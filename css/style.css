@@ -1,0 +1,1101 @@
+/* ==========================================================================
+   DOPANEWS - Street MC Battle × Short Video News UI
+   Base: #090A0F | KENTA: Flame Red/Amber (#FF2A54 / #FF9F1C) | REINA: Cyber Cyan (#00F0FF / #0066FF)
+   ========================================================================== */
+
+:root {
+  --bg-deep: #090A0F;
+  --bg-panel: #10121B;
+  --bg-card: #161926;
+  --border-muted: rgba(255, 255, 255, 0.1);
+
+  --kenta-primary: #FF2A54;
+  --kenta-secondary: #FF9F1C;
+  --kenta-glow: rgba(255, 42, 84, 0.45);
+
+  --reina-primary: #00F0FF;
+  --reina-secondary: #0066FF;
+  --reina-glow: rgba(0, 240, 255, 0.45);
+
+  --neon-gold: #FFE600;
+  --text-main: #F7F8FC;
+  --text-sub: #9BA1B8;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-deep);
+  color: var(--text-main);
+  font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', system-ui, sans-serif;
+  overflow: hidden;
+}
+
+/* 背景のストリート・グリッド＆デュアルネオンスポットライト */
+.app-layout {
+  position: relative;
+  display: grid;
+  grid-template-columns: 410px 1fr;
+  width: 100vw;
+  height: 100vh;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255, 42, 84, 0.12), transparent 42%),
+    radial-gradient(circle at 85% 80%, rgba(0, 240, 255, 0.12), transparent 42%),
+    linear-gradient(180deg, #090A0F 0%, #06070B 100%);
+}
+
+/* ==========================================================================
+   左パネル：設定＆記事入力ドロワー
+   ========================================================================== */
+.control-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 100vh;
+  padding: 18px 18px 24px;
+  background: rgba(16, 18, 27, 0.94);
+  border-right: 1px solid rgba(255, 255, 255, 0.09);
+  overflow-y: auto;
+  z-index: 20;
+}
+
+.brand-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-muted);
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #090A0F;
+  background: linear-gradient(90deg, var(--kenta-secondary), var(--reina-primary));
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.brand-title {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  background: linear-gradient(90deg, #FFFFFF 0%, #FF9F1C 48%, #00F0FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brand-tagline {
+  font-size: 11px;
+  color: var(--text-sub);
+  font-weight: 600;
+}
+
+/* セクションカード */
+.panel-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-muted);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #E2E6F3;
+  text-transform: uppercase;
+}
+
+.key-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.input-group label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+
+.cyber-input,
+.cyber-textarea {
+  width: 100%;
+  background: #0B0D14;
+  color: var(--text-main);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.cyber-input:focus,
+.cyber-textarea:focus {
+  outline: none;
+  border-color: var(--reina-primary);
+  box-shadow: 0 0 0 2px rgba(0, 240, 255, 0.2);
+}
+
+.cyber-textarea {
+  resize: vertical;
+  min-height: 112px;
+  line-height: 1.55;
+}
+
+.key-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.btn-small {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 5px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-small:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.toast-msg {
+  font-size: 11px;
+  color: var(--reina-primary);
+  font-weight: 700;
+}
+
+/* 🔥 バトル生成スタートボタン */
+.btn-fire-start {
+  width: 100%;
+  margin-top: 10px;
+  padding: 13px 16px;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: #FFFFFF;
+  background: linear-gradient(95deg, #FF2A54 0%, #FF7B00 52%, #00B8FF 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(255, 42, 84, 0.4);
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.2s;
+}
+
+.btn-fire-start:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 6px 26px rgba(255, 42, 84, 0.6), 0 0 18px rgba(0, 240, 255, 0.35);
+}
+
+.btn-fire-start:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sub-action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-sub-action {
+  padding: 8px 10px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--text-main);
+  background: #1B2032;
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-sub-action:hover {
+  background: #232A42;
+  border-color: var(--reina-primary);
+}
+
+/* 進捗ステップバー（①Gemini作詞中 ➔ ②Sunoレコーディング中 ➔ ③バトル開始！） */
+.step-progress-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.step-item {
+  padding: 7px 6px;
+  background: #0D0F18;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--text-sub);
+  text-align: center;
+  transition: all 0.25s;
+}
+
+.step-item.step-active {
+  color: #FFFFFF;
+  border-color: var(--kenta-secondary);
+  background: linear-gradient(135deg, rgba(255, 42, 84, 0.28), rgba(255, 159, 28, 0.25));
+  box-shadow: 0 0 12px rgba(255, 159, 28, 0.35);
+  animation: pulseStep 1.2s infinite alternate;
+}
+
+.step-item.step-done {
+  color: var(--reina-primary);
+  border-color: rgba(0, 240, 255, 0.45);
+  background: rgba(0, 240, 255, 0.1);
+}
+
+@keyframes pulseStep {
+  from { transform: scale(1); }
+  to { transform: scale(1.03); }
+}
+
+.status-log {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #D5DAF0;
+  background: #0B0D14;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border-left: 3px solid var(--reina-primary);
+}
+
+.status-log.status-error {
+  color: #FF8FA3;
+  border-left-color: var(--kenta-primary);
+}
+
+/* テスト用フォールバック＆デバッグアコーディオン */
+.fallback-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.file-upload-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 10px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #FFE600;
+  background: rgba(255, 230, 0, 0.08);
+  border: 1px dashed rgba(255, 230, 0, 0.45);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s;
+}
+
+.file-upload-label:hover {
+  background: rgba(255, 230, 0, 0.16);
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.debug-details summary {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--text-sub);
+  cursor: pointer;
+  user-select: none;
+}
+
+.debug-pre {
+  margin-top: 8px;
+  max-height: 150px;
+  overflow: auto;
+  font-size: 10.5px;
+  background: #08090E;
+  padding: 8px;
+  border-radius: 6px;
+  color: #9EE6FF;
+}
+
+/* ==========================================================================
+   右メインエリア：9:16 縦型ショート動画風バトルステージ
+   ========================================================================== */
+.stage-viewport {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.battle-stage {
+  position: relative;
+  width: min(100%, calc((100vh - 32px) * 9 / 16));
+  aspect-ratio: 9 / 16;
+  max-height: calc(100vh - 32px);
+  background:
+    radial-gradient(circle at 20% 28%, rgba(255, 42, 84, 0.22), transparent 52%),
+    radial-gradient(circle at 80% 35%, rgba(0, 240, 255, 0.22), transparent 52%),
+    linear-gradient(180deg, #0D0F18 0%, #090A10 55%, #0B0D16 100%);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 24px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.85),
+    0 0 35px rgba(255, 42, 84, 0.18),
+    0 0 35px rgba(0, 240, 255, 0.18);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px 16px 14px;
+  overflow: hidden;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.battle-stage[data-active-mc="KENTA"] {
+  border-color: rgba(255, 42, 84, 0.7);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.9),
+    0 0 42px rgba(255, 42, 84, 0.38);
+}
+
+.battle-stage[data-active-mc="REINA"] {
+  border-color: rgba(0, 240, 255, 0.7);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.9),
+    0 0 42px rgba(0, 240, 255, 0.38);
+}
+
+/* ステージ上部：タイトル・進捗バー・タイマー */
+.stage-top {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  z-index: 4;
+}
+
+.stage-top-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  background: rgba(255, 42, 84, 0.2);
+  border: 1px solid var(--kenta-primary);
+  color: #FF8FA3;
+  border-radius: 999px;
+}
+
+.live-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--kenta-primary);
+  border-radius: 50%;
+  animation: blinkDot 1s infinite alternate;
+}
+
+@keyframes blinkDot {
+  from { opacity: 0.35; }
+  to { opacity: 1; }
+}
+
+.stage-timer {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: 900;
+  color: #E2E6F3;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.stage-progress-track {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.stage-progress-fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--kenta-primary), var(--kenta-secondary), var(--reina-primary));
+  transition: width 0.15s linear;
+}
+
+.stage-battle-title {
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.3;
+  color: #FFFFFF;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.stage-topic-summary {
+  font-size: 11px;
+  color: #B8C0D8;
+  line-height: 1.35;
+}
+
+.verse-pills-row {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.verse-pill {
+  flex: 1;
+  padding: 4px 6px;
+  font-size: 10px;
+  font-weight: 900;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(15, 18, 28, 0.8);
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.verse-pill.pill-kenta.active {
+  background: linear-gradient(135deg, var(--kenta-primary), var(--kenta-secondary));
+  color: #FFFFFF;
+  border-color: #FFFFFF;
+  box-shadow: 0 0 10px var(--kenta-glow);
+}
+
+.verse-pill.pill-reina.active {
+  background: linear-gradient(135deg, var(--reina-secondary), var(--reina-primary));
+  color: #06080E;
+  border-color: #FFFFFF;
+  box-shadow: 0 0 10px var(--reina-glow);
+}
+
+/* ステージ中央：男女MCアバター対決 ＆ パンチライン字幕 ＆ 解説カード */
+.stage-center {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: auto 0;
+  z-index: 4;
+}
+
+.mc-versus-arena {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.mc-fighter-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 8px;
+  border-radius: 14px;
+  background: rgba(18, 21, 33, 0.85);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2), opacity 0.28s, box-shadow 0.28s, border-color 0.28s;
+}
+
+.mc-fighter-card.mc-kenta.mc-active {
+  transform: scale(1.06) translateY(-2px);
+  border-color: var(--kenta-secondary);
+  background: linear-gradient(180deg, rgba(255, 42, 84, 0.32) 0%, rgba(20, 12, 18, 0.92) 100%);
+  box-shadow: 0 0 24px var(--kenta-glow);
+}
+
+.mc-fighter-card.mc-reina.mc-active {
+  transform: scale(1.06) translateY(-2px);
+  border-color: var(--reina-primary);
+  background: linear-gradient(180deg, rgba(0, 240, 255, 0.28) 0%, rgba(10, 20, 32, 0.92) 100%);
+  box-shadow: 0 0 24px var(--reina-glow);
+}
+
+.mc-fighter-card.mc-dim {
+  opacity: 0.45;
+  transform: scale(0.94);
+  filter: grayscale(35%);
+}
+
+.mc-avatar-ring {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  margin-bottom: 5px;
+}
+
+.mc-kenta .mc-avatar-ring {
+  background: radial-gradient(circle, #FF9F1C 0%, #FF2A54 75%);
+  box-shadow: 0 0 16px var(--kenta-glow);
+}
+
+.mc-reina .mc-avatar-ring {
+  background: radial-gradient(circle, #00F0FF 0%, #0066FF 75%);
+  box-shadow: 0 0 16px var(--reina-glow);
+}
+
+.mc-name {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+.mc-role-tag {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--text-sub);
+  margin-top: 2px;
+}
+
+.vs-emblem {
+  font-size: 16px;
+  font-weight: 900;
+  font-style: italic;
+  color: var(--neon-gold);
+  text-shadow: 0 0 12px rgba(255, 230, 0, 0.8);
+}
+
+/* パンチライン字幕ステージボックス */
+.punchline-card {
+  position: relative;
+  background: rgba(10, 12, 20, 0.9);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+}
+
+.punchline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.active-speaker-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.active-speaker-badge.badge-kenta {
+  background: linear-gradient(90deg, var(--kenta-primary), var(--kenta-secondary));
+  color: #FFFFFF;
+}
+
+.active-speaker-badge.badge-reina {
+  background: linear-gradient(90deg, var(--reina-secondary), var(--reina-primary));
+  color: #050811;
+}
+
+.mc-sub {
+  font-size: 9px;
+  opacity: 0.88;
+  font-weight: 800;
+}
+
+.stage-section-tag {
+  font-size: 9.5px;
+  color: var(--text-sub);
+  font-family: monospace;
+  max-width: 145px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stage-lyric-box {
+  min-height: 86px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+}
+
+.lyric-line {
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.42;
+  color: #FFFFFF;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.95);
+}
+
+.battle-stage[data-active-mc="KENTA"] .lyric-line {
+  text-shadow: 0 2px 12px rgba(255, 42, 84, 0.55);
+}
+
+.battle-stage[data-active-mc="REINA"] .lyric-line {
+  text-shadow: 0 2px 12px rgba(0, 240, 255, 0.55);
+}
+
+.lyric-slam-anim {
+  animation: lyricSlam 0.34s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+@keyframes lyricSlam {
+  0% {
+    opacity: 0;
+    transform: scale(0.91) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* 韻バッジ ＆ 要点解説メモ */
+.verse-insight-box {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rhyme-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rhyme-label {
+  font-size: 10px;
+  font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--neon-gold);
+  color: #090A0F;
+}
+
+.rhyme-words {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--neon-gold);
+}
+
+.point-summary-row {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: #DCE2F5;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+/* ステージ下部：オーディオスペクトラム＆再生・JUDGEボタン */
+.stage-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 4;
+}
+
+.spectrum-canvas {
+  width: 100%;
+  height: 44px;
+  display: block;
+}
+
+.stage-controls-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.btn-stage-play {
+  padding: 10px 12px;
+  font-size: 12.5px;
+  font-weight: 900;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-stage-play.playing {
+  background: rgba(0, 240, 255, 0.18);
+  border-color: var(--reina-primary);
+  color: var(--reina-primary);
+}
+
+.btn-stage-judge {
+  padding: 10px 12px;
+  font-size: 12.5px;
+  font-weight: 900;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(90deg, var(--kenta-primary), var(--reina-secondary));
+  color: #FFFFFF;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(255, 42, 84, 0.35);
+  transition: transform 0.15s;
+}
+
+.btn-stage-judge:hover {
+  transform: translateY(-1px);
+}
+
+/* 【拡張用レイヤー】カットイン演出オーバーレイ（Phase 2用） */
+.cutin-overlay-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+}
+
+/* ==========================================================================
+   ⚖️ JUDGE TIME (投票モーダル／オーバーレイ)
+   ========================================================================== */
+.judge-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 7, 12, 0.88);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+  animation: fadeInModal 0.25s ease-out;
+}
+
+.judge-modal-overlay.hidden,
+.hidden {
+  display: none !important;
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.judge-modal-card {
+  position: relative;
+  width: min(560px, 100%);
+  background: linear-gradient(180deg, #141726 0%, #0C0E18 100%);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-radius: 22px;
+  padding: 24px 22px;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.9),
+    0 0 40px rgba(255, 42, 84, 0.25),
+    0 0 40px rgba(0, 240, 255, 0.25);
+  text-align: center;
+  overflow: hidden;
+}
+
+.judge-header-badge {
+  display: inline-block;
+  padding: 5px 14px;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: #090A0F;
+  background: var(--neon-gold);
+  border-radius: 99px;
+  margin-bottom: 8px;
+}
+
+.judge-headline {
+  font-size: 22px;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.judge-sub-hint {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-bottom: 16px;
+}
+
+.judge-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.judge-choice-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px 14px;
+  border-radius: 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+}
+
+.judge-choice-kenta {
+  background: linear-gradient(160deg, rgba(255, 42, 84, 0.25) 0%, rgba(25, 14, 22, 0.95) 100%);
+  border: 2px solid var(--kenta-primary);
+  color: var(--text-main);
+}
+
+.judge-choice-kenta:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 10px 28px var(--kenta-glow);
+}
+
+.judge-choice-reina {
+  background: linear-gradient(160deg, rgba(0, 240, 255, 0.22) 0%, rgba(12, 22, 36, 0.95) 100%);
+  border: 2px solid var(--reina-primary);
+  color: var(--text-main);
+}
+
+.judge-choice-reina:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 10px 28px var(--reina-glow);
+}
+
+.judge-choice-card.voted-winner {
+  transform: scale(1.04);
+  box-shadow: 0 0 32px rgba(255, 230, 0, 0.65);
+  border-color: var(--neon-gold);
+}
+
+.judge-choice-card.voted-dim {
+  opacity: 0.45;
+  transform: scale(0.95);
+}
+
+.judge-mc-label {
+  font-size: 16px;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.judge-stance-text {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #E5E9F8;
+  margin-bottom: 14px;
+}
+
+.judge-tap-cta {
+  display: block;
+  text-align: center;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.judge-choice-kenta .judge-tap-cta {
+  background: linear-gradient(90deg, var(--kenta-primary), var(--kenta-secondary));
+  color: #FFFFFF;
+}
+
+.judge-choice-reina .judge-tap-cta {
+  background: linear-gradient(90deg, var(--reina-secondary), var(--reina-primary));
+  color: #050811;
+}
+
+/* 投票結果バー */
+.judge-result-box {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 14px;
+  animation: fadeInModal 0.3s ease-out;
+}
+
+.judge-winner-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.judge-winner-banner.banner-kenta {
+  background: rgba(255, 42, 84, 0.22);
+  border: 1px solid var(--kenta-primary);
+}
+
+.judge-winner-banner.banner-reina {
+  background: rgba(0, 240, 255, 0.2);
+  border: 1px solid var(--reina-primary);
+}
+
+.winner-main {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.winner-sub {
+  font-size: 11.5px;
+  color: var(--neon-gold);
+  font-weight: 700;
+}
+
+.tug-bar-container {
+  width: 100%;
+  height: 22px;
+  border-radius: 99px;
+  overflow: hidden;
+  display: flex;
+  margin-bottom: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.tug-bar-kenta {
+  background: linear-gradient(90deg, var(--kenta-primary), var(--kenta-secondary));
+  height: 100%;
+  transition: width 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tug-bar-reina {
+  background: linear-gradient(90deg, var(--reina-primary), var(--reina-secondary));
+  height: 100%;
+  transition: width 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tug-stats-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.judge-footer-btns {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* ドーパミンパーティクル爆発演出 */
+.judge-burst-container {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.dopamine-particle {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  animation: burstOut 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes burstOut {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--tx), var(--ty)) scale(0.2);
+  }
+}
+
+/* モバイル対応 */
+.mobile-drawer-btn {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 50;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #161926;
+  color: #FFF;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+  }
+  .mobile-drawer-btn {
+    display: inline-flex;
+  }
+  .control-drawer {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: min(380px, 92vw);
+    transform: translateX(-105%);
+    transition: transform 0.25s ease;
+  }
+  .control-drawer.drawer-open {
+    transform: translateX(0);
+  }
+}

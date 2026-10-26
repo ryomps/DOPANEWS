@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DOPANEWS（ドーパニュース）| ニュース×MCバトル生成ステージ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+  <button id="btn-toggle-drawer" class="mobile-drawer-btn" type="button">⚙️ 設定・記事入力</button>
+
+  <div class="app-layout">
+    <!-- ==================== 左パネル：設定＆記事入力ドロワー ==================== -->
+    <aside id="control-drawer" class="control-drawer">
+      <header class="brand-header">
+        <div>
+          <div class="brand-logo">
+            <span class="brand-badge">9:16 RAP NEWS</span>
+            <h1 class="brand-title">DOPANEWS</h1>
+          </div>
+          <p class="brand-tagline">長文ニュースを45秒の男女マイクリレーで論破バトル化</p>
+        </div>
+      </header>
+
+      <!-- ① APIキー設定（localStorage保存） -->
+      <section class="panel-section">
+        <div class="section-header">
+          <h2 class="section-title">🔑 API KEYS (localStorage保存)</h2>
+        </div>
+        <div class="key-grid">
+          <div class="input-group">
+            <label for="input-gemini-key">Gemini API Key (gemini-2.5-flash)</label>
+            <input
+              id="input-gemini-key"
+              type="password"
+              class="cyber-input"
+              placeholder="AIzaSy..."
+              autocomplete="off"
+            />
+          </div>
+          <div class="input-group">
+            <label for="input-suno-key">Suno API Key (sunoapi.org互換 V3_5)</label>
+            <input
+              id="input-suno-key"
+              type="password"
+              class="cyber-input"
+              placeholder="Bearer トークン (任意：未入力時は内蔵ビート再生)"
+              autocomplete="off"
+            />
+          </div>
+        </div>
+        <div class="key-actions">
+          <button id="btn-save-keys" type="button" class="btn-small">💾 キーを保存</button>
+          <span id="key-saved-toast" class="toast-msg"></span>
+        </div>
+      </section>
+
+      <!-- ② ニュース記事全文入力 ＆ 生成スタート -->
+      <section class="panel-section">
+        <div class="section-header">
+          <h2 class="section-title">📰 ニュース記事全文入力</h2>
+        </div>
+        <textarea
+          id="input-news-article"
+          class="cyber-textarea"
+          placeholder="ここに気になるニュース記事の本文を貼り付けてください..."
+        ></textarea>
+
+        <button id="btn-start-battle" type="button" class="btn-fire-start">
+          🔥 バトル生成スタート (Gemini ➔ Suno)
+        </button>
+
+        <div class="sub-action-row">
+          <button id="btn-gemini-only" type="button" class="btn-sub-action" title="Geminiで作詞のみ行い内蔵112BPMビートでテストします">
+            ⚡ Gemini作詞のみ実行
+          </button>
+          <button id="btn-load-preset" type="button" class="btn-sub-action" title="APIクレジット消費ゼロでプリセットバトルを即座に再生します">
+            🎧 プリセット即再生デモ
+          </button>
+        </div>
+      </section>
+
+      <!-- ③ 生成ステップ進捗バー -->
+      <section class="panel-section">
+        <div class="section-header">
+          <h2 class="section-title">📡 GENERATION PROGRESS</h2>
+        </div>
+        <div class="step-progress-bar">
+          <div id="step-1-gemini" class="step-item">① Gemini作詞中</div>
+          <div id="step-2-suno" class="step-item">② Suno収録中</div>
+          <div id="step-3-battle" class="step-item step-done">③ バトル開始！</div>
+        </div>
+        <div id="generation-status-log" class="status-log">
+          プリセットニュース「選択的週休3日制」読込済み。右ステージの「▶ PLAY BATTLE」または「🎧 プリセット即再生デモ」ですぐに体験できます。
+        </div>
+      </section>
+
+      <!-- ④ テスト用フォールバック（手元のMP3読み込み＆Sunoプロンプト確認） -->
+      <section class="panel-section">
+        <div class="section-header">
+          <h2 class="section-title">🛠️ テスト用MP3読込 ＆ 生成データ確認</h2>
+        </div>
+        <div class="fallback-grid">
+          <label id="label-local-mp3" for="input-local-mp3" class="file-upload-label">
+            📂 手元のMP3を読込再生
+          </label>
+          <input id="input-local-mp3" type="file" accept="audio/*" class="hidden-file-input" />
+
+          <button
+            type="button"
+            class="btn-sub-action"
+            onclick="document.getElementById('btn-open-judge').click()"
+          >
+            ⚖️ 投票画面をすぐ開く
+          </button>
+        </div>
+
+        <details class="debug-details" style="margin-top: 10px;">
+          <summary>▼ Suno送信メタタグ付き歌詞 ＆ Gemini JSONを表示</summary>
+          <div class="input-group" style="margin-top: 8px;">
+            <label for="suno-prompt-preview">Suno Prompt (男女ボーカル切替メタタグ付き)</label>
+            <textarea id="suno-prompt-preview" class="cyber-textarea" readonly style="min-height: 90px; font-size: 11px;"></textarea>
+          </div>
+          <pre id="gemini-json-preview" class="debug-pre"></pre>
+        </details>
+      </section>
+    </aside>
+
+    <!-- ==================== 右メインステージ：9:16 縦型バトル画面 ==================== -->
+    <main class="stage-viewport">
+      <div id="battle-stage" class="battle-stage" data-active-mc="KENTA">
+        <!-- 【拡張用レイヤー】Phase 2: カットイン演出（乱入・パンチライン特大エフェクト）オーバーレイ -->
+        <div id="cutin-overlay-layer" class="cutin-overlay-layer" data-last-trigger="NONE"></div>
+
+        <!-- ステージ上部：バトルタイトル＆再生タイマー -->
+        <header class="stage-top">
+          <div class="stage-top-meta">
+            <span class="live-pill"><span class="live-dot"></span>ON AIR BATTLE</span>
+            <span id="stage-timer" class="stage-timer">00:00 / 00:45</span>
+          </div>
+          <div class="stage-progress-track">
+            <div id="stage-progress-fill" class="stage-progress-fill"></div>
+          </div>
+          <h2 id="stage-battle-title" class="stage-battle-title">バトルタイトル読込中...</h2>
+          <p id="stage-topic-summary" class="stage-topic-summary"></p>
+          <div id="stage-verse-pills" class="verse-pills-row"></div>
+        </header>
+
+        <!-- ステージ中央：男女MCアバター ＆ パンチライン字幕 ＆ 要点解説カード -->
+        <section class="stage-center">
+          <!-- 男女MC対決アバター -->
+          <div class="mc-versus-arena">
+            <div id="mc-card-kenta" class="mc-fighter-card mc-kenta mc-active">
+              <div class="mc-avatar-ring">🔥</div>
+              <div class="mc-name" style="color: #FF9F1C;">MC KENTA</div>
+              <div class="mc-role-tag">DEEP MALE / 庶民・変革派</div>
+            </div>
+
+            <div class="vs-emblem">VS</div>
+
+            <div id="mc-card-reina" class="mc-fighter-card mc-reina mc-dim">
+              <div class="mc-avatar-ring">❄️</div>
+              <div class="mc-name" style="color: #00F0FF;">MC REINA</div>
+              <div class="mc-role-tag">COOL FEMALE / データ・合理派</div>
+            </div>
+          </div>
+
+          <!-- パンチライン字幕＆要点メモ＆韻バッジ -->
+          <div class="punchline-card">
+            <div class="punchline-header">
+              <span id="active-speaker-badge" class="active-speaker-badge badge-kenta">
+                🔥 MC KENTA
+              </span>
+              <span id="stage-section-tag" class="stage-section-tag">[Verse 1]</span>
+            </div>
+
+            <div id="stage-lyric-box" class="stage-lyric-box">
+              <p class="lyric-line">ステージ準備完了！バトルを再生してください。</p>
+            </div>
+
+            <div class="verse-insight-box">
+              <div class="rhyme-row">
+                <span class="rhyme-label">🎯 RHYME</span>
+                <span id="stage-rhyme-badge" class="rhyme-words">-</span>
+              </div>
+              <div class="point-summary-row">
+                💡 <strong>要点:</strong> <span id="stage-point-summary">-</span>
+              </div>
+              <!-- 【拡張用スロット】Phase 2: 第3の審判AI（ファクトチェッカー）挿入位置 -->
+              <div id="fact-check-slot" class="fact-check-slot" data-fact-status="UNVERIFIED"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ステージ下部：オーディオスペクトラム風ビジュアライザー＆再生コントロール -->
+        <footer class="stage-bottom">
+          <canvas id="spectrum-canvas" class="spectrum-canvas" width="360" height="44"></canvas>
+          <audio id="battle-audio" crossorigin="anonymous"></audio>
+          <div class="stage-controls-row">
+            <button id="btn-play-pause" type="button" class="btn-stage-play">
+              ▶ PLAY BATTLE
+            </button>
+            <button id="btn-open-judge" type="button" class="btn-stage-judge">
+              ⚖️ 投票へ進む (JUDGE)
+            </button>
+          </div>
+        </footer>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==================== 投票モーダル：⚖️ JUDGE TIME ==================== -->
+  <div id="judge-modal-overlay" class="judge-modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="judge-modal-card">
+      <div id="judge-burst-container" class="judge-burst-container"></div>
+
+      <span class="judge-header-badge">⚖️ JUDGE TIME</span>
+      <h2 class="judge-headline">どっちの主張が刺さった？</h2>
+      <p id="judge-battle-title" class="judge-sub-hint">ワンタップ または 左右スワイプで勝者をジャッジ！</p>
+
+      <div class="judge-cards-grid">
+        <!-- MC KENTA 投票カード -->
+        <button id="btn-vote-kenta" type="button" class="judge-choice-card judge-choice-kenta">
+          <div>
+            <div class="judge-mc-label" style="color: #FF9F1C;">🔥 MC KENTA</div>
+            <p id="judge-kenta-stance" class="judge-stance-text"></p>
+          </div>
+          <span class="judge-tap-cta">🔥 KENTAに投票 (論破！)</span>
+        </button>
+
+        <!-- MC REINA 投票カード -->
+        <button id="btn-vote-reina" type="button" class="judge-choice-card judge-choice-reina">
+          <div>
+            <div class="judge-mc-label" style="color: #00F0FF;">❄️ MC REINA</div>
+            <p id="judge-reina-stance" class="judge-stance-text"></p>
+          </div>
+          <span class="judge-tap-cta">❄️ REINAに投票 (論破！)</span>
+        </button>
+      </div>
+
+      <!-- 投票後に表示される勝敗バー＆得票数 -->
+      <div id="judge-result-box" class="judge-result-box hidden">
+        <div id="judge-winner-banner" class="judge-winner-banner"></div>
+        <div class="tug-bar-container">
+          <div id="judge-bar-kenta" class="tug-bar-kenta" style="width: 50%;"></div>
+          <div id="judge-bar-reina" class="tug-bar-reina" style="width: 50%;"></div>
+        </div>
+        <div class="tug-stats-row">
+          <span style="color: #FF9F1C;">🔥 KENTA: <strong id="judge-pct-kenta">50%</strong> (<span id="judge-count-kenta">0票</span>)</span>
+          <span style="color: #00F0FF;">❄️ REINA: <strong id="judge-pct-reina">50%</strong> (<span id="judge-count-reina">0票</span>)</span>
+        </div>
+      </div>
+
+      <div class="judge-footer-btns">
+        <button id="btn-replay-battle" type="button" class="btn-sub-action">
+          🔁 もう一度バトルを聴く
+        </button>
+        <button id="btn-close-judge" type="button" class="btn-small">
+          ✕ ステージに戻る
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./js/types.js"></script>
+  <script src="./js/api.js"></script>
+  <script src="./js/audioController.js"></script>
+  <script src="./js/components/StageView.js"></script>
+  <script src="./js/components/JudgeModal.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>
