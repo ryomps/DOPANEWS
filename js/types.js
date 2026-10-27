@@ -92,9 +92,9 @@
     });
 
     const toSec = (val) => {
-      if (typeof val !== 'number') return 0;
+      if (!Number.isFinite(val)) return 0;
       // Murekaのタイムスタンプはミリ秒 (例: 11960 = 11.96秒)
-      return val > 500 ? val / 1000 : val;
+      return val / 1000;
     };
 
     if (vocalSections.length > 0) {
@@ -106,7 +106,7 @@
             allLines.push({
               text: ln.text || '',
               start_sec: toSec(ln.start),
-              end_sec: toSec(ln.end || ln.start + 2500)
+              end_sec: toSec(ln.end ?? ln.start + 2500)
             });
           }
         });
@@ -124,7 +124,7 @@
             v.timed_lines = sec.lines.map((ln) => ({
               text: ln.text || '',
               start_sec: toSec(ln.start),
-              end_sec: toSec(ln.end || ln.start + 2500)
+              end_sec: toSec(ln.end ?? ln.start + 2500)
             }));
           }
         });
