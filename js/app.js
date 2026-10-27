@@ -64,6 +64,7 @@
     _initComponents() {
       this.stageView = new DOPANEWS.StageView({
         onSelectVerse: (index, startSec) => {
+          if (this.isGenerating) return;
           this.stageView.activateVerse(index, true);
           const verse = this.currentBattleData?.verses?.[index];
           if (verse) {
@@ -75,6 +76,7 @@
 
       this.judgeModal = new DOPANEWS.JudgeModal({
         onReplay: () => {
+          if (this.isGenerating) return;
           this.audioController.seekTo(0);
           if (this.audioController.usingSynthFallback ? !this.audioController.synthPlaying : this.audioEl.paused) {
             this.audioController.togglePlay();
@@ -94,6 +96,7 @@
           }
         },
         onEnded: () => {
+          if (this.isGenerating) return;
           this._setLog('💭 バトル終了。あなたはどっち派？ 今の自分の考えを振り返ってみよう。');
           this.judgeModal.open(this.currentBattleData);
         },
@@ -180,6 +183,8 @@
       this.geminiOnlyBtnEl?.addEventListener('click', () => this.handleGeminiOnlyGeneration());
 
       this.presetTestBtnEl?.addEventListener('click', () => {
+        if (this.isGenerating) return;
+        this._stopCurrentBattle();
         if (this.newsUrlInputEl) this.newsUrlInputEl.value = '';
         this.articleInputEl.value = DOPANEWS.PRESET_NEWS_ARTICLE;
         this._applyBattleData(DOPANEWS.PRESET_BATTLE_DATA);
@@ -189,8 +194,10 @@
       });
 
       this.localMp3InputEl?.addEventListener('change', (e) => {
+        if (this.isGenerating) return;
         const file = e.target.files?.[0];
         if (!file) return;
+        this._stopCurrentBattle();
         const objUrl = URL.createObjectURL(file);
         if (this.localMp3LabelEl) {
           this.localMp3LabelEl.textContent = `🎵 読込済: ${file.name.slice(0, 22)}`;
@@ -201,10 +208,12 @@
       });
 
       this.playPauseBtnEl?.addEventListener('click', () => {
+        if (this.isGenerating) return;
         this.audioController.togglePlay();
       });
 
       this.openJudgeBtnEl?.addEventListener('click', () => {
+        if (this.isGenerating) return;
         this.judgeModal.open(this.currentBattleData);
       });
 
@@ -243,7 +252,7 @@
         throw err;
       } finally {
         if (this.fetchUrlBtnEl) {
-          this.fetchUrlBtnEl.disabled = false;
+          this.fetchUrlBtnEl.disabled = this.isGenerating;
           this.fetchUrlBtnEl.textContent = '📥 URL読込';
         }
       }
@@ -290,8 +299,7 @@
         return;
       }
 
-      this.isGenerating = true;
-      this.generateBtnEl.disabled = true;
+      this._beginGeneration();
 
       try {
         const articleText = await this._resolveArticleTextBeforeGenerate();
@@ -343,8 +351,7 @@
         console.error(err);
         this._setLog(`❌ エラー: ${err.message}`, true);
       } finally {
-        this.isGenerating = false;
-        this.generateBtnEl.disabled = false;
+        this._setGenerating(false);
       }
     }
 
@@ -360,7 +367,7 @@
         return;
       }
 
-      this.isGenerating = true;
+      this._beginGeneration();
       try {
         const articleText = await this._resolveArticleTextBeforeGenerate();
 
@@ -380,8 +387,31 @@
       } catch (err) {
         this._setLog(`❌ エラー: ${err.message}`, true);
       } finally {
-        this.isGenerating = false;
+        this._setGenerating(false);
       }
+    }
+
+    _stopCurrentBattle() {
+      this.audioController.stopPlayback();
+      if (!this.judgeModal.overlayEl.classList.contains('hidden')) {
+        this.judgeModal.close();
+      }
+    }
+
+    _beginGeneration() {
+      this._setGenerating(true);
+      this._stopCurrentBattle();
+    }
+
+    _setGenerating(isGenerating) {
+      this.isGenerating = isGenerating;
+      // Keep the displayed script paired with its audio until generation finishes.
+      [this.generateBtnEl, this.geminiOnlyBtnEl, this.presetTestBtnEl,
+        this.localMp3InputEl, this.playPauseBtnEl, this.openJudgeBtnEl,
+        this.fetchUrlBtnEl, this.newsUrlInputEl, this.articleInputEl,
+        this.stylePresetSelectEl, this.battleStyleInputEl].forEach((element) => {
+        if (element) element.disabled = isGenerating;
+      });
     }
 
     _applyBattleData(battleData) {

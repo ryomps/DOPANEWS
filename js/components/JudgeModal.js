@@ -54,8 +54,18 @@
     open(battleData) {
       if (this.overlayEl.classList.contains('hidden')) this.previousFocus = document.activeElement;
       this.battleData = battleData;
-      // Include the content so different scripts with the same title have separate reflections.
-      this.battleKey = JSON.stringify(battleData);
+      // Identify the script, excluding mutable music style and synchronization metadata.
+      this.battleKey = JSON.stringify({
+        title: battleData?.title,
+        topic_summary: battleData?.topic_summary,
+        kenta_stance: battleData?.kenta_stance,
+        reina_stance: battleData?.reina_stance,
+        verses: (battleData?.verses || []).map((verse) => ({
+          speaker: verse.speaker,
+          lyric: verse.lyric,
+          point_summary: verse.point_summary
+        }))
+      });
       if (!this.reflections.has(this.battleKey)) {
         this.reflections.set(this.battleKey, { choice: null, note: '' });
       }

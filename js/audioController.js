@@ -108,6 +108,16 @@
       }
     }
 
+    stopPlayback() {
+      this.stopSynth();
+      this.audio.pause();
+      this.audio.removeAttribute('src');
+      this.audio.load();
+      this.usingSynthFallback = false;
+      this.onTimeUpdate(0, 0);
+      this.onPlayStateChange(false);
+    }
+
     startSynthBattle(durationSec = 45) {
       this.audio.pause();
       this.usingSynthFallback = true;
