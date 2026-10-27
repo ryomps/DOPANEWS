@@ -16,12 +16,21 @@
     'gemini-1.5-flash'
   ];
 
-  function getMurekaBaseUrl() {
-    if (window.location.protocol.startsWith('http') && window.location.port === '8080') {
-      return '/api/mureka';
+  function getMurekaBaseUrl() { return '/api/mureka'; }
+
+  async function localRequest(path, options = {}) {
+    const response = await fetch(path, options);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || `ローカルサーバーエラー (${response.status})`);
     }
-    return 'https://api.mureka.ai';
+    return response.json();
   }
+  DOPANEWS.getLocalConfig = () => localRequest('/api/config');
+  DOPANEWS.listSavedBattles = () => localRequest('/api/library');
+  DOPANEWS.saveBattle = (record) => localRequest('/api/library', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(record)
+  });
 
   function extractReadableArticleFromHtml(htmlString) {
     const parser = new DOMParser();
@@ -96,7 +105,7 @@
       throw new Error('有効なURL（http:// または https:// から始まるアドレス）を入力してください。');
     }
 
-    if (window.location.protocol.startsWith('http') && window.location.port === '8080') {
+    if (window.location.protocol.startsWith('http')) {
       try {
         const localRes = await fetch(`/api/fetch-url?url=${encodeURIComponent(cleanUrl)}`);
         if (localRes.ok) {
@@ -154,10 +163,7 @@
   /**
    * Gemini APIを呼び出し、ニュース記事全文から「8小節（8行）×4本」の男女MCラップバトルJSONを生成する
    */
-  async function generateBattleScriptWithGemini(articleText, geminiApiKey, onProgress = () => {}) {
-    if (!geminiApiKey) {
-      throw new Error('Gemini APIキーが入力されていません。');
-    }
+  async function generateBattleScriptWithGemini(articleText, onProgress = () => {}) {
     if (!articleText || articleText.trim().length < 20) {
       throw new Error('ニュース記事の本文を20文字以上入力してください。');
     }
@@ -229,7 +235,7 @@
 
     for (let i = 0; i < GEMINI_FALLBACK_MODELS.length; i++) {
       const modelName = GEMINI_FALLBACK_MODELS[i];
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(geminiApiKey.trim())}`;
+      const endpoint = `/api/gemini/${encodeURIComponent(modelName)}`;
 
       if (i > 0) {
         onProgress(
@@ -279,10 +285,7 @@
   /**
    * Mureka 公式API で楽曲を生成し、完成時に lyrics_sections タイムスタンプを battleData に反映する
    */
-  async function generateBattleTrackWithMureka(battleData, murekaApiKey, onProgress = () => {}) {
-    if (!murekaApiKey) {
-      throw new Error('Mureka APIキーが入力されていません。');
-    }
+  async function generateBattleTrackWithMureka(battleData, onProgress = () => {}) {
 
     const lyrics = DOPANEWS.buildSunoPrompt(battleData);
     const stylePrompt = battleData.suno_style || DOPANEWS.DEFAULT_BATTLE_STYLE;
@@ -301,10 +304,7 @@
     try {
       genRes = await fetch(`${baseUrl}/v1/song/generate`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${murekaApiKey.trim()}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
     } catch (fetchErr) {
@@ -332,10 +332,7 @@
 
       const pollUrl = `${baseUrl}/v1/song/query/${encodeURIComponent(taskId)}`;
       const pollRes = await fetch(pollUrl, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${murekaApiKey.trim()}`
-        }
+        method: 'GET'
       });
 
       if (!pollRes.ok) {
@@ -354,11 +351,12 @@
         firstTrack?.stream_url ||
         firstTrack?.flac_url;
 
-      if (playableUrl && (status === 'succeeded' || status === 'streaming')) {
+      if (playableUrl && status === 'succeeded') {
         // Murekaが返したセクション・行単位のミリ秒タイムスタンプをバトルデータに同期
         DOPANEWS.applyMurekaTimestamps(battleData, firstTrack);
 
-        onProgress('Mureka楽曲生成＆歌詞タイムスタンプ同期完了！ステージ再生を開始します🔥');
+        const sync = battleData.mureka_sync;
+        onProgress(`Mureka楽曲完成。歌詞照合 ${sync.matched_lines}/${sync.total_lines}行（声の識別情報はありません）`);
         return {
           audioUrl: playableUrl,
           taskId,

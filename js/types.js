@@ -71,81 +71,68 @@
     return lines.join('\n');
   }
 
-  /**
-   * Mureka APIのレスポンス (choices[0].lyrics_sections) に含まれる正確なミリ秒タイムスタンプを
-   * 各バース (V1〜V4) および各行 (8小節) にマッピングして声と画面遷移を完全一致させる
-   */
+  /** Match returned lyrics to the script; section boundaries do not identify singers. */
   function applyMurekaTimestamps(battleData, murekaChoice) {
-    if (!battleData || !Array.isArray(battleData.verses) || !murekaChoice) {
-      return battleData;
-    }
-
-    const sections = Array.isArray(murekaChoice.lyrics_sections)
-      ? murekaChoice.lyrics_sections
-      : [];
-
-    // 歌詞行を持つセクション（intro / outro 以外）を抽出
-    const vocalSections = sections.filter((sec) => {
-      const type = String(sec.section_type || '').toLowerCase();
-      const hasLines = Array.isArray(sec.lines) && sec.lines.length > 0;
-      return hasLines && type !== 'intro' && type !== 'outro';
-    });
-
-    const toSec = (val) => {
-      if (!Number.isFinite(val)) return 0;
-      // Murekaのタイムスタンプはミリ秒 (例: 11960 = 11.96秒)
-      return val / 1000;
+    if (!battleData || !Array.isArray(battleData.verses) || !murekaChoice) return battleData;
+    const normalize = (text) => String(text || '').normalize('NFKC').toLowerCase()
+      .replace(/[^\p{L}\p{N}]/gu, '');
+    const scripts = battleData.verses.map((verse) => normalize(verse.lyric));
+    const bigrams = (text) => {
+      const characters = Array.from(text);
+      return new Set(characters.slice(0, -1).map((character, index) => character + characters[index + 1]));
     };
-
-    if (vocalSections.length > 0) {
-      // 全ボーカル行をフラット化して4バース（各8行）に割り当てるか、セクション単位で割り当てる
-      const allLines = [];
-      vocalSections.forEach((sec) => {
-        (sec.lines || []).forEach((ln) => {
-          if (typeof ln.start === 'number') {
-            allLines.push({
-              text: ln.text || '',
-              start_sec: toSec(ln.start),
-              end_sec: toSec(ln.end ?? ln.start + 2500)
-            });
-          }
-        });
-      });
-
-      const verseCount = battleData.verses.length;
-      if (vocalSections.length === verseCount) {
-        // セクション数が4バースと完全一致している場合
-        battleData.verses.forEach((v, idx) => {
-          const sec = vocalSections[idx];
-          v.start_time_sec = toSec(sec.start);
-          v.end_time_sec = toSec(sec.end);
-          v.synced_from_mureka = true;
-          if (Array.isArray(sec.lines) && sec.lines.length > 0) {
-            v.timed_lines = sec.lines.map((ln) => ({
-              text: ln.text || '',
-              start_sec: toSec(ln.start),
-              end_sec: toSec(ln.end ?? ln.start + 2500)
-            }));
-          }
-        });
-      } else if (allLines.length >= verseCount) {
-        // 行数ベースで4バース（各8小節）に均等マッピング
-        const linesPerVerse = Math.max(1, Math.floor(allLines.length / verseCount));
-        battleData.verses.forEach((v, idx) => {
-          const startLineIdx = idx * linesPerVerse;
-          const endLineIdx =
-            idx === verseCount - 1 ? allLines.length - 1 : (idx + 1) * linesPerVerse - 1;
-          const slice = allLines.slice(startLineIdx, endLineIdx + 1);
-          if (slice.length > 0) {
-            v.start_time_sec = slice[0].start_sec;
-            v.end_time_sec = slice[slice.length - 1].end_sec;
-            v.timed_lines = slice;
-            v.synced_from_mureka = true;
-          }
+    const similarity = (a, b) => {
+      if (!a || !b) return 0;
+      if (a === b) return 1;
+      if (a.length >= 4 && b.includes(a)) return 1;
+      const left = bigrams(a), right = bigrams(b);
+      let overlap = 0;
+      for (const pair of left) if (right.has(pair)) overlap++;
+      return left.size + right.size ? 2 * overlap / (left.size + right.size) : 0;
+    };
+    const identifyVerse = (text) => {
+      const normalized = normalize(text);
+      if (!normalized) return null;
+      const scores = scripts.map((script, index) => ({
+        index,
+        score: Math.max(similarity(normalized, script), ...String(battleData.verses[index].lyric)
+          .split('\n').map((line) => similarity(normalized, normalize(line))))
+      })).sort((a, b) => b.score - a.score);
+      const best = scores[0];
+      // Shared refrains and weak matches must not be assigned to an arbitrary MC.
+      return best && best.score >= 0.65 && best.score - (scores[1]?.score || 0) >= 0.15
+        ? best.index : null;
+    };
+    battleData.verses.forEach((verse) => {
+      verse.synced_from_mureka = false;
+      verse.timed_lines = null;
+    });
+    const timeline = [];
+    const sections = Array.isArray(murekaChoice.lyrics_sections) ? murekaChoice.lyrics_sections : [];
+    for (const section of sections) {
+      for (const line of Array.isArray(section?.lines) ? section.lines : []) {
+        if (!Number.isFinite(line.start) || !Number.isFinite(line.end) || line.end <= line.start) continue;
+        timeline.push({
+          text: String(line.text || ''), start_sec: line.start / 1000,
+          end_sec: line.end / 1000, verse_index: identifyVerse(line.text)
         });
       }
     }
-
+    timeline.sort((a, b) => a.start_sec - b.start_sec);
+    battleData.verses.forEach((verse, index) => {
+      const lines = timeline.filter((line) => line.verse_index === index);
+      if (!lines.length) return;
+      verse.start_time_sec = lines[0].start_sec;
+      verse.end_time_sec = Math.max(...lines.map((line) => line.end_sec));
+      verse.timed_lines = lines;
+      verse.synced_from_mureka = true;
+    });
+    battleData.mureka_timeline = timeline;
+    const matched = timeline.filter((line) => line.verse_index !== null).length;
+    battleData.mureka_sync = {
+      matched_lines: matched, total_lines: timeline.length,
+      status: !matched ? 'unavailable' : matched === timeline.length ? 'matched' : 'partial'
+    };
     return battleData;
   }
 

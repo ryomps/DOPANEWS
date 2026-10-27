@@ -25,37 +25,19 @@
         </div>
       </header>
 
-      <!-- ① APIキー設定（localStorage保存） -->
       <section class="panel-section">
-        <div class="section-header">
-          <h2 class="section-title">🔑 API KEYS (localStorage保存)</h2>
+        <h2 class="section-title">接続状態</h2>
+        <p id="api-config-status" class="status-log" role="status">ローカル設定を確認中…</p>
+      </section>
+
+      <section class="panel-section">
+        <h2 class="section-title">保存したニュースラップ</h2>
+        <div class="sub-action-row">
+          <button id="btn-save-battle" class="btn-sub-action" type="button">💾 今のラップを保存</button>
+          <button id="btn-refresh-library" class="btn-sub-action" type="button">一覧を更新</button>
         </div>
-        <div class="key-grid">
-          <div class="input-group">
-            <label for="input-gemini-key">① Gemini API Key (gemini-3.8-flash / 台本・作詞用)</label>
-            <input
-              id="input-gemini-key"
-              type="password"
-              class="cyber-input"
-              placeholder="AIzaSy..."
-              autocomplete="off"
-            />
-          </div>
-          <div class="input-group">
-            <label for="input-suno-key">② Mureka API Key (api.mureka.ai / 公式ボーカル楽曲生成)</label>
-            <input
-              id="input-suno-key"
-              type="password"
-              class="cyber-input"
-              placeholder="Mureka API Key を貼り付け (未入力時は内蔵ビート再生)"
-              autocomplete="off"
-            />
-          </div>
-        </div>
-        <div class="key-actions">
-          <button id="btn-save-keys" type="button" class="btn-small">💾 キーを保存</button>
-          <span id="key-saved-toast" class="toast-msg"></span>
-        </div>
+        <p id="library-status" class="reflection-footnote" role="status">このPCに音声・歌詞・元記事を保存します。</p>
+        <div id="saved-battle-list" class="saved-battle-list"></div>
       </section>
 
       <!-- ② ニュース記事入力（URL自動抽出 または 全文貼り付け） ＆ 生成スタート -->
@@ -159,6 +141,8 @@
             <textarea id="suno-prompt-preview" class="cyber-textarea" readonly style="min-height: 90px; font-size: 11px;"></textarea>
           </div>
           <pre id="gemini-json-preview" class="debug-pre"></pre>
+          <p class="reflection-footnote">Mureka返却データ：歌詞と時刻を確認できます。歌手の識別情報は含まれていません。</p>
+          <pre id="mureka-json-preview" class="debug-pre"></pre>
         </details>
       </section>
     </aside>
@@ -235,7 +219,7 @@
           <audio id="battle-audio"></audio>
           <div class="stage-controls-row">
             <button id="btn-play-pause" type="button" class="btn-stage-play">
-              ▶ PLAY BATTLE (再生)
+              ▶ 再生
             </button>
             <button id="btn-open-judge" type="button" class="btn-stage-judge">
               💭 あなたはどっち派？

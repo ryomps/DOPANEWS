@@ -1108,3 +1108,9 @@ html, body {
     transform: translateX(0);
   }
 }
+
+.saved-battle-list { display: grid; gap: 10px; margin-top: 12px; max-height: 300px; overflow-y: auto; }
+.saved-battle-item { padding: 12px; border: 1px solid #384055; border-radius: 10px; background: #101421; }
+.saved-battle-item p { font-size: 12px; line-height: 1.5; margin-bottom: 6px; }
+.saved-battle-item small { display: block; color: var(--text-sub); margin-bottom: 8px; }
+button:disabled { opacity: 0.5; cursor: wait; }
