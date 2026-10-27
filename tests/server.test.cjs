@@ -43,9 +43,11 @@ test('server keeps API keys private and injects them into the correct upstream r
     assert.equal((await fetch(url + route)).status, 404);
   }
   assert.equal((await post(`${url}/api/gemini/gemini-2.5-flash`, { contents: [] })).status, 200);
-  assert.equal((await post(`${url}/api/mureka/v1/song/generate`, { lyrics: 'test' })).status, 200);
+  assert.equal((await post(`${url}/api/mureka/v1/song/generate`, { lyrics: 'test', model: 'auto', n: 3 })).status, 200);
   assert.equal(calls[0].options.headers['x-goog-api-key'], 'test-gemini');
   assert.equal(calls[1].options.headers.Authorization, 'Bearer test-mureka');
+  assert.equal(JSON.parse(calls[1].options.body).model, 'mureka-9');
+  assert.equal(JSON.parse(calls[1].options.body).n, 1);
   assert.ok(!calls[0].target.includes('test-gemini'));
   assert.equal((await fetch(`${url}/api/config`, { headers: { Origin: 'https://other.example' } })).status, 403);
 });

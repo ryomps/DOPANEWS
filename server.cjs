@@ -83,7 +83,11 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
         const config = await readConfig();
         if (!config.mureka) { json(res, { error: 'Set MurekaApiKey in config.local.json' }, 400); return; }
         const options = { method, headers: { Authorization: `Bearer ${config.mureka}`, 'Content-Type': 'application/json' } };
-        if (method === 'POST') options.body = JSON.stringify(await readBody(req));
+        if (method === 'POST') {
+          const input = await readBody(req);
+          // Pin the model here too so a stale browser cannot select the latest model.
+          options.body = JSON.stringify({ ...input, model: 'mureka-9', n: 1 });
+        }
         await proxy(res, `https://api.mureka.ai/v1/song/${mureka[1]}`, options, 'Mureka'); return;
       }
       if (route === '/api/fetch-url' && req.method === 'GET') {

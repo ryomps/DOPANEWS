@@ -226,8 +226,13 @@ test('Mureka waits for the completed response with timings instead of returning 
   const context = {
     window: null, location: { protocol: 'http:', port: '8080' },
     DOPANEWS: data, setTimeout: resolve => resolve(),
-    fetch: async (url) => {
-      if (url.endsWith('/generate')) return { ok: true, json: async () => ({ id: 'test-task' }) };
+    fetch: async (url, options) => {
+      if (url.endsWith('/generate')) {
+        const payload = JSON.parse(options.body);
+        assert.equal(payload.model, 'mureka-9');
+        assert.equal(payload.n, 1);
+        return { ok: true, json: async () => ({ id: 'test-task' }) };
+      }
       polls++;
       return { ok: true, json: async () => polls === 1
         ? { status: 'streaming', choices: [{ stream_url: 'stream.mp3' }] }

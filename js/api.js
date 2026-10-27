@@ -292,13 +292,13 @@
 
     const payload = {
       lyrics,
-      model: 'auto',
+      model: 'mureka-9',
       n: 1,
       prompt: stylePrompt
     };
 
     const baseUrl = getMurekaBaseUrl();
-    onProgress('Mureka 公式API (/v1/song/generate) へ8小節×4本の歌詞＆Styleを送信中...');
+    onProgress('Mureka 9 (/v1/song/generate) へ8小節×4本の歌詞＆Styleを送信中...');
 
     let genRes;
     try {
