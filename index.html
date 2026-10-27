@@ -114,7 +114,7 @@
             class="btn-sub-action"
             onclick="document.getElementById('btn-open-judge').click()"
           >
-            ⚖️ 投票画面をすぐ開く
+            💭 自分の考えを振り返る
           </button>
         </div>
 
@@ -204,7 +204,7 @@
               ▶ PLAY BATTLE
             </button>
             <button id="btn-open-judge" type="button" class="btn-stage-judge">
-              ⚖️ 投票へ進む (JUDGE)
+              💭 あなたはどっち派？
             </button>
           </div>
         </footer>
@@ -212,55 +212,41 @@
     </main>
   </div>
 
-  <!-- ==================== 投票モーダル：⚖️ JUDGE TIME ==================== -->
-  <div id="judge-modal-overlay" class="judge-modal-overlay hidden" role="dialog" aria-modal="true">
-    <div class="judge-modal-card">
-      <div id="judge-burst-container" class="judge-burst-container"></div>
+  <!-- ラップを聴いた後、自分の考えを振り返る -->
+  <div id="judge-modal-overlay" class="judge-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="reflection-heading" aria-describedby="reflection-hint">
+    <div class="judge-modal-card" tabindex="-1">
+      <span class="judge-header-badge">💭 THINK TIME</span>
+      <h2 id="reflection-heading" class="judge-headline">あなたはどっち派？</h2>
+      <p id="reflection-hint" class="judge-sub-hint">ラップを聴いて、今の自分はどちらの意見に近い？<br>迷っていても大丈夫。考えはいつでも変えられます。</p>
+      <p id="judge-battle-title" class="judge-sub-hint"></p>
 
-      <span class="judge-header-badge">⚖️ JUDGE TIME</span>
-      <h2 class="judge-headline">どっちの主張が刺さった？</h2>
-      <p id="judge-battle-title" class="judge-sub-hint">ワンタップ または 左右スワイプで勝者をジャッジ！</p>
-
-      <div class="judge-cards-grid">
-        <!-- MC KENTA 投票カード -->
-        <button id="btn-vote-kenta" type="button" class="judge-choice-card judge-choice-kenta">
+      <div class="judge-cards-grid" role="group" aria-label="今の自分に近い意見">
+        <button id="btn-vote-kenta" type="button" class="judge-choice-card judge-choice-kenta" aria-pressed="false">
           <div>
             <div class="judge-mc-label" style="color: #FF9F1C;">🔥 MC KENTA</div>
             <p id="judge-kenta-stance" class="judge-stance-text"></p>
           </div>
-          <span class="judge-tap-cta">🔥 KENTAに投票 (論破！)</span>
+          <span class="judge-tap-cta">KENTAの意見に近い</span>
         </button>
-
-        <!-- MC REINA 投票カード -->
-        <button id="btn-vote-reina" type="button" class="judge-choice-card judge-choice-reina">
+        <button id="btn-vote-reina" type="button" class="judge-choice-card judge-choice-reina" aria-pressed="false">
           <div>
             <div class="judge-mc-label" style="color: #00F0FF;">❄️ MC REINA</div>
             <p id="judge-reina-stance" class="judge-stance-text"></p>
           </div>
-          <span class="judge-tap-cta">❄️ REINAに投票 (論破！)</span>
+          <span class="judge-tap-cta">REINAの意見に近い</span>
         </button>
+        <button id="btn-reflect-undecided" type="button" class="judge-choice-card reflection-neutral" aria-pressed="false">どちらともいえない・まだ考え中</button>
       </div>
 
-      <!-- 投票後に表示される勝敗バー＆得票数 -->
-      <div id="judge-result-box" class="judge-result-box hidden">
-        <div id="judge-winner-banner" class="judge-winner-banner"></div>
-        <div class="tug-bar-container">
-          <div id="judge-bar-kenta" class="tug-bar-kenta" style="width: 50%;"></div>
-          <div id="judge-bar-reina" class="tug-bar-reina" style="width: 50%;"></div>
-        </div>
-        <div class="tug-stats-row">
-          <span style="color: #FF9F1C;">🔥 KENTA: <strong id="judge-pct-kenta">50%</strong> (<span id="judge-count-kenta">0票</span>)</span>
-          <span style="color: #00F0FF;">❄️ REINA: <strong id="judge-pct-reina">50%</strong> (<span id="judge-count-reina">0票</span>)</span>
-        </div>
+      <div id="reflection-panel" class="reflection-panel hidden">
+        <p id="reflection-selection" role="status" aria-live="polite"></p>
+        <label for="reflection-note">どの言葉に共感した？ 気になった点は？ <span>（任意）</span></label>
+        <textarea id="reflection-note" class="cyber-textarea" rows="3" maxlength="2000" placeholder="共感した理由や、もう少し知りたいことを自由に書いてみよう。"></textarea>
+        <p class="reflection-footnote">選び直しても、書かずに閉じても大丈夫です。</p>
       </div>
-
       <div class="judge-footer-btns">
-        <button id="btn-replay-battle" type="button" class="btn-sub-action">
-          🔁 もう一度バトルを聴く
-        </button>
-        <button id="btn-close-judge" type="button" class="btn-small">
-          ✕ ステージに戻る
-        </button>
+        <button id="btn-replay-battle" type="button" class="btn-sub-action">🔁 もう一度聴いて考える</button>
+        <button id="btn-close-judge" type="button" class="btn-small">ステージに戻る</button>
       </div>
     </div>
   </div>

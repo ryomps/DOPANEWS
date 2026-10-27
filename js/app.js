@@ -70,7 +70,9 @@
       this.judgeModal = new DOPANEWS.JudgeModal({
         onReplay: () => {
           this.audioController.seekTo(0);
-          this.audioController.togglePlay();
+          if (this.audioController.usingSynthFallback ? !this.audioController.synthPlaying : this.audioEl.paused) {
+            this.audioController.togglePlay();
+          }
         }
       });
 
@@ -86,7 +88,7 @@
           }
         },
         onEnded: () => {
-          this._setLog('🏁 バトル終了！⚖️ JUDGE TIME（投票画面）を表示します。');
+          this._setLog('💭 バトル終了。あなたはどっち派？ 今の自分の考えを振り返ってみよう。');
           this.judgeModal.open(this.currentBattleData);
         },
         onPlayStateChange: (isPlaying) => {

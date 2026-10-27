@@ -917,17 +917,6 @@ html, body {
   box-shadow: 0 10px 28px var(--reina-glow);
 }
 
-.judge-choice-card.voted-winner {
-  transform: scale(1.04);
-  box-shadow: 0 0 32px rgba(255, 230, 0, 0.65);
-  border-color: var(--neon-gold);
-}
-
-.judge-choice-card.voted-dim {
-  opacity: 0.45;
-  transform: scale(0.95);
-}
-
 .judge-mc-label {
   font-size: 16px;
   font-weight: 900;
@@ -960,108 +949,42 @@ html, body {
   color: #050811;
 }
 
-/* 投票結果バー */
-.judge-result-box {
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 14px;
-  padding: 14px;
-  margin-bottom: 14px;
-  animation: fadeInModal 0.3s ease-out;
+/* 自分の考えを振り返る */
+.judge-choice-card[aria-pressed="true"] {
+  outline: 3px solid var(--neon-gold);
+  outline-offset: 3px;
 }
-
-.judge-winner-banner {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  margin-bottom: 10px;
+.judge-choice-card:focus-visible,
+.judge-footer-btns button:focus-visible {
+  outline: 3px solid #FFFFFF;
+  outline-offset: 4px;
 }
-
-.judge-winner-banner.banner-kenta {
-  background: rgba(255, 42, 84, 0.22);
-  border: 1px solid var(--kenta-primary);
-}
-
-.judge-winner-banner.banner-reina {
-  background: rgba(0, 240, 255, 0.2);
-  border: 1px solid var(--reina-primary);
-}
-
-.winner-main {
-  font-size: 15px;
-  font-weight: 900;
-}
-
-.winner-sub {
-  font-size: 11.5px;
-  color: var(--neon-gold);
-  font-weight: 700;
-}
-
-.tug-bar-container {
-  width: 100%;
-  height: 22px;
-  border-radius: 99px;
-  overflow: hidden;
-  display: flex;
-  margin-bottom: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-}
-
-.tug-bar-kenta {
-  background: linear-gradient(90deg, var(--kenta-primary), var(--kenta-secondary));
-  height: 100%;
-  transition: width 0.65s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.tug-bar-reina {
-  background: linear-gradient(90deg, var(--reina-primary), var(--reina-secondary));
-  height: 100%;
-  transition: width 0.65s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.tug-stats-row {
-  display: flex;
-  justify-content: space-between;
+.reflection-neutral {
+  grid-column: 1 / -1;
+  align-items: center;
+  background: #1B2030;
+  border: 1px solid #8893AE;
+  color: var(--text-main);
+  font: inherit;
   font-size: 13px;
-  font-weight: 900;
 }
-
-.judge-footer-btns {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
+.reflection-panel {
+  text-align: left;
+  padding: 14px;
+  margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
 }
-
-/* ドーパミンパーティクル爆発演出 */
-.judge-burst-container {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-}
-
-.dopamine-particle {
-  position: absolute;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  animation: burstOut 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes burstOut {
-  0% {
-    opacity: 1;
-    transform: translate(0, 0) scale(1.2);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(var(--tx), var(--ty)) scale(0.2);
-  }
+.reflection-panel label { display: block; margin: 12px 0 6px; }
+.reflection-panel .cyber-textarea { min-height: 90px; }
+.reflection-footnote { color: var(--text-sub); font-size: 11px; margin-top: 8px; }
+.judge-footer-btns { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.judge-modal-card { max-height: calc(100dvh - 40px); overflow-y: auto; }
+@media (max-width: 480px) {
+  .judge-cards-grid { grid-template-columns: 1fr; }
+  .judge-modal-card { padding: 20px 16px; }
 }
 
 /* モバイル対応 */
