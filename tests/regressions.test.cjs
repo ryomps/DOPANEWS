@@ -295,3 +295,72 @@ test('failed autosave retains remote playback and allows retry', async () => {
   data.saveBattle = save; await app._saveCurrentBattle();
   assert.equal(savedRecords.length, 1);
 });
+
+test('live stage follows the active speaker and freezes cheering when playback pauses', () => {
+  const { app, get, tick } = setup();
+  app.audioController.startSynthBattle(64);
+  assert.equal(get('battle-stage').getAttribute('data-playing'), 'true');
+  assert.equal(get('stage-kenta-stance').textContent, app.currentBattleData.kenta_stance);
+  tick(17);
+  assert.equal(get('battle-stage').getAttribute('data-active-mc'), 'REINA');
+  assert.match(get('stage-speaking-status').textContent, /REINA が発言中/);
+  get('btn-play-pause').emit('click');
+  assert.equal(get('battle-stage').getAttribute('data-playing'), 'false');
+  assert.match(get('stage-speaking-status').textContent, /一時停止中/);
+  tick(10);
+  assert.equal(get('battle-stage').getAttribute('data-active-mc'), 'REINA');
+});
+
+test('verse arrows seek without resuming paused playback and stop at the first and last verse', () => {
+  const { app, get } = setup();
+  app.audioController.startSynthBattle(64);
+  get('btn-play-pause').emit('click');
+  assert.equal(get('btn-prev-verse').disabled, true);
+  get('btn-next-verse').emit('click');
+  assert.equal(app.stageView.currentVerseIndex, 1);
+  assert.equal(app.audioController.synthPausedAt, 16);
+  assert.equal(app.audioController.synthPlaying, false);
+  get('btn-next-verse').emit('click'); get('btn-next-verse').emit('click');
+  assert.equal(app.stageView.currentVerseIndex, 3);
+  assert.equal(get('btn-next-verse').disabled, true);
+  get('btn-prev-verse').emit('click');
+  assert.equal(app.audioController.synthPausedAt, 32);
+  get('battle-seek').value = '5'; get('battle-seek').emit('input');
+  assert.equal(app.stageView.currentVerseIndex, 0);
+  assert.equal(app.audioController.synthPausedAt, 5);
+  assert.equal(get('btn-prev-verse').disabled, true);
+});
+
+test('verse arrows skip unmatched Mureka sections and generation locks the new transport', () => {
+  const { app, data, get } = setup();
+  const battle = JSON.parse(JSON.stringify(data.PRESET_BATTLE_DATA));
+  battle.mureka_sync = { status: 'partial' };
+  battle.verses.forEach((v, i) => { v.synced_from_mureka = i === 0 || i === 2; v.start_time_sec = i * 10; });
+  app._applyBattleData(battle);
+  get('btn-next-verse').emit('click');
+  assert.equal(app.stageView.currentVerseIndex, 2);
+  assert.equal(get('btn-next-verse').disabled, true);
+  app._setGenerating(true);
+  assert.equal(get('btn-prev-verse').disabled, true);
+  assert.equal(get('battle-seek').disabled, true);
+  get('btn-prev-verse').emit('click');
+  assert.equal(app.stageView.currentVerseIndex, 2);
+  app._setGenerating(false);
+  assert.equal(get('btn-prev-verse').disabled, false);
+});
+
+test('volume controls both media audio and the synth master gain, including mute', () => {
+  const { app, get } = setup();
+  const updates = [];
+  app.audioController.audioCtx = { currentTime: 12 };
+  app.audioController.masterGain = { gain: { setValueAtTime: (value, time) => updates.push([value, time]) } };
+  get('battle-volume').value = '35'; get('battle-volume').emit('input');
+  assert.equal(get('battle-audio').volume, .35);
+  assert.equal(get('battle-volume-value').textContent, '35%');
+  assert.deepEqual(updates.at(-1), [.35, 12]);
+  get('battle-volume').value = '0'; get('battle-volume').emit('input');
+  assert.equal(get('battle-audio').volume, 0);
+  assert.deepEqual(updates.at(-1), [0, 12]);
+  app.audioController.setVolume(2);
+  assert.equal(get('battle-audio').volume, 1);
+});

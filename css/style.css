@@ -1275,3 +1275,57 @@ button:disabled { opacity: 0.5; cursor: wait; }
   .news-brand { font-size: 20px; }
   .news-brand small { font-size: 8px; margin-left: 7px; }
 }
+
+/* Dark news theme, matching the MC battle stage. */
+.news-screen { background: #090a0f; color: #f0f2f7; }
+.news-header { background: rgba(16,18,27,.97); border-bottom-color: #292d3c; }
+.news-brand { color: #f7f8fc; }
+.news-brand span, .news-bottom-note b span { color: #ff7959; }
+.news-brand small { color: #aeb6c8; }
+.news-edition, .news-section-label > span { color: #8995ad; }
+.news-back { color: #64dbe8; }
+.news-tabs { border-bottom-color: #2a2f40; }
+.news-tabs button { color: #b2bacd; }
+.news-tabs .active { background: #193b49; color: #93eff6; }
+.news-section-label h2 { border-left-color: #00d8ea; }
+.news-sample-note, .news-bottom-note { color: #8f99ae; }
+.news-card { background: transparent; border-bottom-color: #292e3e; }
+.news-card:hover h3 { color: #7ae5ee; }
+.news-meta { color: #929cb1; }
+.news-category, .news-card-bottom { color: #71cbd7; }
+.news-featured .news-card-copy > p { color: #acb4c6; }
+.news-bottom-note b { color: #a8b5cc; }
+.news-article h1 { color: #f3f4f8; }
+.news-byline, .news-article figcaption { color: #919cb2; }
+.news-disclaimer { color: #959fb4; border-left-color: #354054; }
+.news-article-body p { color: #d3d8e4; }
+.news-perspectives { background: #151925; border: 1px solid #2a3043; }
+.news-eyebrow, .news-perspectives b { color: #ffac73; }
+.news-perspectives p:last-child b { color: #66e2ef; }
+.news-end { color: #9ba6bc; }
+.news-battle-bar { background: rgba(16,18,27,.98); border-top-color: #2a3043; box-shadow: 0 -5px 24px #0004; }
+.news-battle-bar button { background: linear-gradient(110deg,#e34454,#b83150); color: #fff; }
+.news-battle-bar button:hover { background: linear-gradient(110deg,#f05363,#ce3b5c); }
+.news-battle-bar small { color: #9ca7bd; }
+.news-screen button:focus-visible, .news-brand:focus-visible { outline-color: #00d8ea; }
+
+/* Neon accents for the news reader. */
+.news-screen { background: radial-gradient(ellipse at 0 0,#00e5ff0c,transparent 48%), radial-gradient(ellipse at 100% 15%,#ff2a700a,transparent 45%), #090a0f; }
+.news-header { border-bottom-color: #00d8ea45; box-shadow: 0 1px 14px #00d8ea12; }
+.news-brand { text-shadow: 0 0 14px #00e5ff38; }
+.news-brand span { color: #ff588b; text-shadow: 0 0 12px #ff2a7070; }
+.news-brand small { text-shadow: none; }
+.news-back { color: #6cf2ff; text-shadow: 0 0 10px #00e5ff55; }
+.news-tabs .active { color: #8af7ff; background: #00d8ea16; box-shadow: inset 0 0 0 1px #00d8ea88,0 0 13px #00d8ea28; text-shadow: 0 0 8px #00d8ea60; }
+.news-tabs { border-bottom-color: #00d8ea28; }
+.news-section-label h2 { border-left-color: #00efff; text-shadow: 0 0 15px #00d8ea28; }
+.news-category, .news-card-bottom { color: #68e8f3; }
+.news-card:hover h3 { color: #9af8ff; text-shadow: 0 0 12px #00e5ff44; }
+.news-card img { box-shadow: 0 0 0 1px #00e5ff25,0 0 16px #00e5ff0d; }
+.news-perspectives { background: linear-gradient(125deg,#ff2a700b,#00e5ff09),#111520; border-color: #00d8ea40; box-shadow: 0 0 20px #00d8ea0d; }
+.news-perspectives b { color: #ff8da8; text-shadow: 0 0 10px #ff2a7050; }
+.news-perspectives p:last-child b { color: #6cf2ff; text-shadow: 0 0 10px #00e5ff50; }
+.news-battle-bar { border-top-color: #ff407655; box-shadow: 0 -2px 20px #ff2a7012; }
+.news-battle-bar button { background: linear-gradient(110deg,#ef285b,#b92386); border: 1px solid #ff7ca5; box-shadow: 0 0 10px #ff2a7050,inset 0 0 14px #ff89b525; text-shadow: 0 0 8px #ffffff40; }
+.news-battle-bar button:hover { background: linear-gradient(110deg,#ff396d,#d42b98); box-shadow: 0 0 20px #ff2a7070,inset 0 0 14px #ff89b535; }
+.news-screen button:focus-visible, .news-brand:focus-visible { outline-color: #73f5ff; }

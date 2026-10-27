@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="./css/battle-editorial.css" />
+  <link rel="stylesheet" href="./css/live-battle.css" />
 </head>
 <body class="news-mode">
   <section id="news-screen" class="news-screen" aria-label="ニュース">
@@ -159,7 +161,7 @@
 
     <!-- ==================== 右メインステージ：9:16 縦型バトル画面 ==================== -->
     <main class="stage-viewport">
-      <div id="battle-stage" class="battle-stage" data-active-mc="KENTA">
+      <div id="battle-stage" class="battle-stage live-battle-player" data-active-mc="KENTA" data-playing="false">
         <!-- 【拡張用レイヤー】Phase 2: カットイン演出（乱入・パンチライン特大エフェクト）オーバーレイ -->
         <div id="cutin-overlay-layer" class="cutin-overlay-layer" data-last-trigger="NONE"></div>
 
@@ -169,12 +171,9 @@
             <span class="live-pill"><span class="live-dot"></span>ON AIR BATTLE</span>
             <span id="stage-timer" class="stage-timer">00:00 / 00:45</span>
           </div>
-          <div class="stage-progress-track">
-            <div id="stage-progress-fill" class="stage-progress-fill"></div>
-          </div>
+          <span class="stage-topic-label">TODAY’S TOPIC / 議題</span>
           <h2 id="stage-battle-title" class="stage-battle-title">バトルタイトル読込中...</h2>
           <p id="stage-topic-summary" class="stage-topic-summary"></p>
-          <div id="stage-verse-pills" class="verse-pills-row"></div>
         </header>
 
         <!-- ステージ中央：男女MCアバター ＆ パンチライン字幕 ＆ 要点解説カード -->
@@ -182,19 +181,22 @@
           <!-- 男女MC対決アバター -->
           <div class="mc-versus-arena">
             <div id="mc-card-kenta" class="mc-fighter-card mc-kenta mc-active">
-              <div class="mc-avatar-ring">🔥</div>
-              <div class="mc-name" style="color: #FF9F1C;">MC KENTA</div>
-              <div class="mc-role-tag">DEEP MALE / 庶民・変革派</div>
+              <div class="mc-stage-portrait" aria-hidden="true"></div>
+              <span class="mc-speaking-label">ON MIC</span>
+              <div class="mc-crowd" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="mc-identity"><div class="mc-name">MC KENTA</div><p id="stage-kenta-stance" class="mc-stance"></p></div>
             </div>
 
             <div class="vs-emblem">VS</div>
 
             <div id="mc-card-reina" class="mc-fighter-card mc-reina mc-dim">
-              <div class="mc-avatar-ring">❄️</div>
-              <div class="mc-name" style="color: #00F0FF;">MC REINA</div>
-              <div class="mc-role-tag">COOL FEMALE / データ・合理派</div>
+              <div class="mc-stage-portrait" aria-hidden="true"></div>
+              <span class="mc-speaking-label">ON MIC</span>
+              <div class="mc-crowd" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="mc-identity"><div class="mc-name">MC REINA</div><p id="stage-reina-stance" class="mc-stance"></p></div>
             </div>
           </div>
+          <p id="stage-speaking-status" class="stage-speaking-status" role="status" aria-live="polite"></p>
 
           <!-- パンチライン字幕＆要点メモ＆韻バッジ -->
           <div class="punchline-card">
@@ -225,15 +227,21 @@
 
         <!-- ステージ下部：オーディオスペクトラム風ビジュアライザー＆再生コントロール -->
         <footer class="stage-bottom">
-          <canvas id="spectrum-canvas" class="spectrum-canvas" width="360" height="44"></canvas>
+          <div class="battle-seek-row">
+            <div class="stage-progress-track"><div id="stage-progress-fill" class="stage-progress-fill"></div></div>
+            <input id="battle-seek" type="range" min="0" max="48" value="0" step="0.1" aria-label="再生位置" />
+          </div>
+          <div id="stage-verse-pills" class="verse-pills-row" aria-label="バースを選択"></div>
+          <canvas id="spectrum-canvas" class="spectrum-canvas" width="360" height="24" aria-hidden="true"></canvas>
           <audio id="battle-audio"></audio>
           <div class="stage-controls-row">
-            <button id="btn-play-pause" type="button" class="btn-stage-play">
-              ▶ 再生
-            </button>
-            <button id="btn-open-judge" type="button" class="btn-stage-judge">
-              💭 あなたはどっち派？
-            </button>
+            <button id="btn-prev-verse" class="btn-verse-step" type="button" aria-label="前のバース" title="前のバース">❮</button>
+            <button id="btn-play-pause" type="button" class="btn-stage-play" aria-label="再生" title="再生">▶</button>
+            <button id="btn-next-verse" class="btn-verse-step" type="button" aria-label="次のバース" title="次のバース">❯</button>
+          </div>
+          <div class="battle-secondary-controls">
+            <label class="battle-volume" for="battle-volume"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3zM16 8q4 4 0 8M19 5q7 7 0 14"/></svg><input id="battle-volume" type="range" min="0" max="100" value="100" step="1" aria-label="音量"/><output id="battle-volume-value" for="battle-volume">100%</output></label>
+            <button id="btn-open-judge" type="button" class="btn-stage-judge">投票する <span aria-hidden="true">↗</span></button>
           </div>
         </footer>
       </div>

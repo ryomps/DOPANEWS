@@ -142,6 +142,9 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
       const audio = /^\/api\/library\/([a-f0-9]{32})\/audio$/.exec(route);
       if (audio && req.method === 'GET') { await sendFile(req, res, path.join(libraryDir, `${audio[1]}.mp3`), 'audio/mpeg'); return; }
       const publicPath = route === '/' ? '/index.html' : route;
+      if (req.method === 'GET' && /^\/css\/images\/[a-zA-Z0-9_-]+\.png$/.test(publicPath)) {
+        await sendFile(req, res, path.join(root, publicPath.slice(1)), 'image/png'); return;
+      }
       if (req.method === 'GET' && (publicPath === '/index.html' || /^\/(js|css)\/[a-zA-Z0-9_/-]+\.(js|css)$/.test(publicPath))) {
         const mime = publicPath.endsWith('.js') ? 'application/javascript' : publicPath.endsWith('.css') ? 'text/css' : 'text/html';
         await sendFile(req, res, path.join(root, publicPath.slice(1)), `${mime}; charset=utf-8`); return;
