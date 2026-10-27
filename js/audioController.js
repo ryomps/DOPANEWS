@@ -1,24 +1,31 @@
 /**
  * DOPANEWS Audio & Spectrum Visualizer Controller
- * - Suno APIのstreamAudioUrl / audioUrl またはローカルMP3を <audio> で再生
- * - MP3未選択時のプリセットテスト用に 112 BPM Boom Bap ビートシンセサイザーも内蔵
- * - 曲終了時（endedイベント）にコールバックを発火し、JUDGE TIME（投票画面）へ自動遷移
+ * - Mureka APIの生成音声URL または ローカルMP3を <audio> で確実に再生
+ * - 外部CDNのCORS制限による無音化を防ぐため、<audio>は直接出力しビジュアライザーを連動
+ * - ブラウザの自動再生ブロック時はステージ上の再生ボタンでワンタップ開始可能
  */
 (function (global) {
   const DOPANEWS = (global.DOPANEWS = global.DOPANEWS || {});
 
   class AudioController {
-    constructor({ audioElement, canvasElement, onTimeUpdate, onEnded, onPlayStateChange }) {
+    constructor({
+      audioElement,
+      canvasElement,
+      onTimeUpdate,
+      onEnded,
+      onPlayStateChange,
+      onAutoplayBlocked
+    }) {
       this.audio = audioElement;
       this.canvas = canvasElement;
       this.ctx2d = canvasElement ? canvasElement.getContext('2d') : null;
       this.onTimeUpdate = onTimeUpdate || (() => {});
       this.onEnded = onEnded || (() => {});
       this.onPlayStateChange = onPlayStateChange || (() => {});
+      this.onAutoplayBlocked = onAutoplayBlocked || (() => {});
 
       this.audioCtx = null;
       this.analyser = null;
-      this.mediaSource = null;
       this.dataArray = null;
       this.rafId = null;
 
@@ -79,28 +86,25 @@
       }
     }
 
+    /**
+     * 生成された楽曲URL（Mureka CDN等）またはローカルMP3をセットして再生
+     */
     async loadAndPlayUrl(url) {
       this.stopSynth();
       this.usingSynthFallback = false;
 
+      // 外部CDNのMP3がCORSエラーでブロックされないよう crossorigin 属性を外す
+      this.audio.removeAttribute('crossorigin');
       this.audio.src = url;
-      this.audio.currentTime = 0;
+      this.audio.load();
 
       try {
-        this._ensureAudioContext();
-        if (!this.mediaSource) {
-          try {
-            this.mediaSource = this.audioCtx.createMediaElementSource(this.audio);
-            this.mediaSource.connect(this.analyser);
-            this.analyser.connect(this.audioCtx.destination);
-          } catch {
-            // CORS制限時でも再生を継続
-          }
-        }
         await this.audio.play();
+        this.onPlayStateChange(true);
       } catch (err) {
-        console.warn('Auto-play warning:', err);
+        console.warn('Autoplay blocked by browser policy, waiting for user click:', err);
         this.onPlayStateChange(false);
+        this.onAutoplayBlocked(url);
       }
     }
 
@@ -171,14 +175,17 @@
         return;
       }
 
-      if (!this.audio.src) {
+      // 音声URLがまだセットされていない場合は112BPMシンセビートでバトル再生を開始
+      if (!this.audio.getAttribute('src')) {
         this.startSynthBattle(45);
         return;
       }
 
       if (this.audio.paused) {
-        this._ensureAudioContext();
-        this.audio.play();
+        this.audio.play().catch((err) => {
+          console.error('Audio play error, falling back to synth beat:', err);
+          this.startSynthBattle(45);
+        });
       } else {
         this.audio.pause();
       }
@@ -191,7 +198,7 @@
         this.onTimeUpdate(this.synthPausedAt, this.synthDuration);
         return;
       }
-      if (this.audio.src) {
+      if (this.audio.getAttribute('src')) {
         this.audio.currentTime = seconds;
       }
     }
@@ -264,22 +271,24 @@
         const barWidth = (width - gap * (barCount - 1)) / barCount;
 
         let freqValues = null;
-        if (this.analyser && this.dataArray) {
+        if (this.usingSynthFallback && this.analyser && this.dataArray) {
           this.analyser.getByteFrequencyData(this.dataArray);
           freqValues = this.dataArray;
         }
 
         const isPlaying = this.usingSynthFallback ? this.synthPlaying : !this.audio.paused;
-        const t = performance.now() / 160;
+        const t = performance.now() / 140;
 
         for (let i = 0; i < barCount; i++) {
           let ratio = 0.12;
           if (isPlaying) {
             const analyserVal = freqValues ? freqValues[i % freqValues.length] / 255 : 0;
             const waveVal =
-              0.25 +
-              0.45 * Math.abs(Math.sin(t + i * 0.45)) * Math.abs(Math.cos(t * 0.7 - i * 0.2));
-            ratio = Math.max(0.14, Math.min(0.98, analyserVal > 0.05 ? analyserVal : waveVal));
+              0.22 +
+              0.55 *
+                Math.abs(Math.sin(t + i * 0.55)) *
+                Math.abs(Math.cos(t * 0.85 - i * 0.25));
+            ratio = Math.max(0.15, Math.min(0.98, analyserVal > 0.05 ? analyserVal : waveVal));
           } else {
             ratio = 0.1 + 0.05 * Math.sin(t * 0.4 + i * 0.3);
           }

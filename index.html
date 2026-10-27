@@ -32,7 +32,7 @@
         </div>
         <div class="key-grid">
           <div class="input-group">
-            <label for="input-gemini-key">Gemini API Key (gemini-2.5-flash)</label>
+            <label for="input-gemini-key">① Gemini API Key (gemini-3.8-flash / 台本・作詞用)</label>
             <input
               id="input-gemini-key"
               type="password"
@@ -42,12 +42,12 @@
             />
           </div>
           <div class="input-group">
-            <label for="input-suno-key">Suno API Key (sunoapi.org互換 V3_5)</label>
+            <label for="input-suno-key">② Mureka API Key (api.mureka.ai / 公式ボーカル楽曲生成)</label>
             <input
               id="input-suno-key"
               type="password"
               class="cyber-input"
-              placeholder="Bearer トークン (任意：未入力時は内蔵ビート再生)"
+              placeholder="Mureka API Key を貼り付け (未入力時は内蔵ビート再生)"
               autocomplete="off"
             />
           </div>
@@ -58,19 +58,53 @@
         </div>
       </section>
 
-      <!-- ② ニュース記事全文入力 ＆ 生成スタート -->
+      <!-- ② ニュース記事入力（URL自動抽出 または 全文貼り付け） ＆ 生成スタート -->
       <section class="panel-section">
         <div class="section-header">
-          <h2 class="section-title">📰 ニュース記事全文入力</h2>
+          <h2 class="section-title">📰 ニュース記事入力 (URL または 本文)</h2>
         </div>
+
+        <!-- URL入力＆自動抽出バー -->
+        <div class="url-fetch-row">
+          <input
+            id="input-news-url"
+            type="url"
+            class="cyber-input url-input"
+            placeholder="🔗 https://news.yahoo.co.jp/... などの記事URLを貼付"
+            autocomplete="off"
+          />
+          <button id="btn-fetch-url" type="button" class="btn-url-fetch" title="URLからニュース本文を自動抽出します">
+            📥 URL読込
+          </button>
+        </div>
+
         <textarea
           id="input-news-article"
           class="cyber-textarea"
-          placeholder="ここに気になるニュース記事の本文を貼り付けてください..."
+          placeholder="上の欄にURLを入れて「📥 URL読込」を押すか、ここに直接ニュース本文（またはURL）を貼り付けてください..."
         ></textarea>
 
+        <!-- 🎛️ ビート＆ボーカル Style 指定欄 -->
+        <div class="input-group" style="margin-top: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label for="input-battle-style">🎛️ ビート＆ボーカル Style (Murekaへ送る曲調・BPM指定)</label>
+            <select id="select-style-preset" class="cyber-input" style="width: auto; padding: 2px 6px; font-size: 10.5px;">
+              <option value="Japanese Pop Rap, Educational Rap, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Male and Female Duet, Groovy Funky Beat, 115 BPM">🎵 Pop & Educational Funky Rap (115 BPM・標準)</option>
+              <option value="Japanese Hip Hop MC Battle, Male and Female Duet, Alternate Rapping, Clear Male Rapper vs Clear Female Rapper, Hard Boom Bap Beat, 95 BPM">🔥 王道Boom Bap (95 BPM)</option>
+              <option value="Japanese Trap Rap Battle, Male and Female Duet, Heavy 808 Bass, Clear Male Rap vs Fast Female Rap, Dark Street Vibe, 136 BPM">⚡ 高速Trap / 808 (136 BPM)</option>
+              <option value="Japanese Jazz Hip Hop Battle, Male and Female Duet, Melodic Piano Loop, Groovy Drums, Clear Male Vocal vs Clear Female Vocal, 105 BPM">🎷 メロディックJazz Rap (105 BPM)</option>
+            </select>
+          </div>
+          <input
+            id="input-battle-style"
+            type="text"
+            class="cyber-input"
+            value="Japanese Pop Rap, Educational Rap, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Male and Female Duet, Groovy Funky Beat, 115 BPM"
+          />
+        </div>
+
         <button id="btn-start-battle" type="button" class="btn-fire-start">
-          🔥 バトル生成スタート (Gemini ➔ Suno)
+          🔥 8小節×4本 バトル生成スタート (Gemini ➔ Mureka)
         </button>
 
         <div class="sub-action-row">
@@ -90,15 +124,15 @@
         </div>
         <div class="step-progress-bar">
           <div id="step-1-gemini" class="step-item">① Gemini作詞中</div>
-          <div id="step-2-suno" class="step-item">② Suno収録中</div>
-          <div id="step-3-battle" class="step-item step-done">③ バトル開始！</div>
+          <div id="step-2-suno" class="step-item">② Mureka収録中</div>
+          <div id="step-3-battle" class="step-item">③ バトル開始！</div>
         </div>
         <div id="generation-status-log" class="status-log">
-          プリセットニュース「選択的週休3日制」読込済み。右ステージの「▶ PLAY BATTLE」または「🎧 プリセット即再生デモ」ですぐに体験できます。
+          ニュースのURLまたは本文を入力し、「🔥 バトル生成スタート」を押してください！
         </div>
       </section>
 
-      <!-- ④ テスト用フォールバック（手元のMP3読み込み＆Sunoプロンプト確認） -->
+      <!-- ④ テスト用フォールバック（手元のMP3読み込み＆生成プロンプト確認） -->
       <section class="panel-section">
         <div class="section-header">
           <h2 class="section-title">🛠️ テスト用MP3読込 ＆ 生成データ確認</h2>
@@ -119,9 +153,9 @@
         </div>
 
         <details class="debug-details" style="margin-top: 10px;">
-          <summary>▼ Suno送信メタタグ付き歌詞 ＆ Gemini JSONを表示</summary>
+          <summary>▼ Mureka送信メタタグ付き歌詞 ＆ Gemini JSONを表示</summary>
           <div class="input-group" style="margin-top: 8px;">
-            <label for="suno-prompt-preview">Suno Prompt (男女ボーカル切替メタタグ付き)</label>
+            <label for="suno-prompt-preview">Lyrics Prompt (男女ボーカル切替メタタグ付き)</label>
             <textarea id="suno-prompt-preview" class="cyber-textarea" readonly style="min-height: 90px; font-size: 11px;"></textarea>
           </div>
           <pre id="gemini-json-preview" class="debug-pre"></pre>
@@ -198,10 +232,10 @@
         <!-- ステージ下部：オーディオスペクトラム風ビジュアライザー＆再生コントロール -->
         <footer class="stage-bottom">
           <canvas id="spectrum-canvas" class="spectrum-canvas" width="360" height="44"></canvas>
-          <audio id="battle-audio" crossorigin="anonymous"></audio>
+          <audio id="battle-audio"></audio>
           <div class="stage-controls-row">
             <button id="btn-play-pause" type="button" class="btn-stage-play">
-              ▶ PLAY BATTLE
+              ▶ PLAY BATTLE (再生)
             </button>
             <button id="btn-open-judge" type="button" class="btn-stage-judge">
               ⚖️ 投票へ進む (JUDGE)
