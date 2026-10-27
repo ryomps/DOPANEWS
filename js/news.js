@@ -133,6 +133,8 @@
       app._stopCurrentBattle();
       app.newsUrlInputEl.value = ''; app.lastFetchedUrl = '';
       app.articleInputEl.value = a.title+'\n\n'+a.paragraphs.join('\n\n');
+      app.currentArticleText = app.articleInputEl.value;
+      app.currentSynthDuration = 64;
       const lines = a.stances.map((stance,i) => [stance, i ? '選べる未来を ここから描こう' : 'その理想の前に 現場を見よう', a.summary, i ? '期待だけじゃない 課題も確かめる' : 'その負担は誰が 引き受ける', a.paragraphs[i+2].split('。')[0], i ? '小さく試して 改善重ねよう' : '取り残される声にも 応えよう', '違う視点を 重ねてみよう', 'このニュースから 明日を考えよう']);
       app._applyBattleData(D.normalizeBattleData({title:a.title, topic_summary:'サンプル台本｜'+a.summary, kenta_stance:a.stances[0], reina_stance:a.stances[1], verses:[0,1,0,1].map((n,i)=>({speaker:n?'REINA':'KENTA',lyric:(i<2?lines[n]:[...lines[n].slice(4),...lines[n].slice(0,4)]).join('\n'),point_summary:a.stances[n],rhyme_words:'未来 × 期待 / 視点 × 起点',start_time_sec:i*16}))}));
       document.body.classList.remove('news-mode'); returnBtn.hidden = false;

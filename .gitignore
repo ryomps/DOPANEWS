@@ -3,3 +3,6 @@
 .env.*
 *.key
 config.local.*
+
+# Generated music and private local history
+.local/

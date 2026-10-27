@@ -1,5 +1,4 @@
-/* ==========================================================================
-   DOPANEWS - Street MC Battle × Short Video News UI
+/* ===================================================================   DOPANEWS - Street MC Battle × Short Video News UI
    Base: #090A0F | KENTA: Flame Red/Amber (#FF2A54 / #FF9F1C) | REINA: Cyber Cyan (#00F0FF / #0066FF)
    ========================================================================== */
 
@@ -50,8 +49,7 @@ html, body {
     linear-gradient(180deg, #090A0F 0%, #06070B 100%);
 }
 
-/* ==========================================================================
-   左パネル：設定＆記事入力ドロワー
+/* ===================================================================   左パネル：設定＆記事入力ドロワー
    ========================================================================== */
 .control-drawer {
   display: flex;
@@ -391,8 +389,7 @@ html, body {
   color: #9EE6FF;
 }
 
-/* ==========================================================================
-   右メインエリア：9:16 縦型ショート動画風バトルステージ
+/* ===================================================================   右メインエリア：9:16 縦型ショート動画風バトルステージ
    ========================================================================== */
 .stage-viewport {
   position: relative;
@@ -898,8 +895,7 @@ html, body {
   z-index: 15;
 }
 
-/* ==========================================================================
-   ⚖️ JUDGE TIME (投票モーダル／オーバーレイ)
+/* ===================================================================   ⚖️ JUDGE TIME (投票モーダル／オーバーレイ)
    ========================================================================== */
 .judge-modal-overlay {
   position: fixed;
@@ -1266,3 +1262,8 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .cutin-vs-letters, .cutin-vs-hint { transition: none; }
 }
+.saved-battle-list { display: grid; gap: 10px; margin-top: 12px; max-height: 300px; overflow-y: auto; }
+.saved-battle-item { padding: 12px; border: 1px solid #384055; border-radius: 10px; background: #101421; }
+.saved-battle-item p { font-size: 12px; line-height: 1.5; margin-bottom: 6px; }
+.saved-battle-item small { display: block; color: var(--text-sub); margin-bottom: 8px; }
+button:disabled { opacity: 0.5; cursor: wait; }

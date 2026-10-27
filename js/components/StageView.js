@@ -1,7 +1,7 @@
 /**
  * DOPANEWS 9:16 Vertical Battle Stage Component
  * - 8小節（8行）× 4本 のMCバトル表示＆現在歌っている小節のリアルタイムハイライト
- * - Murekaの lyrics_sections タイムスタンプ または 楽曲実尺 (durationSec) に基づく完全同期
+ * - Murekaの返却歌詞と台本の照合結果に基づく表示同期（歌手識別ではない）
  * - 【拡張用】ファクトチェッカー表示スロット (#fact-check-slot) と
  *   カットイン演出用オーバーレイレイヤー (#cutin-overlay-layer) を内蔵
  */
@@ -94,6 +94,7 @@
         btn.className = `verse-pill ${verse.speaker === 'REINA' ? 'pill-reina' : 'pill-kenta'}`;
         btn.textContent = `V${idx + 1} ${verse.speaker}`;
         btn.title = `${verse.point_summary}`;
+        btn.disabled = Boolean(this.battleData.mureka_sync && !verse.synced_from_mureka);
         btn.addEventListener('click', () => {
           const windows = this.getVerseWindows(this.lastKnownDuration);
           const targetStart = windows[idx] ? windows[idx].start : verse.start_time_sec;
@@ -120,6 +121,21 @@
       }
 
       if (!this.battleData || !this.battleData.verses.length) return;
+
+      // Mureka timings are used only for lines matched to the script, never equal divisions.
+      if (this.battleData.mureka_sync) {
+        const active = (this.battleData.mureka_timeline || []).filter((line) =>
+          currentTimeSec >= line.start_sec && currentTimeSec < line.end_sec);
+        const speakers = new Set(active.map((line) => line.verse_index));
+        if (speakers.size !== 1 || speakers.has(null)) {
+          this._showUnassignedPart(active.length > 0);
+          return;
+        }
+        const verseIndex = active[0].verse_index;
+        if (verseIndex !== this.currentVerseIndex) this.activateVerse(verseIndex, true);
+        this._highlightCurrentBar(verseIndex, currentTimeSec);
+        return;
+      }
 
       const windows = this.getVerseWindows(this.lastKnownDuration);
       let targetIdx = 0;
@@ -218,7 +234,9 @@
           void this.lyricBoxEl.offsetWidth;
           this.lyricBoxEl.classList.add('lyric-slam-anim');
         }
-        const lines = verse.lyric.split('\n').filter(Boolean);
+        const lines = verse.timed_lines?.length
+          ? verse.timed_lines.map((line) => line.text)
+          : verse.lyric.split('\n').filter(Boolean);
         this.lyricBoxEl.innerHTML = lines
           .map(
             (line, i) =>
@@ -237,6 +255,27 @@
       }
 
       this._renderFutureFactCheckSlot(verse);
+    }
+
+    _showUnassignedPart(hasLyrics) {
+      this.currentVerseIndex = -1;
+      this.currentLineIndex = -1;
+      this.stageEl?.setAttribute('data-active-mc', 'NONE');
+      [this.cardKentaEl, this.cardReinaEl].forEach((card) => {
+        card?.classList.remove('mc-active');
+        card?.classList.add('mc-dim');
+      });
+      this.versePillsEl?.querySelectorAll('.verse-pill').forEach((pill) => pill.classList.remove('active'));
+      if (this.activeSpeakerBadgeEl) {
+        this.activeSpeakerBadgeEl.textContent = hasLyrics ? '歌詞の担当を確認できません' : '間奏・歌詞の時刻情報なし';
+        this.activeSpeakerBadgeEl.className = 'active-speaker-badge';
+      }
+      if (this.lyricBoxEl) this.lyricBoxEl.textContent = hasLyrics
+        ? '元の台本と照合できないため、MC表示を保留しています。' : '次のリリックを待っています。';
+      if (this.sectionTagEl) this.sectionTagEl.textContent = '';
+      if (this.rhymeBadgeEl) this.rhymeBadgeEl.textContent = '—';
+      if (this.pointSummaryEl) this.pointSummaryEl.textContent = '—';
+      if (this.factCheckSlotEl) this.factCheckSlotEl.dataset.factStatus = 'UNVERIFIED';
     }
 
     _renderFutureFactCheckSlot(verse) {

@@ -14,7 +14,8 @@
       onTimeUpdate,
       onEnded,
       onPlayStateChange,
-      onAutoplayBlocked
+      onAutoplayBlocked,
+      onPlaybackError
     }) {
       this.audio = audioElement;
       this.canvas = canvasElement;
@@ -23,6 +24,8 @@
       this.onEnded = onEnded || (() => {});
       this.onPlayStateChange = onPlayStateChange || (() => {});
       this.onAutoplayBlocked = onAutoplayBlocked || (() => {});
+      this.onPlaybackError = onPlaybackError || (() => {});
+      this.playbackVersion = 0;
 
       this.audioCtx = null;
       this.analyser = null;
@@ -90,6 +93,7 @@
      * 生成された楽曲URL（Mureka CDN等）またはローカルMP3をセットして再生
      */
     async loadAndPlayUrl(url) {
+      const version = ++this.playbackVersion;
       this.stopSynth();
       this.usingSynthFallback = false;
 
@@ -100,15 +104,17 @@
 
       try {
         await this.audio.play();
-        this.onPlayStateChange(true);
+        if (version === this.playbackVersion) this.onPlayStateChange(true);
       } catch (err) {
-        console.warn('Autoplay blocked by browser policy, waiting for user click:', err);
+        if (version !== this.playbackVersion) return;
         this.onPlayStateChange(false);
-        this.onAutoplayBlocked(url);
+        if (err.name === 'NotAllowedError') this.onAutoplayBlocked(url);
+        else this.onPlaybackError(err);
       }
     }
 
     stopPlayback() {
+      this.playbackVersion++;
       this.stopSynth();
       this.audio.pause();
       this.audio.removeAttribute('src');
@@ -192,13 +198,20 @@
       }
 
       if (this.audio.paused) {
+        const version = this.playbackVersion;
         this.audio.play().catch((err) => {
-          console.error('Audio play error, falling back to synth beat:', err);
-          this.startSynthBattle(45);
+          if (version !== this.playbackVersion) return;
+          this.onPlayStateChange(false);
+          this.onPlaybackError(err);
         });
       } else {
         this.audio.pause();
       }
+    }
+
+    pause() {
+      if (this.usingSynthFallback) this.pauseSynth();
+      else this.audio.pause();
     }
 
     seekTo(seconds) {
