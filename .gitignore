@@ -1,0 +1,5 @@
+# API Keys & Local Env (絶対Gitに上げないファイル)
+.env
+.env.*
+*.key
+config.local.*

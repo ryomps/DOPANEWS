@@ -1,7 +1,8 @@
 /**
  * DOPANEWS Main Application Controller
- * - localStorage による Gemini / Suno APIキー永続化
- * - 進捗ステップバー（①Gemini作詞中 ➔ ②Sunoレコーディング中 ➔ ③バトル開始！）制御
+ * - ニュースURLからの本文自動抽出（URL欄・本文欄のどちらにURLを貼っても自動判定）
+ * - localStorage による Gemini / Mureka APIキー永続化
+ * - 進捗ステップバー（①Gemini作詞中 ➔ ②Mureka収録中 ➔ ③バトル開始！）制御
  * - プリセットデータ＆ローカルMP3テストフォールバック制御
  */
 (function (global) {
@@ -9,13 +10,14 @@
 
   const STORAGE_KEYS = {
     GEMINI_KEY: 'dopanews_gemini_api_key',
-    SUNO_KEY: 'dopanews_suno_api_key'
+    MUREKA_KEY: 'dopanews_mureka_api_key'
   };
 
   class DopaNewsApp {
     constructor() {
       this.currentBattleData = DOPANEWS.PRESET_BATTLE_DATA;
       this.isGenerating = false;
+      this.lastFetchedUrl = '';
 
       this._cacheDom();
       this._initComponents();
@@ -28,11 +30,15 @@
 
     _cacheDom() {
       this.geminiKeyInputEl = document.getElementById('input-gemini-key');
-      this.sunoKeyInputEl = document.getElementById('input-suno-key');
+      this.murekaKeyInputEl = document.getElementById('input-suno-key');
       this.saveKeysBtnEl = document.getElementById('btn-save-keys');
       this.keySavedToastEl = document.getElementById('key-saved-toast');
 
+      this.newsUrlInputEl = document.getElementById('input-news-url');
+      this.fetchUrlBtnEl = document.getElementById('btn-fetch-url');
       this.articleInputEl = document.getElementById('input-news-article');
+      this.stylePresetSelectEl = document.getElementById('select-style-preset');
+      this.battleStyleInputEl = document.getElementById('input-battle-style');
       this.generateBtnEl = document.getElementById('btn-start-battle');
       this.geminiOnlyBtnEl = document.getElementById('btn-gemini-only');
       this.presetTestBtnEl = document.getElementById('btn-load-preset');
@@ -93,8 +99,17 @@
         },
         onPlayStateChange: (isPlaying) => {
           if (this.playPauseBtnEl) {
-            this.playPauseBtnEl.innerHTML = isPlaying ? '⏸ PAUSE' : '▶ PLAY BATTLE';
+            this.playPauseBtnEl.innerHTML = isPlaying ? '⏸ PAUSE (一時停止)' : '▶ PLAY BATTLE (再生)';
             this.playPauseBtnEl.classList.toggle('playing', isPlaying);
+          }
+        },
+        onAutoplayBlocked: () => {
+          this._setLog(
+            '🎵 楽曲の準備が完了しました！ブラウザの自動再生制限のため、右ステージ下の「▶ PLAY BATTLE (再生)」ボタンを押してスタートしてください🔥'
+          );
+          if (this.playPauseBtnEl) {
+            this.playPauseBtnEl.style.boxShadow = '0 0 20px #FFE600';
+            this.playPauseBtnEl.style.borderColor = '#FFE600';
           }
         }
       });
@@ -103,9 +118,12 @@
     _loadSavedKeys() {
       try {
         const gKey = localStorage.getItem(STORAGE_KEYS.GEMINI_KEY) || '';
-        const sKey = localStorage.getItem(STORAGE_KEYS.SUNO_KEY) || '';
+        const mKey =
+          localStorage.getItem(STORAGE_KEYS.MUREKA_KEY) ||
+          localStorage.getItem('dopanews_suno_api_key') ||
+          '';
         if (this.geminiKeyInputEl) this.geminiKeyInputEl.value = gKey;
-        if (this.sunoKeyInputEl) this.sunoKeyInputEl.value = sKey;
+        if (this.murekaKeyInputEl) this.murekaKeyInputEl.value = mKey;
       } catch {
         // ignore
       }
@@ -114,9 +132,9 @@
     _saveKeys() {
       try {
         const gKey = this.geminiKeyInputEl?.value.trim() || '';
-        const sKey = this.sunoKeyInputEl?.value.trim() || '';
+        const mKey = this.murekaKeyInputEl?.value.trim() || '';
         localStorage.setItem(STORAGE_KEYS.GEMINI_KEY, gKey);
-        localStorage.setItem(STORAGE_KEYS.SUNO_KEY, sKey);
+        localStorage.setItem(STORAGE_KEYS.MUREKA_KEY, mKey);
         if (this.keySavedToastEl) {
           this.keySavedToastEl.textContent = '✓ APIキーをlocalStorageに保存しました';
           setTimeout(() => {
@@ -130,13 +148,39 @@
 
     _bindEvents() {
       this.geminiKeyInputEl?.addEventListener('change', () => this._saveKeys());
-      this.sunoKeyInputEl?.addEventListener('change', () => this._saveKeys());
+      this.murekaKeyInputEl?.addEventListener('change', () => this._saveKeys());
       this.saveKeysBtnEl?.addEventListener('click', () => this._saveKeys());
+
+      // URLから記事本文を読み込むボタン＆Enterキー対応
+      this.fetchUrlBtnEl?.addEventListener('click', () => this.handleFetchUrl());
+      this.newsUrlInputEl?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          this.handleFetchUrl();
+        }
+      });
+
+      // Styleプリセット選択時にテキストボックスへ反映
+      this.stylePresetSelectEl?.addEventListener('change', (e) => {
+        if (this.battleStyleInputEl && e.target.value) {
+          this.battleStyleInputEl.value = e.target.value;
+          if (this.currentBattleData) {
+            this.currentBattleData.suno_style = e.target.value;
+          }
+        }
+      });
+
+      this.battleStyleInputEl?.addEventListener('input', (e) => {
+        if (this.currentBattleData && e.target.value.trim()) {
+          this.currentBattleData.suno_style = e.target.value.trim();
+        }
+      });
 
       this.generateBtnEl?.addEventListener('click', () => this.handleFullBattleGeneration());
       this.geminiOnlyBtnEl?.addEventListener('click', () => this.handleGeminiOnlyGeneration());
 
       this.presetTestBtnEl?.addEventListener('click', () => {
+        if (this.newsUrlInputEl) this.newsUrlInputEl.value = '';
         this.articleInputEl.value = DOPANEWS.PRESET_NEWS_ARTICLE;
         this._applyBattleData(DOPANEWS.PRESET_BATTLE_DATA);
         this._setStepState(3);
@@ -169,13 +213,73 @@
       });
     }
 
+    /**
+     * ニュースURLから本文を抽出してテキストエリアにセットする
+     */
+    async handleFetchUrl(customUrl) {
+      const targetUrl = (customUrl || this.newsUrlInputEl?.value || '').trim();
+      if (!targetUrl) {
+        this._setLog('⚠️ ニュース記事のURLを入力してください。', true);
+        this.newsUrlInputEl?.focus();
+        return null;
+      }
+
+      if (this.fetchUrlBtnEl) {
+        this.fetchUrlBtnEl.disabled = true;
+        this.fetchUrlBtnEl.textContent = '⏳ 読込中...';
+      }
+      this._setLog(`🔗 URLからニュース記事の本文を自動抽出中... (${targetUrl.slice(0, 45)}...)`);
+
+      try {
+        const articleText = await DOPANEWS.fetchArticleFromUrl(targetUrl);
+        this.articleInputEl.value = articleText;
+        this.lastFetchedUrl = targetUrl;
+        this._setLog(
+          `✅ URLからニュース本文を抽出しました！（${articleText.length.toLocaleString()}文字）続けて「🔥 バトル生成スタート」を押せます。`
+        );
+        return articleText;
+      } catch (err) {
+        this._setLog(`❌ URL読込エラー: ${err.message}`, true);
+        throw err;
+      } finally {
+        if (this.fetchUrlBtnEl) {
+          this.fetchUrlBtnEl.disabled = false;
+          this.fetchUrlBtnEl.textContent = '📥 URL読込';
+        }
+      }
+    }
+
+    /**
+     * テキストエリアまたはURL欄にURLが入っている場合、自動で本文を取得してから返す
+     */
+    async _resolveArticleTextBeforeGenerate() {
+      const urlFieldVal = this.newsUrlInputEl?.value.trim() || '';
+      const textFieldVal = this.articleInputEl?.value.trim() || '';
+
+      // 1) テキストエリア自体にURLが1行だけ貼られている場合
+      if (/^https?:\/\/\S+$/i.test(textFieldVal)) {
+        if (this.newsUrlInputEl) this.newsUrlInputEl.value = textFieldVal;
+        return await this.handleFetchUrl(textFieldVal);
+      }
+
+      // 2) URL欄に新しいURLが入力されていて、まだ読み込んでいない場合
+      if (
+        /^https?:\/\/\S+$/i.test(urlFieldVal) &&
+        urlFieldVal !== this.lastFetchedUrl &&
+        (textFieldVal === '' || textFieldVal === DOPANEWS.PRESET_NEWS_ARTICLE)
+      ) {
+        return await this.handleFetchUrl(urlFieldVal);
+      }
+
+      return textFieldVal;
+    }
+
     async handleFullBattleGeneration() {
       if (this.isGenerating) return;
       this._saveKeys();
 
       const geminiKey = this.geminiKeyInputEl?.value.trim();
-      const sunoKey = this.sunoKeyInputEl?.value.trim();
-      const articleText = this.articleInputEl?.value.trim();
+      const murekaKey = this.murekaKeyInputEl?.value.trim();
 
       if (!geminiKey) {
         this._setLog(
@@ -190,37 +294,50 @@
       this.generateBtnEl.disabled = true;
 
       try {
+        const articleText = await this._resolveArticleTextBeforeGenerate();
+
         this._setStepState(1);
         this._setLog(
-          '① Gemini 2.5 Flash がニュースの対立軸を抽出し、KENTA vs REINA のラップ歌詞を作詞中...'
+          '① Gemini 3.8 Flash がニュースの対立軸を抽出し、KENTA vs REINA のラップ歌詞を作詞中...'
         );
 
-        const battleData = await DOPANEWS.generateBattleScriptWithGemini(articleText, geminiKey);
+        const battleData = await DOPANEWS.generateBattleScriptWithGemini(
+          articleText,
+          geminiKey,
+          (progressMsg) => this._setLog(`① ${progressMsg}`)
+        );
+        // ユーザーが画面上で指定したStyleプロンプトを優先適用
+        if (this.battleStyleInputEl?.value.trim()) {
+          battleData.suno_style = this.battleStyleInputEl.value.trim();
+        }
         this._applyBattleData(battleData);
 
         this._setStepState(2);
-        if (!sunoKey) {
+        if (!murekaKey) {
           this._setLog(
-            '⚠️ Suno APIキーが未入力のため、Gemini生成リリック＋内蔵112BPMビートでステージを開始します！'
+            '⚠️ Mureka APIキーが未入力のため、Gemini生成リリック＋内蔵112BPMビートでステージを開始します！'
           );
           this._setStepState(3);
-          this.audioController.startSynthBattle(45);
+          this.audioController.startSynthBattle(64);
           return;
         }
 
         this._setLog(
-          '② Suno API (V3_5) にメタタグ付き歌詞を送信し、男女マイクリレー楽曲をレコーディング中...'
+          '② Mureka 公式API に8小節×4本の歌詞＆Styleを送信し、男女マイクリレー楽曲をレコーディング中...'
         );
-        const { audioUrl } = await DOPANEWS.generateBattleTrackWithSuno(
+        const { audioUrl } = await DOPANEWS.generateBattleTrackWithMureka(
           battleData,
-          sunoKey,
+          murekaKey,
           (progressMsg) => {
             this._setLog(`② ${progressMsg}`);
           }
         );
 
+        // Murekaから取得した正確なタイムスタンプをステージとJSONプレビューに再反映
+        this._applyBattleData(battleData);
+
         this._setStepState(3);
-        this._setLog('③ バトル楽曲が完成！ステージでマイクリレーを自動再生します🔥');
+        this._setLog('③ Murekaバトル楽曲が完成！ステージでマイクリレーを自動再生します🔥');
         await this.audioController.loadAndPlayUrl(audioUrl);
       } catch (err) {
         console.error(err);
@@ -236,7 +353,6 @@
       this._saveKeys();
 
       const geminiKey = this.geminiKeyInputEl?.value.trim();
-      const articleText = this.articleInputEl?.value.trim();
 
       if (!geminiKey) {
         this._setLog('⚠️ Gemini APIキーを入力してください。', true);
@@ -246,9 +362,15 @@
 
       this.isGenerating = true;
       try {
+        const articleText = await this._resolveArticleTextBeforeGenerate();
+
         this._setStepState(1);
-        this._setLog('① Gemini 2.5 Flash でニュース記事からラップバトル歌詞JSONを生成中...');
-        const battleData = await DOPANEWS.generateBattleScriptWithGemini(articleText, geminiKey);
+        this._setLog('① Gemini 3.8 Flash でニュース記事からラップバトル歌詞JSONを生成中...');
+        const battleData = await DOPANEWS.generateBattleScriptWithGemini(
+          articleText,
+          geminiKey,
+          (progressMsg) => this._setLog(`① ${progressMsg}`)
+        );
         this._applyBattleData(battleData);
         this._setStepState(3);
         this._setLog(
