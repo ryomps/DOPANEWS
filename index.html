@@ -9,7 +9,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./css/style.css" />
 </head>
-<body>
+<body class="news-mode">
+  <section id="news-screen" class="news-screen" aria-label="ニュース">
+    <header class="news-header"><div class="news-header-inner">
+      <button id="news-back" class="news-back" type="button" hidden>〈 戻る</button>
+      <a class="news-brand" href="#" aria-label="DOPANEWS トップ">DOPA<span>NEWS</span><small>ニュースを、別の視点で。</small></a>
+      <span class="news-edition">NEWS × MC BATTLE</span>
+    </div></header>
+    <main id="news-content" class="news-content"></main>
+    <footer id="news-battle-bar" class="news-battle-bar" hidden><div><span>このニュースを、ふたつの視点で。</span><button id="news-start-battle" type="button">MCバトル開始 <span aria-hidden="true">→</span></button><small>サンプル台本＋デモビートで再生</small></div></footer>
+  </section>
+  <button id="return-to-news" class="return-to-news" type="button" hidden>〈 記事に戻る</button>
   <button id="btn-toggle-drawer" class="mobile-drawer-btn" type="button">⚙️ 設定・記事入力</button>
 
   <div class="app-layout">
@@ -291,5 +301,6 @@
   <script src="./js/components/StageView.js"></script>
   <script src="./js/components/JudgeModal.js"></script>
   <script src="./js/app.js"></script>
+  <script src="./js/news.js"></script>
 </body>
 </html>
