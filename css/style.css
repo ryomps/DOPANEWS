@@ -1111,22 +1111,22 @@ html, body {
 .news-mode .news-screen { display: block; }
 .news-mode .app-layout, .news-mode #btn-toggle-drawer { display: none; }
 .news-header { position: sticky; top: 0; z-index: 5; background: rgba(255,255,255,.97); border-bottom: 1px solid #e3e8e9; }
-.news-header-inner { max-width: 1060px; margin: auto; min-height: 91px; padding: 18px 32px; display: flex; align-items: center; gap: 24px; }
-.news-brand { color: #102f40; text-decoration: none; font-size: 27px; font-weight: 900; letter-spacing: -1.3px; line-height: 1.1; }
+.news-header-inner { max-width: 1060px; margin: auto; min-height: 52px; padding: 10px 24px; display: flex; align-items: center; gap: 24px; }
+.news-brand { color: #102f40; text-decoration: none; font-size: 25px; font-weight: 900; letter-spacing: -1.3px; line-height: 1.1; white-space: nowrap; }
 .news-brand span, .news-bottom-note b span { color: #d85239; }
-.news-brand small { display: block; font-size: 10px; font-weight: 500; letter-spacing: 1px; margin-top: 8px; }
+.news-brand small { display: inline-block; vertical-align: middle; font-size: 10px; font-weight: 500; letter-spacing: .02em; margin-left: 12px; }
 .news-edition { margin-left: auto; font-size: 10px; letter-spacing: 2px; color: #6b7c83; }
 .news-back { border: 0; background: none; color: #176084; cursor: pointer; padding: 10px 0; font: inherit; white-space: nowrap; }
-.news-content { max-width: 1060px; padding: 18px 24px 32px; margin: auto; }
+.news-content { max-width: 1060px; padding: 10px 24px 32px; margin: auto; }
 .news-intro { margin: 0 0 32px; }
 .news-eyebrow { color: #b64e35; font-size: 10px; letter-spacing: 2px; font-weight: 700; }
 .news-intro h1 { font-size: clamp(23px,3.5vw,34px); margin: 10px 0; letter-spacing: .02em; }
 .news-intro p { color: #68777e; font-size: 13px; line-height: 1.9; }
-.news-tabs { display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; border-bottom: 1px solid #dce4e7; padding-bottom: 8px; margin-bottom: 16px; }
+.news-tabs { display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; border-bottom: 1px solid #dce4e7; padding-bottom: 6px; margin-bottom: 10px; }
 .news-tabs::-webkit-scrollbar { display: none; }
 .news-tabs button { background: none; border: none; color: #5a6971; white-space: nowrap; padding: 8px 20px; border-radius: 24px; font: inherit; font-size: 13px; cursor: pointer; }
 .news-tabs .active { background: #103e54; color: #fff; font-weight: 700; }
-.news-section-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.news-section-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .news-section-label h2 { border-left: 4px solid #164d68; padding-left: 12px; font-size: 19px; }
 .news-section-label > span { font-size: 11px; color: #8a969c; }
 .news-sample-note { font-size: 11px; color: #7a878d; margin-bottom: 10px; line-height: 1.5; }
@@ -1169,13 +1169,13 @@ html, body {
 .return-to-news { position: fixed; top: 10px; right: 12px; z-index: 40; background: #fff; color: #123d51; border: 1px solid #b2c6cf; border-radius: 6px; padding: 9px 16px; cursor: pointer; }
 .news-screen button:focus-visible, .news-brand:focus-visible { outline: 3px solid #3593bd; outline-offset: 4px; }
 @media (max-width: 700px) {
-  .news-header-inner { min-height: 76px; padding: 15px 20px; gap: 15px; }
+  .news-header-inner { min-height: 48px; padding: 9px 14px; gap: 12px; }
   .news-brand { font-size: 23px; }
   .news-edition { font-size: 8px; letter-spacing: 1px; }
-  .news-content { padding: 14px 14px 28px; }
+  .news-content { padding: 8px 14px 28px; }
   .news-intro { margin-bottom: 23px; }
   .news-intro p { font-size: 12px; }
-  .news-tabs { gap: 6px; margin-bottom: 14px; }
+  .news-tabs { gap: 6px; margin-bottom: 9px; }
   .news-tabs button { font-size: 12px; padding: 7px 16px; }
   .news-grid { display: block; }
   .news-featured { padding-bottom: 14px; border-bottom: 1px solid #e1e7ea; }
@@ -1267,3 +1267,11 @@ html, body {
 .saved-battle-item p { font-size: 12px; line-height: 1.5; margin-bottom: 6px; }
 .saved-battle-item small { display: block; color: var(--text-sub); margin-bottom: 8px; }
 button:disabled { opacity: 0.5; cursor: wait; }
+@media (max-width: 600px) {
+  .news-edition { display: none; }
+}
+@media (max-width: 420px) {
+  .news-header-inner { gap: 8px; padding-inline: 12px; }
+  .news-brand { font-size: 20px; }
+  .news-brand small { font-size: 8px; margin-left: 7px; }
+}
