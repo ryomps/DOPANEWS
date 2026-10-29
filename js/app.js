@@ -71,7 +71,8 @@
       this.nextVerseBtnEl = document.getElementById('btn-next-verse');
       this.seekInputEl = document.getElementById('battle-seek');
       this.volumeInputEl = document.getElementById('battle-volume');
-      this.volumeValueEl = document.getElementById('battle-volume-value');
+      this.muteButtonEl = document.getElementById('battle-mute');
+      this.lastAudibleVolume = 100;
       this.openJudgeBtnEl = document.getElementById('btn-open-judge');
       this.mobileDrawerToggleEl = document.getElementById('btn-toggle-drawer');
       this.sidebarPanelEl = document.getElementById('control-drawer');
@@ -92,6 +93,7 @@
       });
 
       this.judgeModal = new DOPANEWS.JudgeModal({
+        onChoose: () => document.getElementById('return-to-news')?.click?.(),
         onReplay: () => {
           if (this.isGenerating) return;
           this.audioController.seekTo(0);
@@ -317,10 +319,16 @@
         this.stageView.syncTime(seconds, this.stageView.lastKnownDuration);
         this._updateTransport();
       });
-      this.volumeInputEl?.addEventListener('input', () => {
-        const volume = Number(this.volumeInputEl.value);
+      const applyVolume = (volume) => {
+        if (volume > 0) this.lastAudibleVolume = volume;
         this.audioController.setVolume(volume / 100);
-        if (this.volumeValueEl) this.volumeValueEl.textContent = `${volume}%`;
+        if (this.volumeInputEl) this.volumeInputEl.value = String(volume);
+        this.muteButtonEl?.setAttribute('aria-pressed', String(volume === 0));
+        this.muteButtonEl?.setAttribute('aria-label', volume === 0 ? '消音を解除する' : '消音する');
+      };
+      this.volumeInputEl?.addEventListener('input', () => applyVolume(Number(this.volumeInputEl.value)));
+      this.muteButtonEl?.addEventListener('click', () => {
+        applyVolume(this.audioController.volume > 0 ? 0 : this.lastAudibleVolume);
       });
 
       this.openJudgeBtnEl?.addEventListener('click', () => {

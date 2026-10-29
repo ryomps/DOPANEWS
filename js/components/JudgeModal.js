@@ -3,7 +3,8 @@
   const DOPANEWS = (global.DOPANEWS = global.DOPANEWS || {});
 
   class JudgeModal {
-    constructor({ onReplay }) {
+    constructor({ onReplay, onChoose }) {
+      this.onChoose = onChoose || (() => {});
       this.onReplay = onReplay || (() => {});
       this.battleData = null;
       this.reflections = new Map();
@@ -12,9 +13,6 @@
       this.titleEl = document.getElementById('judge-battle-title');
       this.kentaStanceEl = document.getElementById('judge-kenta-stance');
       this.reinaStanceEl = document.getElementById('judge-reina-stance');
-      this.panelEl = document.getElementById('reflection-panel');
-      this.selectionEl = document.getElementById('reflection-selection');
-      this.noteEl = document.getElementById('reflection-note');
       this.buttons = {
         KENTA: document.getElementById('btn-vote-kenta'),
         REINA: document.getElementById('btn-vote-reina'),
@@ -24,10 +22,9 @@
         button.addEventListener('click', () => {
           this.reflections.get(this.battleKey).choice = choice;
           this._renderSelection();
+          this.close();
+          this.onChoose(choice);
         });
-      });
-      this.noteEl.addEventListener('input', () => {
-        this.reflections.get(this.battleKey).note = this.noteEl.value;
       });
       document.getElementById('btn-close-judge').addEventListener('click', () => this.close());
       document.getElementById('btn-replay-battle').addEventListener('click', () => {
@@ -67,12 +64,11 @@
         }))
       });
       if (!this.reflections.has(this.battleKey)) {
-        this.reflections.set(this.battleKey, { choice: null, note: '' });
+        this.reflections.set(this.battleKey, { choice: null });
       }
       this.titleEl.textContent = battleData?.title || 'NEWS RAP BATTLE';
       this.kentaStanceEl.textContent = battleData?.kenta_stance || '';
       this.reinaStanceEl.textContent = battleData?.reina_stance || '';
-      this.noteEl.value = this.reflections.get(this.battleKey).note;
       this._renderSelection();
       this.overlayEl.classList.remove('hidden');
       this.cardEl.focus();
@@ -88,13 +84,6 @@
       Object.entries(this.buttons).forEach(([value, button]) => {
         button.setAttribute('aria-pressed', String(choice === value));
       });
-      this.panelEl.classList.toggle('hidden', !choice);
-      const messages = {
-        KENTA: '今の自分は、KENTAの意見に近い。',
-        REINA: '今の自分は、REINAの意見に近い。',
-        UNDECIDED: 'まだ考え中。それも今の自分の考えです。'
-      };
-      this.selectionEl.textContent = messages[choice] || '';
     }
   }
 
