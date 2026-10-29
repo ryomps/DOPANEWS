@@ -68,7 +68,7 @@
         overlay.setAttribute('aria-label', 'MCバトル 対立するふたつの立場');
         const portrait = (reina) => '<svg class="cutin-portrait" viewBox="0 0 220 250" aria-hidden="true"><path d="M24 250q4-90 86-92 82 2 86 92" fill="currentColor"/><path d="M73 162l37 39 37-39" fill="#fff" opacity=".8"/><path d="M67 95q-2-61 44-62 51 0 46 66l-9 40q-37 46-73-1z" fill="#f3d8bd"/><path d="'+(reina?'M59 152V81q0-66 53-61 61-2 53 75l9 78-31-18 1-78q-37 4-57-22l-9 98z':'M64 95l-4-44 25-6-1-20 29 12 27-9 24 31-10 40-14-30-53 5-10 24z')+'" fill="#182735"/><path d="M88 107h9m28 0h9" stroke="#182735" stroke-width="5" stroke-linecap="round"/><path d="M101 133q12 8 23-1" fill="none" stroke="#a96c54" stroke-width="3"/><g transform="translate('+(reina?'45':'153')+' 151) rotate('+(reina?'-23':'23')+')"><rect x="-7" y="13" width="14" height="65" rx="6" fill="#263947"/><rect x="-13" y="-9" width="26" height="33" rx="12" fill="#fff"/><path d="M-9 2H9m-9 7H9m-9 7H9" stroke="#263947" stroke-width="2"/></g></svg>';
         const stanceHtml = index => escape(article.stances[index]);
-        overlay.innerHTML = '<div class="cutin-topic"><span>NEWS MC BATTLE</span><h2>'+escape(article.title)+'</h2></div><div class="cutin-matchup"><div class="cutin-side cutin-kenta"><div class="cutin-stance"><span>立場 A / MC KENTA</span><h3>'+stanceHtml(0)+'</h3></div>'+portrait(false)+'</div><div class="cutin-side cutin-reina"><div class="cutin-stance"><span>立場 B / MC REINA</span><h3>'+stanceHtml(1)+'</h3></div>'+portrait(true)+'</div><button type="button" class="cutin-vs" aria-label="VSを押してMCバトル開始"><span class="cutin-vs-letters">VS</span><span class="cutin-vs-hint">タップしてバトル開始</span></button></div>';
+        overlay.innerHTML = '<div class="cutin-topic"><span>NEWS MC BATTLE</span><h2>'+escape(article.title)+'</h2></div><div class="cutin-matchup"><div class="cutin-side cutin-kenta"><div class="cutin-stance"><span>立場 A / MC KENTA</span><h3>'+stanceHtml(0)+'</h3></div>'+portrait(false)+'</div><div class="cutin-side cutin-reina"><div class="cutin-stance"><span>立場 B / MC REINA</span><h3>'+stanceHtml(1)+'</h3></div>'+portrait(true)+'</div><button type="button" class="cutin-vs" aria-label="VSを押してMCバトル開始"><span class="cutin-vs-letters">VS</span><span class="cutin-vs-hint">タップしてスタジオへ進む</span></button></div>';
         document.body.appendChild(overlay);
         screen.inert = true;
         const startButton = overlay.querySelector('button');
@@ -125,7 +125,6 @@
       enteringBattle = true;
       articleScroll = screen.scrollTop;
       const a = selected;
-      // Initialize audio within the original user gesture before the animation delay.
       app.audioController._ensureAudioContext();
       const proceed = await showBattleCutin(a);
       enteringBattle = false;
@@ -134,13 +133,14 @@
       app.newsUrlInputEl.value = ''; app.lastFetchedUrl = '';
       app.articleInputEl.value = a.title+'\n\n'+a.paragraphs.join('\n\n');
       app.currentArticleText = app.articleInputEl.value;
-      app.currentSynthDuration = 64;
+      app.currentSynthDuration = 67;
       const lines = a.stances.map((stance,i) => [stance, i ? '選べる未来を ここから描こう' : 'その理想の前に 現場を見よう', a.summary, i ? '期待だけじゃない 課題も確かめる' : 'その負担は誰が 引き受ける', a.paragraphs[i+2].split('。')[0], i ? '小さく試して 改善重ねよう' : '取り残される声にも 応えよう', '違う視点を 重ねてみよう', 'このニュースから 明日を考えよう']);
-      app._applyBattleData(D.normalizeBattleData({title:a.title, topic_summary:'サンプル台本｜'+a.summary, kenta_stance:a.stances[0], reina_stance:a.stances[1], verses:[0,1,0,1].map((n,i)=>({speaker:n?'REINA':'KENTA',lyric:(i<2?lines[n]:[...lines[n].slice(4),...lines[n].slice(0,4)]).join('\n'),point_summary:a.stances[n],rhyme_words:'未来 × 期待 / 視点 × 起点',start_time_sec:i*16}))}));
+      app._applyBattleData(D.normalizeBattleData({title:a.title, topic_summary:'記事セット済｜左の「🔥 バトル生成スタート」でラップ楽曲を生成できます', kenta_stance:a.stances[0], reina_stance:a.stances[1], verses:[0,1,0,1].map((n,i)=>({speaker:n?'REINA':'KENTA',lyric:(i<2?lines[n]:[...lines[n].slice(4),...lines[n].slice(0,4)]).join('\n'),point_summary:a.stances[n],rhyme_words:'未来 × 期待 / 視点 × 起点',start_time_sec:i*16.7}))}));
       document.body.classList.remove('news-mode'); returnBtn.hidden = false;
       returnBtn.focus({preventScroll:true});
-      app._setStepState(3); app._setLog('選択した記事のサンプル台本とデモビートを再生中です（音声ラップはAPI連携後に生成できます）。');
-      app.audioController.startSynthBattle(64);
+      app._setStepState(0);
+      app._setLog('📰 記事をセットしました！左パネルの「🔥 8小節×4本 バトル生成スタート」を押すとラップ楽曲を生成します（右下の「▶ 再生」でデモ再生も可能）。');
+      // ※ここで勝手にサンプル歌詞・デモビートが流れ出さないよう自動再生を停止し、00:00 待機状態に保つ
     });
     returnBtn.addEventListener('click', () => {
       if (global.dopaNewsApp.isGenerating) return;

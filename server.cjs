@@ -67,12 +67,24 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
         const config = await readConfig();
         json(res, { geminiConfigured: Boolean(config.gemini), murekaConfigured: Boolean(config.mureka) }); return;
       }
+      if (route === '/api/config' && req.method === 'POST') {
+        const body = await readBody(req);
+        const current = await readConfig().catch(() => ({ gemini: '', mureka: '' }));
+        const nextCfg = {
+          GeminiApiKey: typeof body.GeminiApiKey === 'string' && body.GeminiApiKey.trim() ? body.GeminiApiKey.trim() : current.gemini,
+          MurekaApiKey: typeof body.MurekaApiKey === 'string' && body.MurekaApiKey.trim() ? body.MurekaApiKey.trim() : current.mureka
+        };
+        await fsp.writeFile(configPath, JSON.stringify(nextCfg, null, 2), 'utf8');
+        json(res, { ok: true, geminiConfigured: Boolean(nextCfg.GeminiApiKey), murekaConfigured: Boolean(nextCfg.MurekaApiKey) }); return;
+      }
       const gemini = /^\/api\/gemini\/([a-zA-Z0-9.-]+)$/.exec(route);
       if (gemini && req.method === 'POST') {
         const config = await readConfig();
-        if (!config.gemini) { json(res, { error: 'Set GeminiApiKey in config.local.json' }, 400); return; }
+        const headerKey = (req.headers['x-goog-api-key'] || '').toString().trim();
+        const geminiKey = headerKey || config.gemini;
+        if (!geminiKey) { json(res, { error: 'Set GeminiApiKey in config.local.json or in the browser API Key input.' }, 400); return; }
         await proxy(res, `https://generativelanguage.googleapis.com/v1beta/models/${gemini[1]}:generateContent`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': config.gemini },
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
           body: JSON.stringify(await readBody(req))
         }, 'Gemini'); return;
       }
@@ -81,8 +93,10 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
         const method = mureka[1] === 'generate' ? 'POST' : 'GET';
         if (req.method !== method) { json(res, { error: 'Method not allowed' }, 405); return; }
         const config = await readConfig();
-        if (!config.mureka) { json(res, { error: 'Set MurekaApiKey in config.local.json' }, 400); return; }
-        const options = { method, headers: { Authorization: `Bearer ${config.mureka}`, 'Content-Type': 'application/json' } };
+        const headerAuth = (req.headers.authorization || '').toString().replace(/^Bearer\s+/i, '').trim();
+        const murekaKey = headerAuth || config.mureka;
+        if (!murekaKey) { json(res, { error: 'Set MurekaApiKey in config.local.json or in the browser API Key input.' }, 400); return; }
+        const options = { method, headers: { Authorization: `Bearer ${murekaKey}`, 'Content-Type': 'application/json' } };
         if (method === 'POST') options.body = JSON.stringify(await readBody(req));
         await proxy(res, `https://api.mureka.ai/v1/song/${mureka[1]}`, options, 'Mureka'); return;
       }

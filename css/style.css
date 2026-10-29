@@ -1267,3 +1267,26 @@ html, body {
 .saved-battle-item p { font-size: 12px; line-height: 1.5; margin-bottom: 6px; }
 .saved-battle-item small { display: block; color: var(--text-sub); margin-bottom: 8px; }
 button:disabled { opacity: 0.5; cursor: wait; }
+
+/* 🎤 ワンタップ歌い出し同期ボタン */
+.btn-vocal-sync {
+  padding: 3px 8px;
+  font-size: 10.5px;
+  font-weight: 900;
+  color: #090A0F;
+  background: linear-gradient(90deg, #FFE600, #FF9F1C);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(255, 230, 0, 0.4);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+
+.btn-vocal-sync:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 14px rgba(255, 230, 0, 0.75);
+}
+
+.btn-vocal-sync:active {
+  transform: scale(0.96);
+}

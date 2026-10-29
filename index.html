@@ -7,14 +7,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="./css/style.css?v=20261027_4" />
 </head>
 <body class="news-mode">
   <section id="news-screen" class="news-screen" aria-label="ニュース">
     <header class="news-header"><div class="news-header-inner">
       <button id="news-back" class="news-back" type="button" hidden>〈 戻る</button>
       <a class="news-brand" href="#" aria-label="DOPANEWS トップ">DOPA<span>NEWS</span><small>ニュースを、別の視点で。</small></a>
-      <span class="news-edition">NEWS × MC BATTLE</span>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button id="news-open-studio" type="button" style="background: #143f53; color: #fff; border: 0; border-radius: 6px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer;">🎤 URL・記事からラップ生成スタジオへ</button>
+        <span class="news-edition">NEWS × MC BATTLE</span>
+      </div>
     </div></header>
     <main id="news-content" class="news-content"></main>
     <footer id="news-battle-bar" class="news-battle-bar" hidden><div><span>このニュースを、ふたつの視点で。</span><button id="news-start-battle" type="button">MCバトル開始 <span aria-hidden="true">→</span></button><small>サンプル台本＋デモビートで再生</small></div></footer>
@@ -36,8 +39,31 @@
       </header>
 
       <section class="panel-section">
-        <h2 class="section-title">接続状態</h2>
-        <p id="api-config-status" class="status-log" role="status">ローカル設定を確認中…</p>
+        <div class="section-header">
+          <h2 class="section-title">🔑 接続状態 ＆ APIキー設定</h2>
+          <button id="btn-save-keys" class="btn-small" type="button">💾 キー保存</button>
+        </div>
+        <p id="api-config-status" class="status-log" role="status" style="margin-bottom: 8px;">接続状態を確認中…</p>
+        <div class="input-group">
+          <label for="input-gemini-key">Gemini API Key (台本・8小節×4本作詞用)</label>
+          <input
+            id="input-gemini-key"
+            type="password"
+            class="cyber-input"
+            placeholder="AIzaSy... (ブラウザまたはconfig.local.jsonに保存)"
+            autocomplete="off"
+          />
+        </div>
+        <div class="input-group" style="margin-top: 6px;">
+          <label for="input-suno-key">Mureka API Key (公式API ボーカル＆ビート生成用)</label>
+          <input
+            id="input-suno-key"
+            type="password"
+            class="cyber-input"
+            placeholder="Mureka API Key を入力..."
+            autocomplete="off"
+          />
+        </div>
       </section>
 
       <section class="panel-section">
@@ -77,21 +103,19 @@
         ></textarea>
 
         <!-- 🎛️ ビート＆ボーカル Style 指定欄 -->
-        <div class="input-group" style="margin-top: 8px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <label for="input-battle-style">🎛️ ビート＆ボーカル Style (Murekaへ送る曲調・BPM指定)</label>
-            <select id="select-style-preset" class="cyber-input" style="width: auto; padding: 2px 6px; font-size: 10.5px;">
-              <option value="Japanese Pop Rap, Educational Rap, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Male and Female Duet, Groovy Funky Beat, 115 BPM">🎵 Pop & Educational Funky Rap (115 BPM・標準)</option>
-              <option value="Japanese Hip Hop MC Battle, Male and Female Duet, Alternate Rapping, Clear Male Rapper vs Clear Female Rapper, Hard Boom Bap Beat, 95 BPM">🔥 王道Boom Bap (95 BPM)</option>
-              <option value="Japanese Trap Rap Battle, Male and Female Duet, Heavy 808 Bass, Clear Male Rap vs Fast Female Rap, Dark Street Vibe, 136 BPM">⚡ 高速Trap / 808 (136 BPM)</option>
-              <option value="Japanese Jazz Hip Hop Battle, Male and Female Duet, Melodic Piano Loop, Groovy Drums, Clear Male Vocal vs Clear Female Vocal, 105 BPM">🎷 メロディックJazz Rap (105 BPM)</option>
-            </select>
-          </div>
+        <div class="input-group" style="margin-top: 8px; display: flex; flex-direction: column; gap: 5px;">
+          <label for="input-battle-style">🎛️ ビート＆ボーカル Style (Murekaへ送る曲調・BPM指定)</label>
+          <select id="select-style-preset" class="cyber-input" style="width: 100%; padding: 6px 8px; font-size: 11.5px;">
+            <option value="Japanese Pop Rap, Educational Rap, Male and Female Duet, Alternating Male Verse and Female Chorus, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Groovy Funky Beat, 115 BPM">🎵 Pop & Educational Funky Rap (115 BPM・標準)</option>
+            <option value="Japanese Hip Hop MC Battle, Male and Female Duet, Alternating Male Verse and Female Chorus, Clear Male Rapper vs Clear Female Rapper, Hard Boom Bap Beat, 95 BPM">🔥 王道Boom Bap (95 BPM)</option>
+            <option value="Japanese Trap Rap Battle, Male and Female Duet, Alternating Male Verse and Female Chorus, Heavy 808 Bass, Clear Male Rap vs Fast Female Rap, 136 BPM">⚡ 高速Trap / 808 (136 BPM)</option>
+            <option value="Japanese Jazz Hip Hop Battle, Male and Female Duet, Alternating Male Verse and Female Chorus, Melodic Piano Loop, Groovy Drums, 105 BPM">🎷 メロディックJazz Rap (105 BPM)</option>
+          </select>
           <input
             id="input-battle-style"
             type="text"
             class="cyber-input"
-            value="Japanese Pop Rap, Educational Rap, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Male and Female Duet, Groovy Funky Beat, 115 BPM"
+            value="Japanese Pop Rap, Educational Rap, Male and Female Duet, Alternating Male Verse and Female Chorus, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Groovy Funky Beat, 115 BPM"
           />
         </div>
 
@@ -167,7 +191,17 @@
         <header class="stage-top">
           <div class="stage-top-meta">
             <span class="live-pill"><span class="live-dot"></span>ON AIR BATTLE</span>
-            <span id="stage-timer" class="stage-timer">00:00 / 00:45</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <button
+                id="btn-sync-vocal-start"
+                type="button"
+                class="btn-vocal-sync"
+                title="前奏（イントロ）が終わって歌い始めた瞬間に押すと、そこから115BPM（8小節＝約16.7秒）で画面をピタッと同期します！"
+              >
+                🎤 歌い出し同期
+              </button>
+              <span id="stage-timer" class="stage-timer">00:00 / 01:07</span>
+            </div>
           </div>
           <div class="stage-progress-track">
             <div id="stage-progress-fill" class="stage-progress-fill"></div>
@@ -279,12 +313,12 @@
     </div>
   </div>
 
-  <script src="./js/types.js"></script>
-  <script src="./js/api.js"></script>
-  <script src="./js/audioController.js"></script>
-  <script src="./js/components/StageView.js"></script>
-  <script src="./js/components/JudgeModal.js"></script>
-  <script src="./js/app.js"></script>
-  <script src="./js/news.js"></script>
+  <script src="./js/types.js?v=20261027_4"></script>
+  <script src="./js/api.js?v=20261027_4"></script>
+  <script src="./js/audioController.js?v=20261027_4"></script>
+  <script src="./js/components/StageView.js?v=20261027_4"></script>
+  <script src="./js/components/JudgeModal.js?v=20261027_4"></script>
+  <script src="./js/app.js?v=20261027_4"></script>
+  <script src="./js/news.js?v=20261027_4"></script>
 </body>
 </html>
