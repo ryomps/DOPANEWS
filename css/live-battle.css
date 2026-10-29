@@ -107,6 +107,7 @@
 
 /* Keep portraits readable above the crowd, including the inactive MC. */
 .live-battle-player .mc-stage-portrait { background-size: auto 125%; transform-origin: center 25%; }
+.live-battle-player .mc-kenta .mc-stage-portrait { background-position: left top; }
 .live-battle-player .mc-reina .mc-stage-portrait { background-position: right top; }
 .live-battle-player .mc-dim .mc-stage-portrait { filter: grayscale(.25) brightness(.65); transform: scale(1); }
 .live-battle-player .mc-crowd { bottom: 0; height: 24px; z-index: 2; opacity: .12; }
