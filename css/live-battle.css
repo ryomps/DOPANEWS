@@ -27,8 +27,6 @@
 .live-battle-player .mc-speaking-label { position: absolute; top: 9px; left: 9px; z-index: 4; font-size: 8px; font-weight: 900; letter-spacing: 1px; border-radius: 3px; padding: 4px 6px; background: #174698; color: white; opacity: 0; }
 .live-battle-player .mc-reina .mc-speaking-label { background: #ae2639; }
 .live-battle-player .mc-active .mc-speaking-label { opacity: 1; }
-.live-battle-player[data-playing="false"] .mc-speaking-label { font-size: 0; }
-.live-battle-player[data-playing="false"] .mc-speaking-label::after { content: 'PAUSED'; font-size: 8px; }
 .live-battle-player .vs-emblem { position: absolute; z-index: 5; left: 50%; top: 39%; transform: translate(-50%,-50%) rotate(-8deg); font: italic 900 35px/1 'Arial Black',Arial,sans-serif; letter-spacing: -3px; color: white; text-shadow: 2px 3px 0 #000; transition: left .55s; pointer-events: none; }
 .live-battle-player[data-active-mc="KENTA"] .vs-emblem { left: 64%; }
 .live-battle-player[data-active-mc="REINA"] .vs-emblem { left: 36%; }
@@ -153,3 +151,69 @@
 .live-battle-player .mc-active .mc-stage-portrait { transform:none; filter:brightness(1.04); }
 .live-battle-player .mc-dim .mc-stage-portrait { transform:none; filter:brightness(.8) saturate(.8); }
 .live-battle-player .mc-stage-portrait { object-position:center top; }
+
+/* Keep the manual sync hook available without showing a consumer control. */
+#btn-sync-vocal-start[hidden] { display:none; }
+
+.live-battle-player #stage-timer { display:none; }
+
+.live-battle-player #btn-show-ai-review { display:none; }
+
+.battle-mute { display:flex; align-items:center; justify-content:center; flex:0 0 44px; width:44px; height:44px; padding:0; border:0; border-radius:8px; background:transparent; cursor:pointer; }
+.battle-mute .volume-slash { display:none; }
+.battle-mute[aria-pressed="true"] .volume-slash { display:block; }
+.battle-mute[aria-pressed="true"] .volume-waves { display:none; }
+.battle-mute:focus-visible { outline:2px solid #91b8ff; outline-offset:1px; }
+
+/* Give the current speaker more room; keep VS on the moving boundary. */
+.live-battle-player { --turn-color:#4b94ff; }
+.live-battle-player[data-active-mc="KENTA"] { --turn-color:#4b94ff; }
+.live-battle-player[data-active-mc="REINA"] { --turn-color:#ff5067; }
+.live-battle-player[data-active-mc="KENTA"] .mc-versus-arena { grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr); }
+.live-battle-player[data-active-mc="REINA"] .mc-versus-arena { grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); }
+.live-battle-player .mc-fighter-card { min-width:0; }
+.live-battle-player .mc-kenta { border-right:2px solid var(--turn-color); }
+.live-battle-player[data-active-mc="KENTA"] .vs-emblem { left:60%; }
+.live-battle-player[data-active-mc="REINA"] .vs-emblem { left:40%; }
+.live-battle-player .vs-emblem { text-shadow:2px 3px 0 #000, 0 0 12px var(--turn-color); }
+
+/* Match both duration and easing to keep VS on the grid boundary. */
+.live-battle-player .vs-emblem { transition:left .55s cubic-bezier(.22,.7,.2,1); }
+@media(prefers-reduced-motion:reduce) { .live-battle-player .mc-versus-arena,.live-battle-player .vs-emblem { transition:none; } }
+
+.live-battle-player .punchline-header { display:none; }
+
+/* Keep the lyrics readable after removing the heading row. */
+.live-battle-player .punchline-card { min-height:120px; overflow:hidden; }
+.live-battle-player .stage-lyric-box { display:flex; min-height:96px; overflow-y:auto; color:#e6edf7; }
+.live-battle-player .lyric-line { flex-shrink:0; color:#bfcbdc; }
+.live-battle-player .lyric-line.line-active { color:#fff; }
+.live-battle-player .lyric-line.line-past { color:#94a3b8; }
+
+/* Compact volume group beside the vote action. */
+.live-battle-player .battle-volume { flex:0 1 124px; max-width:124px; gap:3px; }
+.live-battle-player .battle-mute { flex-basis:30px; width:30px; height:32px; border-radius:5px; }
+.live-battle-player .battle-volume svg { width:16px; height:16px; flex-basis:16px; }
+.live-battle-player .battle-volume input { height:18px; }
+
+/* Equal breathing room above and below the playback controls. */
+.live-battle-player .stage-bottom { gap:8px; }
+.live-battle-player .stage-controls-row { padding-block:8px; margin:0; min-height:64px; box-sizing:border-box; }
+.live-battle-player .btn-verse-step { height:48px; margin:0; }
+.live-battle-player .btn-stage-play { display:grid; place-items:center; margin:0; }
+@media(max-height:740px) {
+  .live-battle-player .stage-controls-row { min-height:58px; }
+  .live-battle-player .btn-verse-step { height:42px; }
+}
+
+.live-battle-player .mc-kenta .mc-speaking-label { left:7px; right:auto; }
+
+/* Thin visual track while retaining a usable pointer area. */
+.live-battle-player .battle-volume input[type="range"] { appearance:none; -webkit-appearance:none; height:24px; background:transparent; padding:0; border:0; }
+.live-battle-player .battle-volume input[type="range"]::-webkit-slider-runnable-track { height:3px; border-radius:99px; background:#8494b0; }
+.live-battle-player .battle-volume input[type="range"]::-webkit-slider-thumb { appearance:none; -webkit-appearance:none; width:10px; height:10px; margin-top:-3.5px; border:0; border-radius:50%; background:#c5d4ed; }
+.live-battle-player .battle-volume input[type="range"]::-moz-range-track { height:3px; border-radius:99px; background:#8494b0; }
+.live-battle-player .battle-volume input[type="range"]::-moz-range-thumb { width:10px; height:10px; border:0; border-radius:50%; background:#c5d4ed; }
+
+/* Lower only the volume group, retaining clearance above the waveform. */
+.live-battle-player .battle-volume { transform:translateY(6px); }

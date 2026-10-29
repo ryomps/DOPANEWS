@@ -375,7 +375,7 @@
       if (previousTabs) categoryScroll = previousTabs.scrollLeft;
       selected = null; back.hidden = true; bar.hidden = true;
       const filtered = items.filter(a => category === 'トップ' || a.category === category);
-      content.innerHTML = '<nav class="news-tabs" aria-label="ニュースのカテゴリー">'+['トップ','テクノロジー','政治','経済','スポーツ','自然','エンタメ','恋愛'].map(c=>'<button type="button" style="'+genreStyle(c)+'" data-category="'+c+'" aria-pressed="'+(category===c)+'" class="'+(category===c?'active':'')+'">'+c+'</button>').join('')+'</nav><div class="news-section-label" style="'+genreStyle(category)+'"><h2>注目ニュース</h2><span>編集部セレクト</span></div><p class="news-sample-note">公的資料をもとに編集した解説です。表示日はラベルに応じて資料公表・制度施行・資料確認の日付を示します。速報・自動取得ニュースではありません。</p>'+(filtered.length?'':'<div class="news-category-empty"><h3>'+escape(category)+'の記事を準備中です</h3><p>根拠資料と利用条件を確認できた記事から追加します。</p><button type="button" data-category="トップ">トップの記事を見る →</button></div>')+'<div class="news-grid">'+filtered.map((a,i)=>'<button type="button" class="news-card '+(i===0?'news-featured':'')+'" style="'+genreStyle(a.category)+'" data-article="'+a.id+'"><img src="'+artwork(a)+'" alt="'+a.caption+'"/><div class="news-card-copy"><div class="news-meta">'+meta(a)+'</div><h3>'+a.title+'</h3><p>'+a.summary+'</p><div class="news-card-bottom"><span>#'+a.tag+'</span><span>記事を読む ↗</span></div></div></button>').join('')+'</div><p class="news-bottom-note">ひとつのニュースに、ひとつじゃない見方を。<br><b>DOPA<span>NEWS</span></b></p>';
+      content.innerHTML = '<nav class="news-tabs" aria-label="ニュースのカテゴリー">'+['トップ','テクノロジー','政治','経済','スポーツ','自然','エンタメ','恋愛'].map(c=>'<button type="button" style="'+genreStyle(c)+'" data-category="'+c+'" aria-pressed="'+(category===c)+'" class="'+(category===c?'active':'')+'">'+c+'</button>').join('')+'</nav>'+(category === 'トップ' ? '<div class="news-section-label"><h2>注目ニュース</h2><span>編集部セレクト</span></div>' : '')+''+(filtered.length?'':'<div class="news-category-empty"><h3>'+escape(category)+'の記事を準備中です</h3><p>根拠資料と利用条件を確認できた記事から追加します。</p><button type="button" data-category="トップ">トップの記事を見る →</button></div>')+'<div class="news-grid">'+filtered.map((a,i)=>'<button type="button" class="news-card '+(i===0?'news-featured':'')+'" style="'+genreStyle(a.category)+'" data-article="'+a.id+'"><img src="'+artwork(a)+'" alt="'+a.caption+'"/><div class="news-card-copy"><div class="news-meta">'+meta(a)+'</div><h3>'+a.title+'</h3><p>'+a.summary+'</p><div class="news-card-bottom"><span>#'+a.tag+'</span><span>記事を読む ↗</span></div></div></button>').join('')+'</div><p class="news-sample-note">公的資料をもとに編集した解説です。表示日はラベルに応じて資料公表・制度施行・資料確認の日付を示します。速報・自動取得ニュースではありません。</p><p class="news-bottom-note">ひとつのニュースに、ひとつじゃない見方を。<br><b>DOPA<span>NEWS</span></b></p>';
       content.querySelector('.news-tabs').scrollLeft = categoryScroll;
     }
     function sourceMarkup(a) {
@@ -432,6 +432,16 @@
       app._setStepState(0);
       app._setLog('📰 記事をセットしました！左パネルの「🔥 8小節×4本 バトル生成スタート」を押すとラップ楽曲を生成します（右下の「▶ 再生」でデモ再生も可能）。');
       // ※ここで勝手にサンプル歌詞・デモビートが流れ出さないよう自動再生を停止し、00:00 待機状態に保つ
+    });
+    document.querySelector('.battle-brand')?.addEventListener('click', event => {
+      event.preventDefault();
+      const app = global.dopaNewsApp;
+      app._stopCurrentBattle();
+      app.judgeModal.close();
+      document.body.classList.add('news-mode');
+      returnBtn.hidden = true;
+      location.hash = '';
+      route();
     });
     returnBtn.addEventListener('click', () => {
       if (global.dopaNewsApp.isGenerating) return;

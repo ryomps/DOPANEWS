@@ -61,3 +61,63 @@
   .battle-stage.live-battle-player,.news-screen { width:var(--phone-width); height:var(--preview-height); max-height:var(--preview-height); border:1px solid #ffffff26; border-radius:18px; }
   .news-screen,.news-versus-cutin { top:var(--preview-top); bottom:var(--preview-bottom); height:var(--preview-height); }
 }
+
+/* Reserve independent slots so actions never overlap the centered logo. */
+.news-header-inner .news-brand { max-width:calc(100% - 136px); font-size:clamp(19px, 5.6vw, var(--consumer-logo-size)); }
+
+/* Voting belongs to the battle phone, with the topic as its heading. */
+.live-battle-player > .judge-modal-overlay { position:absolute; inset:0; padding:12px; border-radius:inherit; background:#030608b8; backdrop-filter:blur(5px); }
+.live-battle-player .judge-modal-card { width:100%; max-width:100%; max-height:100%; padding:20px 14px; overflow-y:auto; }
+.judge-topic-title { margin:0 0 16px; color:#fff; font-size:20px; line-height:1.55; font-weight:900; text-align:left; overflow-wrap:anywhere; }
+.live-battle-player .judge-headline { font-size:14px; color:#aeb9cb; margin:0 0 16px; }
+.live-battle-player .judge-cards-grid { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px; }
+.live-battle-player .judge-choice-card { min-width:0; padding:12px 10px; }
+.live-battle-player .judge-mc-label { font-size:16px; }
+.live-battle-player .judge-stance-text { font-size:12px; }
+.live-battle-player .judge-tap-cta { font-size:11px; padding:10px 4px; }
+.live-battle-player .judge-footer-btns { gap:8px; }
+.live-battle-player .judge-footer-btns button { font-size:11px; }
+
+.live-battle-player .judge-close-button { display:block; margin:0 0 14px; padding:6px 0; min-height:32px; border:0; background:transparent; color:#c9d3e2; font:inherit; font-size:12px; cursor:pointer; }
+.live-battle-player .judge-close-button:focus-visible { outline:2px solid #91b8ff; outline-offset:3px; }
+
+#btn-replay-battle { display:inline-flex; align-items:center; justify-content:center; gap:7px; }
+#btn-replay-battle .replay-arrow { display:inline-block; font-size:24px; line-height:1; transform:rotate(180deg); }
+
+#btn-replay-battle .replay-arrow { display:block; flex:0 0 24px; width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; transform:rotate(180deg); }
+
+.judge-character-icon { display:block; width:64px; height:64px; margin:0 auto 12px; border-radius:50%; object-fit:cover; object-position:center 15%; background:#111720; border:2px solid; }
+.judge-character-kenta { border-color:#609dff; }
+.judge-character-reina { border-color:#ff657a; }
+
+/* Fit voting into the phone height without an internal scroll area. */
+.live-battle-player > .judge-modal-overlay { container: battle-vote / size; padding:10px; overflow:hidden; }
+.live-battle-player .judge-modal-card { display:flex; flex-direction:column; gap:10px; padding:14px 12px; max-height:100%; box-sizing:border-box; overflow:hidden; }
+.live-battle-player .judge-close-button { align-self:flex-start; margin:0; min-height:28px; padding:3px 0; flex-shrink:0; }
+.live-battle-player .judge-topic-title { font-size:18px; line-height:1.4; margin:0; }
+.live-battle-player .judge-headline { margin:0; font-size:13px; }
+.live-battle-player .judge-cards-grid { margin:0; gap:8px; }
+.live-battle-player .judge-choice-card { padding:10px 8px; }
+.live-battle-player .judge-character-icon { width:52px; height:52px; margin-bottom:8px; }
+.live-battle-player .judge-stance-text { font-size:12px; line-height:1.45; margin:0 0 10px; }
+.live-battle-player .judge-tap-cta { padding:8px 4px; }
+.live-battle-player .reflection-neutral { min-height:38px; padding:8px; font-size:12px; }
+.live-battle-player .judge-footer-btns { margin:0; flex-shrink:0; }
+@container battle-vote (max-height:560px) {
+  .live-battle-player .judge-modal-card { padding:10px; gap:7px; }
+  .live-battle-player .judge-topic-title { font-size:16px; line-height:1.35; }
+  .live-battle-player .judge-character-icon { width:38px; height:38px; margin-bottom:5px; }
+  .live-battle-player .judge-stance-text { font-size:11px; line-height:1.35; margin-bottom:6px; }
+  .live-battle-player .judge-choice-card { padding:8px 6px; }
+  .live-battle-player .judge-tap-cta { padding:6px 3px; }
+  .live-battle-player .judge-footer-btns button { padding:6px 10px; }
+}
+
+/* Float the article action outside its scrolling, transformed phone container. */
+.news-battle-bar { position:fixed; top:auto; right:auto; left:50%; bottom:calc(16px + env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(280px, calc(100% - 40px)); padding:0; border:0; border-radius:999px; background:transparent; box-shadow:none; z-index:8; }
+.news-battle-bar button { min-height:48px; justify-content:center; gap:16px; box-shadow:0 4px 20px #0008; }
+.news-battle-bar small { display:none; }
+body:not(.news-mode) .news-battle-bar { display:none; }
+@media(min-width:901px) {
+  .news-battle-bar { left:calc(var(--dev-width) + (100% - var(--dev-width))/2); bottom:calc(var(--preview-bottom, 12px) + 16px); width:280px; border-radius:999px; }
+}

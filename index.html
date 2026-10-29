@@ -18,16 +18,13 @@
   <section id="news-screen" class="news-screen" aria-label="ニュース">
     <header class="news-header"><div class="news-header-inner">
       <button id="news-back" class="news-back" type="button" hidden>〈 戻る</button>
-      <a class="news-brand" href="#" aria-label="DOPANEWS トップ">DOPA<span>NEWS</span><small>ニュースを、別の視点で。</small></a>
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <button id="news-open-studio" type="button" title="URL・記事からラップ生成スタジオへ" style="background: #143f53; color: #fff; border: 0; border-radius: 6px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer;">生成スタジオ</button>
-        <span class="news-edition">NEWS × MC BATTLE</span>
-      </div>
+      <a class="news-brand" href="#" aria-label="DOPANEWS トップ">DOPA<span>NEWS</span></a>
     </div></header>
     <section id="news-live-panel" class="live-news" aria-label="自動取得ニュース"></section>
     <main id="news-content" class="news-content"></main>
-    <footer id="news-battle-bar" class="news-battle-bar" hidden><div><span>このニュースを、ふたつの視点で。</span><button id="news-start-battle" type="button">MCバトル開始 <span aria-hidden="true">→</span></button><small>資料に基づく創作台本＋デモビートで再生</small></div></footer>
   </section>
+
+    <footer id="news-battle-bar" class="news-battle-bar" hidden><div><span>このニュースを、ふたつの視点で。</span><button id="news-start-battle" type="button">MCバトル開始 <span aria-hidden="true">→</span></button><small>資料に基づく創作台本＋デモビートで再生</small></div></footer>
 
   <button id="btn-toggle-drawer" class="mobile-drawer-btn" type="button">⚙️ 設定・記事入力</button>
 
@@ -291,7 +288,6 @@
             <input id="battle-seek" type="range" min="0" max="48" value="0" step="0.1" aria-label="再生位置" />
           </div>
           <div id="stage-verse-pills" class="verse-pills-row" aria-label="バースを選択"></div>
-          <canvas id="spectrum-canvas" class="spectrum-canvas" width="360" height="24" aria-hidden="true"></canvas>
           <audio id="battle-audio"></audio>
           <div class="stage-controls-row">
             <button id="btn-prev-verse" class="btn-verse-step" type="button" aria-label="前のバース" title="前のバース">❮</button>
@@ -299,51 +295,45 @@
             <button id="btn-next-verse" class="btn-verse-step" type="button" aria-label="次のバース" title="次のバース">❯</button>
           </div>
           <div class="battle-secondary-controls">
-            <label class="battle-volume" for="battle-volume"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3zM16 8q4 4 0 8M19 5q7 7 0 14"/></svg><input id="battle-volume" type="range" min="0" max="100" value="100" step="1" aria-label="音量"/><output id="battle-volume-value" for="battle-volume">100%</output></label>
+            <div class="battle-volume"><button id="battle-mute" class="battle-mute" type="button" aria-label="消音する" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z"/><path class="volume-waves" d="M16 8q4 4 0 8M19 5q7 7 0 14"/><path class="volume-slash" d="M3 3l18 18"/></svg></button><input id="battle-volume" type="range" min="0" max="100" value="100" step="1" aria-label="音量"/></div>
             <button id="btn-open-judge" type="button" class="btn-stage-judge">投票する <span aria-hidden="true">↗</span></button>
           </div>
+          <canvas id="spectrum-canvas" class="spectrum-canvas" width="360" height="24" aria-hidden="true"></canvas>
         </footer>
-      </div>
-    </main>
-  </div>
-
   <!-- ラップを聴いた後、自分の考えを振り返る -->
-  <div id="judge-modal-overlay" class="judge-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="reflection-heading" aria-describedby="reflection-hint">
+  <div id="judge-modal-overlay" class="judge-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="judge-battle-title">
     <div class="judge-modal-card" tabindex="-1">
-      <span class="judge-header-badge">💭 THINK TIME</span>
-      <h2 id="reflection-heading" class="judge-headline">あなたはどっち派？</h2>
-      <p id="reflection-hint" class="judge-sub-hint">ラップを聴いて、今の自分はどちらの意見に近い？<br>迷っていても大丈夫。考えはいつでも変えられます。</p>
-      <p id="judge-battle-title" class="judge-sub-hint"></p>
+      <button id="btn-close-judge" type="button" class="judge-close-button">× 閉じる</button>
+      <h2 id="judge-battle-title" class="judge-topic-title"></h2>
+      <p id="reflection-heading" class="judge-headline">あなたはどっち派？</p>
 
       <div class="judge-cards-grid" role="group" aria-label="今の自分に近い意見">
         <button id="btn-vote-kenta" type="button" class="judge-choice-card judge-choice-kenta" aria-pressed="false">
           <div>
-            <div class="judge-mc-label" style="color: #FF9F1C;">🔥 MC KENTA</div>
+            <img class="judge-character-icon judge-character-kenta" src="./css/images/mc-kenta.png" alt="KENTA" width="64" height="64" />
             <p id="judge-kenta-stance" class="judge-stance-text"></p>
           </div>
-          <span class="judge-tap-cta">KENTAの意見に近い</span>
+          <span class="judge-tap-cta">KENTA</span>
         </button>
         <button id="btn-vote-reina" type="button" class="judge-choice-card judge-choice-reina" aria-pressed="false">
           <div>
-            <div class="judge-mc-label" style="color: #00F0FF;">❄️ MC REINA</div>
+            <img class="judge-character-icon judge-character-reina" src="./css/images/mc-reina.png" alt="REINA" width="64" height="64" />
             <p id="judge-reina-stance" class="judge-stance-text"></p>
           </div>
-          <span class="judge-tap-cta">REINAの意見に近い</span>
+          <span class="judge-tap-cta">REINA</span>
         </button>
-        <button id="btn-reflect-undecided" type="button" class="judge-choice-card reflection-neutral" aria-pressed="false">どちらともいえない・まだ考え中</button>
+        <button id="btn-reflect-undecided" type="button" class="judge-choice-card reflection-neutral" aria-pressed="false">どちらともいえない</button>
       </div>
 
-      <div id="reflection-panel" class="reflection-panel hidden">
-        <p id="reflection-selection" role="status" aria-live="polite"></p>
-        <label for="reflection-note">どの言葉に共感した？ 気になった点は？ <span>（任意）</span></label>
-        <textarea id="reflection-note" class="cyber-textarea" rows="3" maxlength="2000" placeholder="共感した理由や、もう少し知りたいことを自由に書いてみよう。"></textarea>
-        <p class="reflection-footnote">選び直しても、書かずに閉じても大丈夫です。</p>
-      </div>
       <div class="judge-footer-btns">
-        <button id="btn-replay-battle" type="button" class="btn-sub-action">🔁 もう一度聴いて考える</button>
-        <button id="btn-close-judge" type="button" class="btn-small">ステージに戻る</button>
+        <button id="btn-replay-battle" type="button" class="btn-sub-action"><svg class="replay-arrow" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8M21 3v5h-5"/></svg> もう一度聞く</button>
+
       </div>
     </div>
+  </div>
+
+      </div>
+    </main>
   </div>
 
   <script src="./js/bootstrap.js"></script>

@@ -22,13 +22,13 @@
 .news-back { position:relative; z-index:1; min-width:52px; min-height:44px; font-size:12px; padding:6px; }
 .news-content { width: 100%; max-width: none; padding: 12px 16px 32px; }
 .news-tabs {
-  gap: 7px; margin: 0 -16px 16px; padding: 0 16px 10px;
+  gap: 5px; margin: 0 -16px 10px; padding: 0 16px 7px;
   overflow-x: auto; overscroll-behavior-x: contain; scroll-padding-inline: 16px;
 }
-.news-tabs button { min-height: 44px; padding: 9px 17px; font-size: 13px; }
+.news-tabs button { min-height: 32px; padding: 5px 11px; font-size: 11px; line-height: 1.4; }
 .news-section-label h2 { font-size: 19px; }
 .news-section-label > span { font-size: 10px; }
-.news-sample-note { font-size: 11px; line-height: 1.8; margin: 12px 0; }
+.news-sample-note { font-size: 8px; line-height: 1.5; margin: 5px 0 8px; color: #7f8996; font-weight: 400; }
 .news-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .news-card { min-width: 0; padding: 14px 12px; gap: 12px; }
 .news-card-copy { min-width: 0; }
@@ -77,3 +77,31 @@
 .news-card { border-left:3px solid var(--genre-color); }
 .news-section-label h2 { border-left-color:var(--genre-color,#ef4444); }
 .news-article .news-category { background:var(--genre-color); color:#07101d; }
+
+/* Dense news feed, including the first article. */
+.news-grid { gap:1px; }
+.news-grid .news-card { display:flex; flex-direction:row-reverse; align-items:center; grid-row:auto; gap:9px; padding:9px 4px; border:0; border-bottom:1px solid #ffffff1c; border-radius:0; }
+.news-grid .news-card img { width:72px; height:66px; aspect-ratio:auto; margin:0; border-radius:4px; object-fit:cover; }
+.news-grid .news-card .news-card-copy { padding:0; }
+.news-grid .news-card h3 { font-size:14px; line-height:1.45; margin:4px 0; }
+.news-grid .news-card .news-card-copy > p { display:none; }
+.news-grid .news-card .news-meta { font-size:9px; gap:4px; }
+.news-grid .news-card .news-card-bottom { font-size:9px; }
+
+/* Minimal scroll indicator: white thumb, no track or arrows. */
+.news-screen { scrollbar-width:thin; scrollbar-color:#fff transparent; }
+.news-screen::-webkit-scrollbar { width:3px; height:3px; }
+.news-screen::-webkit-scrollbar-track { background:transparent; border:0; }
+.news-screen::-webkit-scrollbar-thumb { background:#fff; border:0; border-radius:99px; }
+.news-screen::-webkit-scrollbar-button { display:none; width:0; height:0; }
+.news-screen::-webkit-scrollbar-corner { background:transparent; }
+
+/* Balance the scrollbar gutter so the header stays centered in the phone. */
+.news-screen { scrollbar-gutter:stable both-edges; }
+
+/* Keep category navigation directly below the sticky logo header. */
+.news-tabs { position:sticky; top:calc(var(--consumer-header-height, 52px) + env(safe-area-inset-top) + 1px); z-index:4; background:#050708; padding-top:6px; }
+
+/* Start the category strip at its sticky position, without a scrolling top gap. */
+.news-content:has(> .news-tabs) { padding-top:0; }
+.news-tabs { margin-top:0; padding-top:6px; }

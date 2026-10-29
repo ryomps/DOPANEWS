@@ -130,24 +130,26 @@ test('preset switch stops real audio and closes reflection; synth completion ope
   assert.equal(app.audioController.synthPlaying, true);
 });
 
-test('reflection survives style/timing changes but different lyrics have their own state', () => {
+test('vote closes immediately, returns to the article and retains choices for the same script', () => {
   const { app, data, get } = setup();
   const battle = JSON.parse(JSON.stringify(data.PRESET_BATTLE_DATA));
+  const choices = []; app.judgeModal.onChoose = choice => choices.push(choice);
   app.judgeModal.open(battle);
   get('btn-vote-kenta').emit('click');
-  get('reflection-note').value = 'my reason'; get('reflection-note').emit('input');
+  assert.deepEqual(choices, ['KENTA']);
+  assert.equal(get('judge-modal-overlay').classList.contains('hidden'), true);
   app.judgeModal.close();
   battle.suno_style = 'new style'; battle.verses[0].start_time_sec = 0.4;
   battle.verses[0].synced_from_mureka = true; battle.verses[0].timed_lines = [];
   app.judgeModal.open(JSON.parse(JSON.stringify(battle)));
   assert.equal(get('btn-vote-kenta').attrs['aria-pressed'], 'true');
-  assert.equal(get('reflection-note').value, 'my reason');
+
   get('btn-reflect-undecided').emit('click');
   assert.equal(get('btn-vote-kenta').attrs['aria-pressed'], 'false');
   assert.equal(get('btn-reflect-undecided').attrs['aria-pressed'], 'true');
   battle.verses[0].lyric += ' changed'; app.judgeModal.open(battle);
-  assert.equal(get('reflection-note').value, '');
-  assert.equal(get('reflection-panel').classList.contains('hidden'), true);
+  assert.deepEqual(choices, ['KENTA', 'UNDECIDED']);
+  assert.equal(get('btn-reflect-undecided').attrs['aria-pressed'], 'false');
 });
 
 test('Mureka milliseconds convert consistently at 0, 400, 500, 501 and later timestamps', () => {
@@ -611,11 +613,21 @@ test('volume controls both media audio and the synth master gain, including mute
   app.audioController.masterGain = { gain: { setValueAtTime: (value, time) => updates.push([value, time]) } };
   get('battle-volume').value = '35'; get('battle-volume').emit('input');
   assert.equal(get('battle-audio').volume, .35);
-  assert.equal(get('battle-volume-value').textContent, '35%');
+  assert.equal(get('battle-mute').getAttribute('aria-pressed'), 'false');
+  get('battle-mute').emit('click');
+  assert.equal(get('battle-audio').volume, 0);
+  assert.equal(get('battle-volume').value, '0');
+  assert.equal(get('battle-mute').getAttribute('aria-pressed'), 'true');
+  get('battle-mute').emit('click');
+  assert.equal(get('battle-audio').volume, .35);
+  assert.equal(get('battle-volume').value, '35');
   assert.deepEqual(updates.at(-1), [.35, 12]);
   get('battle-volume').value = '0'; get('battle-volume').emit('input');
   assert.equal(get('battle-audio').volume, 0);
   assert.deepEqual(updates.at(-1), [0, 12]);
+  assert.equal(get('battle-mute').getAttribute('aria-pressed'), 'true');
+  get('battle-mute').emit('click');
+  assert.equal(get('battle-audio').volume, .35);
   app.audioController.setVolume(2);
   assert.equal(get('battle-audio').volume, 1);
 });
