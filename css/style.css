@@ -1266,12 +1266,7 @@ html, body {
 .saved-battle-item { padding: 12px; border: 1px solid #384055; border-radius: 10px; background: #101421; }
 .saved-battle-item p { font-size: 12px; line-height: 1.5; margin-bottom: 6px; }
 .saved-battle-item small { display: block; color: var(--text-sub); margin-bottom: 8px; }
-.ai-review-panel { font-size: 12px; line-height: 1.6; }
-.ai-review-issue { margin-top: 10px; padding: 10px; border-left: 3px solid #FFE600; background: #ffffff08; overflow-wrap: anywhere; }
-.ai-review-issue p { margin-bottom: 6px; }
-.ai-review-panel [hidden] { display: none !important; }
 .stage-bottom { position: relative; }
-#btn-show-ai-review { position: absolute; top: 0; left: 0; width: 100%; z-index: 1; padding: 5px 8px; font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 button:disabled { opacity: 0.5; cursor: wait; }
 
 /* 🎤 ワンタップ歌い出し同期ボタン */

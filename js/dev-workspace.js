@@ -18,12 +18,13 @@ document.getElementById('dev-api-form').addEventListener('submit', async event =
   const status = document.getElementById('api-config-status');
   const gemini = document.getElementById('dev-gemini-key');
   const mureka = document.getElementById('dev-mureka-key');
+  const openai = document.getElementById('dev-openai-key');
   button.disabled = true;
   try {
-    const response = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ GeminiApiKey: gemini.value, MurekaApiKey: mureka.value }) });
+    const response = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ GeminiApiKey: gemini.value, MurekaApiKey: mureka.value, OpenAIApiKey: openai.value }) });
     if (!response.ok) throw new Error('設定を保存できませんでした。ローカルサーバーの接続を確認してください。');
     const config = await response.json();
-    status.textContent = `保存しました。Gemini：${config.geminiConfigured ? '設定済み' : '未設定'} ／ Mureka：${config.murekaConfigured ? '設定済み' : '未設定'}`;
+    status.textContent = `保存しました。OpenAI検索：${config.openaiConfigured ? '設定済み' : '未設定'} ／ Gemini：${config.geminiConfigured ? '設定済み' : '未設定'} ／ Mureka：${config.murekaConfigured ? '設定済み' : '未設定'}`;
   } catch (error) { status.textContent = error.message; }
-  finally { gemini.value = ''; mureka.value = ''; button.disabled = false; }
+  finally { gemini.value = ''; mureka.value = ''; openai.value = ''; button.disabled = false; }
 });

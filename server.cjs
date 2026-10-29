@@ -6,9 +6,10 @@ const crypto = require('node:crypto');
 const { Readable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 const { reviewBattle, reviewFingerprint } = require('./review.cjs');
+const { createNewsService, publicNewsFailure } = require('./news-service.cjs');
 
 function createServer({ root = __dirname, libraryDir = path.join(root, '.local', 'library'),
-  configPath = path.join(root, 'config.local.json'), env = process.env, fetchImpl = fetch } = {}) {
+  newsDirectory = path.join(root, '.local', 'news'), configPath = path.join(root, 'config.local.json'), env = process.env, fetchImpl = fetch } = {}) {
   const reviewJobs = new Map();
   const json = (res, data, status = 200) => {
     res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -18,7 +19,7 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
     let local = {};
     try { local = JSON.parse(await fsp.readFile(configPath, 'utf8')); }
     catch (err) { if (err.code !== 'ENOENT') throw new Error('config.local.json must contain valid JSON.'); }
-    return { gemini: local.GeminiApiKey || env.GEMINI_API_KEY || '', mureka: local.MurekaApiKey || env.MUREKA_API_KEY || '' };
+    return { gemini: local.GeminiApiKey || env.GEMINI_API_KEY || '', mureka: local.MurekaApiKey || env.MUREKA_API_KEY || '', openai: local.OpenAIApiKey || env.OPENAI_API_KEY || '' };
   }
   async function readBody(req) {
     if (!req.headers['content-type']?.startsWith('application/json')) throw new Error('JSON request required.');
@@ -30,6 +31,7 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
     }
     return JSON.parse(Buffer.concat(chunks).toString('utf8'));
   }
+  const news = createNewsService({ directory: newsDirectory, fetchImpl, readConfig });
   async function sendFile(req, res, file, mime) {
     const stat = await fsp.stat(file);
     let start = 0, end = stat.size - 1, status = 200;
@@ -65,9 +67,29 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
         json(res, { error: 'Origin denied' }, 403); return;
       }
       const url = new URL(req.url, `http://${host}`), route = url.pathname;
+      if (route === '/api/news/search-usage' && req.method === 'GET') {
+        const [usage, config] = await Promise.all([news.searchUsage(), readConfig()]);
+        json(res, { ...usage, configured: Boolean(config.openai) }); return;
+      }
+      if (route === '/api/news' && req.method === 'GET') {
+        const [headlines, articles, searchUsage, config] = await Promise.all([news.headlines(), news.list(), news.searchUsage(), readConfig()]);
+        json(res, { headlines, articles, sources: news.sources, primarySources: news.primarySources, searchUsage: { ...searchUsage, configured: Boolean(config.openai) } }); return;
+      }
+      if (route === '/api/news/generate' && req.method === 'POST') {
+        const input = await readBody(req);
+        if (!input || typeof input !== 'object' || Object.keys(input).some(k => !['topicId', 'retry'].includes(k)) || ('retry' in input && typeof input.retry !== 'boolean')) throw new Error('一覧から話題を選んでください。');
+        try { json(res, await news.generate(input.topicId, input.retry)); }
+        catch (error) { const problem = publicNewsFailure(error); json(res, { code: problem.code, error: problem.message }, problem.status); }
+        return;
+      }
+      const newsArticle = /^\/api\/news\/articles\/([a-f0-9]{32})$/.exec(route);
+      if (newsArticle && req.method === 'GET') {
+        const record = await news.get(newsArticle[1]);
+        json(res, record || { error: '保存したニュースが見つかりません。' }, record ? 200 : 404); return;
+      }
       if (route === '/api/config' && req.method === 'GET') {
         const config = await readConfig();
-        json(res, { geminiConfigured: Boolean(config.gemini), murekaConfigured: Boolean(config.mureka), reviewSupported: true }); return;
+        json(res, { geminiConfigured: Boolean(config.gemini), murekaConfigured: Boolean(config.mureka), openaiConfigured: Boolean(config.openai), reviewSupported: true }); return;
       }
       if (route === '/api/review' && req.method === 'POST') {
         const input = await readBody(req);
@@ -111,7 +133,7 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
       }
       if (route === '/api/config' && req.method === 'POST') {
         const input = await readBody(req);
-        const fields = ['GeminiApiKey', 'MurekaApiKey'];
+        const fields = ['GeminiApiKey', 'MurekaApiKey', 'OpenAIApiKey'];
         if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(k => !fields.includes(k)) || fields.some(k => k in input && (typeof input[k] !== 'string' || input[k].length > 4096 || /[\r\n]/.test(input[k])))) {
           json(res, { error: 'Invalid API key settings' }, 400); return;
         }
@@ -122,17 +144,7 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
         for (const key of fields) if (input[key]?.trim()) settings[key] = input[key].trim();
         await fsp.writeFile(configPath, JSON.stringify(settings, null, 2), { mode: 0o600 });
         const config = await readConfig();
-        json(res, { geminiConfigured: Boolean(config.gemini), murekaConfigured: Boolean(config.mureka) }); return;
-      }
-      if (route === '/api/config' && req.method === 'POST') {
-        const body = await readBody(req);
-        const current = await readConfig().catch(() => ({ gemini: '', mureka: '' }));
-        const nextCfg = {
-          GeminiApiKey: typeof body.GeminiApiKey === 'string' && body.GeminiApiKey.trim() ? body.GeminiApiKey.trim() : current.gemini,
-          MurekaApiKey: typeof body.MurekaApiKey === 'string' && body.MurekaApiKey.trim() ? body.MurekaApiKey.trim() : current.mureka
-        };
-        await fsp.writeFile(configPath, JSON.stringify(nextCfg, null, 2), 'utf8');
-        json(res, { ok: true, geminiConfigured: Boolean(nextCfg.GeminiApiKey), murekaConfigured: Boolean(nextCfg.MurekaApiKey) }); return;
+        json(res, { geminiConfigured: Boolean(config.gemini), murekaConfigured: Boolean(config.mureka), openaiConfigured: Boolean(config.openai) }); return;
       }
       const gemini = /^\/api\/gemini\/([a-zA-Z0-9.-]+)$/.exec(route);
       if (gemini && req.method === 'POST') {

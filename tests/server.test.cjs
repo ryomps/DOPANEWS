@@ -39,7 +39,7 @@ test('server keeps API keys private and injects them into the correct upstream r
     calls.push({ target, options }); return Response.json({ status: 'succeeded' });
   });
   const config = await (await fetch(`${url}/api/config`)).json();
-  assert.deepEqual(config, { geminiConfigured: true, murekaConfigured: true, reviewSupported: true });
+  assert.deepEqual(config, { geminiConfigured: true, murekaConfigured: true, openaiConfigured:false, reviewSupported: true });
   for (const route of ['/config.local.json', '/.local/library/x.json', '/server.cjs', '/.git/config']) {
     assert.equal((await fetch(url + route)).status, 404);
   }
@@ -171,7 +171,7 @@ test('developer config writes stay private, preserve blank fields and reject for
   const { url, root } = await fixture(t);
   let response = await post(url + '/api/config', { GeminiApiKey: 'replacement', MurekaApiKey: '' });
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { geminiConfigured: true, murekaConfigured: true });
+  assert.deepEqual(await response.json(), { geminiConfigured: true, murekaConfigured: true, openaiConfigured:false });
   const stored = JSON.parse(await fs.readFile(path.join(root, 'config.local.json'), 'utf8'));
   assert.equal(stored.GeminiApiKey, 'replacement');
   assert.equal(stored.MurekaApiKey, 'test-mureka');
@@ -179,4 +179,11 @@ test('developer config writes stay private, preserve blank fields and reject for
   response = await fetch(url + '/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://example.com' }, body: JSON.stringify({ GeminiApiKey: 'bad' }) });
   assert.equal(response.status, 403);
   assert.equal((await post(url + '/api/config', { GeminiApiKey: 123 })).status, 400);
+  response = await post(url + '/api/config', { OpenAIApiKey: 'private-openai' });
+  assert.equal(response.status, 200); assert.equal((await response.json()).openaiConfigured, true);
+  await post(url + '/api/config', { OpenAIApiKey: '' });
+  const updated = JSON.parse(await fs.readFile(path.join(root, 'config.local.json'), 'utf8'));
+  assert.equal(updated.OpenAIApiKey, 'private-openai'); assert.equal(updated.GeminiApiKey, 'replacement');
+  assert.ok(!(await (await fetch(url + '/api/config')).text()).includes('private-openai'));
+  assert.equal((await post(url + '/api/config', { OpenAIApiKey: 'bad\nkey' })).status, 400);
 });

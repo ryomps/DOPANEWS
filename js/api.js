@@ -23,7 +23,7 @@
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
       if (path === '/api/review' && response.status === 404 && !data.code) {
-        throw new Error('AI審判APIが見つかりません。サーバーを再起動後、ページを再読み込みせず「審判だけ再確認」を押してください。歌詞・音源の再生成は不要です。');
+        throw new Error('サーバーの更新が必要です。サーバーを再起動してから、もう一度お試しください。');
       }
       throw new Error(data.error || `ローカルサーバーエラー (${response.status})`);
     }
@@ -281,8 +281,15 @@
           .replace(/```\s*$/, '')
           .trim();
 
-        const parsed = JSON.parse(cleanedJson);
-        return DOPANEWS.validateBattleReadings(DOPANEWS.normalizeBattleData(parsed));
+        try {
+          const parsed = JSON.parse(cleanedJson);
+          return DOPANEWS.validateBattleReadings(DOPANEWS.normalizeBattleData(parsed));
+        } catch (error) {
+          // An actual model output with invalid lyrics/readings can be corrected;
+          // distinguish it from network/authentication/provider failures.
+          error.code = 'LYRIC_CONTENT_INVALID';
+          throw error;
+        }
       }
 
       lastStatus = response.status;

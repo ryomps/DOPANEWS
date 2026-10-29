@@ -399,50 +399,66 @@ test('Gemini pronunciation output flows into the Mureka 9 payload without an ext
 const flaggedReview = stage => ({ stage, verdict: 'needs_revision', summary: '元記事と数値が異なります',
   issues: [{ kind: 'contradiction', quote: '全員の給料が半分', reason: '断定の根拠がありません', source_quote: '', suggestion: '懸念として表現する' }] });
 
-test('script issues stop before Mureka; dismiss never retries or generates audio', async () => {
+test('lyrics fail at most three times, never generate music, and rejected lyrics never reach the stage', async () => {
   const { app, data, get } = setup();
   let lyrics = 0, music = 0, reviews = 0;
-  data.generateBattleScriptWithGemini = async () => { lyrics++; return data.PRESET_BATTLE_DATA; };
-  data.generateBattleTrackWithMureka = async () => { music++; return { audioUrl: 'song.mp3' }; };
+  const original = app.currentBattleData;
+  data.generateBattleScriptWithGemini = async () => { lyrics++; return {...data.PRESET_BATTLE_DATA, title: 'rejected lyrics'}; };
+  data.generateBattleTrackWithMureka = async () => { music++; };
   data.reviewBattle = async () => { reviews++; return flaggedReview('script'); };
   await app.handleFullBattleGeneration();
-  assert.equal(lyrics, 1); assert.equal(music, 0); assert.equal(reviews, 1);
-  assert.equal(app.reviewState.status, 'needs_revision');
-  assert.equal(get('btn-review-regenerate').hidden, false);
-  get('btn-review-dismiss').emit('click'); await Promise.resolve();
-  assert.equal(get('btn-review-regenerate').hidden, true);
-  assert.equal(lyrics, 1); assert.equal(music, 0);
+  assert.equal(lyrics, 3); assert.equal(reviews, 3); assert.equal(music, 0);
+  assert.equal(app.currentBattleData, original); assert.equal(app.isGenerating, false);
+  assert.equal(app.currentReviews.scriptAttempts.length, 3);
+  assert.match(get('generation-status-log').textContent, /作成を完了できません/);
+  assert.doesNotMatch(get('generation-status-log').textContent, /審判|指摘|全員の給料/);
+  assert.equal(get('btn-start-battle').disabled, false);
 });
 
-test('manual regeneration sends feedback and the original article; each click makes only one attempt', async () => {
+test('automatic correction uses the original article and latest feedback, then generates music only once', async () => {
   const { app, data } = setup();
   let lyrics = 0, music = 0, reviews = 0;
   const source = app.articleInputEl.value;
   data.generateBattleScriptWithGemini = async (article, progress, feedback) => {
-    lyrics++;
-    if (lyrics === 2) { assert.equal(article, source); assert.equal(feedback.verdict, 'needs_revision'); }
+    lyrics++; assert.equal(article, source);
+    assert.equal(feedback?.verdict ?? null, lyrics === 1 ? null : 'needs_revision');
+    if (lyrics === 2) app.articleInputEl.value = 'edited during generation';
     return JSON.parse(JSON.stringify(data.PRESET_BATTLE_DATA));
   };
   data.generateBattleTrackWithMureka = async () => { music++; return { audioUrl: 'song.mp3' }; };
-  data.reviewBattle = async input => { reviews++; return reviews === 1 ? flaggedReview('script') : { stage: input.stage, verdict: 'pass', summary: '確認完了', issues: [] }; };
-  await app.handleFullBattleGeneration(); assert.equal(music, 0);
-  app.articleInputEl.value = '別の入力';
-  await app._regenerateReviewedBattle(); await app.audioReviewPromise;
-  assert.equal(lyrics, 2); assert.equal(music, 1);
-  assert.equal(app.reviewState.stage, 'audio'); assert.equal(app.reviewState.status, 'pass');
+  data.reviewBattle = async input => {
+    if (input.stage === 'audio') return { stage: 'audio', verdict: 'pass', summary: 'pass', issues: [] };
+    reviews++; return reviews < 3 ? flaggedReview('script') : { stage: 'script', verdict: 'pass', summary: 'pass', issues: [] };
+  };
+  await app.handleFullBattleGeneration(); await app.audioReviewPromise;
+  assert.equal(lyrics, 3); assert.equal(reviews, 3); assert.equal(music, 1);
+  assert.equal(app.currentReviews.scriptAttempts.length, 3);
 });
 
-test('failed review stops generation; passing recheck automatically generates audio without regenerating lyrics', async () => {
-  const { app, data } = setup();
+test('first-pass approval skips further lyrics and full generation stays locked until music is done', async () => {
+  const { app, data, get } = setup();
+  let lyrics = 0, release, entered;
+  const started = new Promise(resolve => { entered = resolve; });
+  data.generateBattleScriptWithGemini = async () => { lyrics++; return data.PRESET_BATTLE_DATA; };
+  data.generateBattleTrackWithMureka = () => new Promise(resolve => { release = resolve; entered(); });
+  const running = app.handleFullBattleGeneration();
+  await started;
+  assert.ok(release); assert.equal(lyrics, 1); assert.equal(app.isGenerating, true);
+  assert.equal(get('btn-start-battle').disabled, true);
+  release({ audioUrl: 'song.mp3' }); await running; await app.audioReviewPromise;
+  assert.equal(app.isGenerating, false); assert.equal(lyrics, 1);
+});
+
+test('checker connection failure stops without regenerating or exposing internal errors', async () => {
+  const { app, data, get } = setup();
   let lyrics = 0, music = 0;
   data.generateBattleScriptWithGemini = async () => { lyrics++; return data.PRESET_BATTLE_DATA; };
-  data.generateBattleTrackWithMureka = async () => { music++; return { audioUrl: 'song.mp3' }; };
-  data.reviewBattle = async () => { throw new Error('connection failed'); };
+  data.generateBattleTrackWithMureka = async () => { music++; };
+  data.reviewBattle = async () => { throw new Error('AI審判 internal provider failure'); };
   await app.handleFullBattleGeneration();
-  assert.equal(app.reviewState.status, 'error'); assert.equal(music, 0);
-  data.reviewBattle = async input => ({ stage: input.stage, verdict: 'pass', summary: '確認完了', issues: [] });
-  await app._recheckReview(); await app.audioReviewPromise;
-  assert.equal(lyrics, 1); assert.equal(music, 1);
+  assert.equal(app.reviewState.status, 'error'); assert.equal(music, 0); assert.equal(lyrics, 1);
+  assert.doesNotMatch(get('generation-status-log').textContent, /審判|provider/);
+  assert.equal(app.isGenerating, false);
 });
 
 test('audio review runs in background without regenerating and late results cannot overwrite another battle', async () => {
@@ -461,19 +477,17 @@ test('audio review runs in background without regenerating and late results cann
   assert.equal(app.reviewState.status, 'idle'); assert.equal(music, 1);
 });
 
-test('audio issues remain a user choice and keep the generated recording available', async () => {
+test('audio review remains internal and never regenerates or replaces the recording', async () => {
   const { app, data, get } = setup();
   let music = 0;
   data.generateBattleScriptWithGemini = async () => data.PRESET_BATTLE_DATA;
   data.generateBattleTrackWithMureka = async () => { music++; return { audioUrl: 'song.mp3' }; };
-  data.reviewBattle = async input => input.stage === 'audio' ? flaggedReview('audio') : { stage: 'script', verdict: 'pass', summary: '確認完了', issues: [] };
+  data.reviewBattle = async input => input.stage === 'audio' ? flaggedReview('audio') : { stage: 'script', verdict: 'pass', summary: 'pass', issues: [] };
   await app.handleFullBattleGeneration(); await app.audioReviewPromise;
   assert.equal(app.reviewState.status, 'needs_revision'); assert.equal(music, 1);
   assert.equal(get('battle-audio').src, '/api/library/saved-test/audio');
-  assert.match(get('ai-review-cost').textContent, /GeminiとMureka/);
-  get('btn-review-dismiss').emit('click'); await Promise.resolve(); assert.equal(music, 1);
+  assert.doesNotMatch(get('generation-status-log').textContent, /審判|指摘|全員の給料/);
 });
-
 
 test('outdated local server is detected before spending Gemini or Mureka credits', async () => {
   const { app, data, get } = setup();
@@ -493,24 +507,48 @@ test('missing review route explains restart while missing audio keeps its own er
   const context = { window: null, DOPANEWS: data, fetch: async () => ({ ok: false, status: 404, json: async () => detail }) };
   context.window = context; vm.createContext(context);
   vm.runInContext(fs.readFileSync(path.join(root, 'js/api.js'), 'utf8'), context);
-  await assert.rejects(data.reviewBattle({ stage: 'script' }), /サーバーを再起動後.*審判だけ再確認/);
+  await assert.rejects(data.reviewBattle({ stage: 'script' }), /サーバーを再起動/);
   detail = { error: '保存音源がありません', code: 'REVIEW_SOURCE_NOT_FOUND' };
   await assert.rejects(data.reviewBattle({ stage: 'audio' }), /保存音源がありません/);
 });
 
 
-test('a recheck with issues still stops before Mureka; audio rechecks never regenerate', async () => {
-  const { app, data } = setup();
-  let music = 0;
-  data.generateBattleScriptWithGemini = async () => data.PRESET_BATTLE_DATA;
-  data.generateBattleTrackWithMureka = async () => { music++; return { audioUrl: 'song.mp3' }; };
+test('lyrics-only generation also retries uncertain scripts within the shared three-attempt budget', async () => {
+  const { app, data } = setup(); let lyrics = 0, reviews = 0, music = 0;
+  data.generateBattleScriptWithGemini = async () => { lyrics++; return data.PRESET_BATTLE_DATA; };
+  data.generateBattleTrackWithMureka = async () => { music++; };
+  data.reviewBattle = async () => { reviews++; return reviews === 1 ? {...flaggedReview('script'), verdict: 'uncertain'} : {stage:'script', verdict:'pass', summary:'pass', issues:[]}; };
+  await app.handleGeminiOnlyGeneration();
+  assert.equal(lyrics, 2); assert.equal(reviews, 2); assert.equal(music, 0);
+  assert.equal(app.audioController.usingSynthFallback, true); assert.equal(app.isGenerating, false);
+});
+
+test('lyrics-only generation stops at three rejected scripts without saving or playing them', async () => {
+  const { app, data, get } = setup(); let lyrics = 0, saves = 0;
+  data.generateBattleScriptWithGemini = async () => { lyrics++; return data.PRESET_BATTLE_DATA; };
+  data.saveBattle = async () => { saves++; };
   data.reviewBattle = async () => flaggedReview('script');
-  await app.handleFullBattleGeneration(); await app._recheckReview();
-  assert.equal(music, 0); assert.equal(app.reviewState.status, 'needs_revision');
-  data.reviewBattle = async input => ({ stage: input.stage, verdict: 'pass', summary: '指摘なし', issues: [] });
-  await app._recheckReview(); await app.audioReviewPromise;
-  assert.equal(music, 1);
-  await app._recheckReview(); assert.equal(music, 1);
+  await app.handleGeminiOnlyGeneration();
+  assert.equal(lyrics, 3); assert.equal(saves, 0); assert.equal(app.audioController.getCurrentTime(), 0);
+  assert.equal(get('btn-gemini-only').disabled, false);
+});
+
+test('review controls and reports are absent from the HTML at every viewport', () => {
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  assert.doesNotMatch(html, /id="(?:ai-review-panel|btn-show-ai-review|btn-review-[^"]*)"/);
+});
+
+test('invalid pronunciation output shares the three-attempt limit and gets correction feedback', async () => {
+  const { app, data } = setup(); let lyrics = 0, reviews = 0;
+  data.generateBattleScriptWithGemini = async (article, progress, feedback) => {
+    lyrics++;
+    if (lyrics > 1) assert.equal(feedback.verdict, 'needs_revision');
+    throw Object.assign(new Error('かな表記が不正です'), { code: 'LYRIC_CONTENT_INVALID' });
+  };
+  data.reviewBattle = async () => { reviews++; };
+  await app.handleGeminiOnlyGeneration();
+  assert.equal(lyrics, 3); assert.equal(reviews, 0); assert.equal(app.currentReviews.scriptAttempts.length, 3);
+  assert.equal(app.isGenerating, false);
 });
 
 test('live stage follows the active speaker and freezes cheering when playback pauses', () => {

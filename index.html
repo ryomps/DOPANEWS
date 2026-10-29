@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="./css/live-battle.css" />
   <link rel="stylesheet" href="./css/mobile-news.css" />
   <link rel="stylesheet" href="./css/dev-workspace.css" />
+  <link rel="stylesheet" href="./css/news-live.css" />
 </head>
 <body class="news-mode">
   <section id="news-screen" class="news-screen" aria-label="ニュース">
@@ -19,10 +20,11 @@
       <button id="news-back" class="news-back" type="button" hidden>〈 戻る</button>
       <a class="news-brand" href="#" aria-label="DOPANEWS トップ">DOPA<span>NEWS</span><small>ニュースを、別の視点で。</small></a>
       <div style="display: flex; align-items: center; gap: 10px;">
-        <button id="news-open-studio" type="button" style="background: #143f53; color: #fff; border: 0; border-radius: 6px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer;">🎤 URL・記事からラップ生成スタジオへ</button>
+        <button id="news-open-studio" type="button" title="URL・記事からラップ生成スタジオへ" style="background: #143f53; color: #fff; border: 0; border-radius: 6px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer;">生成スタジオ</button>
         <span class="news-edition">NEWS × MC BATTLE</span>
       </div>
     </div></header>
+    <section id="news-live-panel" class="live-news" aria-label="自動取得ニュース"></section>
     <main id="news-content" class="news-content"></main>
     <footer id="news-battle-bar" class="news-battle-bar" hidden><div><span>このニュースを、ふたつの視点で。</span><button id="news-start-battle" type="button">MCバトル開始 <span aria-hidden="true">→</span></button><small>資料に基づく創作台本＋デモビートで再生</small></div></footer>
   </section>
@@ -50,6 +52,8 @@
         <h2 class="section-title">接続状態</h2>
         <p id="api-config-status" class="status-log" role="status">ローカル設定を確認中…</p>
         <form id="dev-api-form" class="dev-api-form" autocomplete="off">
+          <label for="dev-openai-key">OpenAI APIキー（ニュース検索）</label>
+          <input id="dev-openai-key" class="cyber-input" type="password" autocomplete="new-password" placeholder="新しいキーを入力" />
           <label for="dev-gemini-key">Gemini APIキー</label>
           <input id="dev-gemini-key" class="cyber-input" type="password" autocomplete="new-password" placeholder="新しいキーを入力" />
           <label for="dev-mureka-key">Mureka APIキー</label>
@@ -138,19 +142,6 @@
         </div>
         <div id="generation-status-log" class="status-log">
           ニュースのURLまたは本文を入力し、「🔥 バトル生成スタート」を押してください！
-        </div>
-      </section>
-
-      <section id="ai-review-panel" class="panel-section ai-review-panel" tabindex="-1">
-        <h2 class="section-title">AI審判</h2>
-        <p id="ai-review-status" role="status" aria-live="polite">未確認：新しく生成する歌詞・音源を確認します。</p>
-        <p class="reflection-footnote">元記事との照合です。意見や比喩だけでは不適切としません。AIの判定にも誤りがあります。</p>
-        <div id="ai-review-issues"></div>
-        <p id="ai-review-cost" class="reflection-footnote"></p>
-        <div class="sub-action-row">
-          <button id="btn-review-regenerate" class="btn-sub-action" type="button" hidden>指摘を反映して再生成する</button>
-          <button id="btn-review-dismiss" class="btn-sub-action" type="button" hidden>今回は再生成しない</button>
-          <button id="btn-review-recheck" class="btn-sub-action" type="button" hidden>審判だけ再確認（Gemini）</button>
         </div>
       </section>
 
@@ -260,7 +251,6 @@
               <div class="point-summary-row">
                 💡 <strong>要点:</strong> <span id="stage-point-summary">-</span>
               </div>
-              <!-- 【拡張用スロット】Phase 2: 第3の審判AI（ファクトチェッカー）挿入位置 -->
               <div id="fact-check-slot" class="fact-check-slot" data-fact-status="UNVERIFIED"></div>
             </div>
           </div>
@@ -268,7 +258,6 @@
 
         <!-- ステージ下部：オーディオスペクトラム風ビジュアライザー＆再生コントロール -->
         <footer class="stage-bottom">
-          <button id="btn-show-ai-review" class="btn-small" type="button">AI審判：未確認</button>
           <div class="battle-seek-row">
             <div class="stage-progress-track"><div id="stage-progress-fill" class="stage-progress-fill"></div></div>
             <input id="battle-seek" type="range" min="0" max="48" value="0" step="0.1" aria-label="再生位置" />
@@ -336,6 +325,7 @@
   <script src="./js/components/JudgeModal.js?v=20261027_4"></script>
   <script src="./js/app.js?v=20261027_4"></script>
   <script src="./js/news.js?v=20261027_4"></script>
+  <script src="./js/news-live.js?v=20261029_1"></script>
 </body>
 <script src="./js/dev-workspace.js"></script>
 </html>
