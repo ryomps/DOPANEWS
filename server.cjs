@@ -67,6 +67,21 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
         const config = await readConfig();
         json(res, { geminiConfigured: Boolean(config.gemini), murekaConfigured: Boolean(config.mureka) }); return;
       }
+      if (route === '/api/config' && req.method === 'POST') {
+        const input = await readBody(req);
+        const fields = ['GeminiApiKey', 'MurekaApiKey'];
+        if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(k => !fields.includes(k)) || fields.some(k => k in input && (typeof input[k] !== 'string' || input[k].length > 4096 || /[\r\n]/.test(input[k])))) {
+          json(res, { error: 'Invalid API key settings' }, 400); return;
+        }
+        let settings = {};
+        try { settings = JSON.parse(await fsp.readFile(configPath, 'utf8')); }
+        catch (err) { if (err.code !== 'ENOENT') throw err; }
+        // Blank fields leave existing values unchanged. Never send keys back to the browser.
+        for (const key of fields) if (input[key]?.trim()) settings[key] = input[key].trim();
+        await fsp.writeFile(configPath, JSON.stringify(settings, null, 2), { mode: 0o600 });
+        const config = await readConfig();
+        json(res, { geminiConfigured: Boolean(config.gemini), murekaConfigured: Boolean(config.mureka) }); return;
+      }
       const gemini = /^\/api\/gemini\/([a-zA-Z0-9.-]+)$/.exec(route);
       if (gemini && req.method === 'POST') {
         const config = await readConfig();

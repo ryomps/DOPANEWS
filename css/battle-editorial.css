@@ -195,3 +195,17 @@
 @media (max-width: 500px) {
   .active-speaker-badge .mc-sub { display: none; }
 }
+
+.news-source-notes { padding:18px; margin:24px 0; border:1px solid #ffffff24; border-radius:8px; background:#0b131d; color:#bbc7d6; font-size:12px; line-height:1.9; overflow-wrap:anywhere; }
+.news-source-notes h2 { font-size:16px; color:#f2f5fa; }
+.news-source-notes a { color:#94bcff; text-decoration:underline; text-underline-offset:3px; }
+
+.news-category-empty { margin:24px 0; padding:36px 20px; text-align:center; border:1px solid #ffffff24; border-radius:8px; background:#0b131d; color:#bbc7d6; }
+.news-category-empty h3 { margin:0 0 12px; font-size:18px; color:#f2f5fa; }
+.news-category-empty p { font-size:12px; line-height:1.8; }
+.news-category-empty button { margin-top:12px; padding:12px 18px; border:1px solid #426a9c; border-radius:6px; background:#142a45; color:#dceaff; cursor:pointer; }
+.news-tabs { overflow-x:auto; flex-wrap:nowrap; }
+.news-tabs button { flex:0 0 auto; white-space:nowrap; }
+
+.cutin-kenta .cutin-portrait { background-image:url('./images/mc-kenta.png'); background-size:cover; background-position:center 20%; }
+.cutin-reina .cutin-portrait { background-image:url('./images/mc-reina.png'); background-size:cover; background-position:center 20%; }
