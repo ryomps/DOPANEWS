@@ -7,7 +7,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./css/style.css?v=20261027_4" />
+  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="./css/battle-editorial.css" />
+  <link rel="stylesheet" href="./css/live-battle.css" />
+  <link rel="stylesheet" href="./css/mobile-news.css" />
+  <link rel="stylesheet" href="./css/dev-workspace.css" />
 </head>
 <body class="news-mode">
   <section id="news-screen" class="news-screen" aria-label="ニュース">
@@ -20,14 +24,18 @@
       </div>
     </div></header>
     <main id="news-content" class="news-content"></main>
-    <footer id="news-battle-bar" class="news-battle-bar" hidden><div><span>このニュースを、ふたつの視点で。</span><button id="news-start-battle" type="button">MCバトル開始 <span aria-hidden="true">→</span></button><small>サンプル台本＋デモビートで再生</small></div></footer>
+    <footer id="news-battle-bar" class="news-battle-bar" hidden><div><span>このニュースを、ふたつの視点で。</span><button id="news-start-battle" type="button">MCバトル開始 <span aria-hidden="true">→</span></button><small>資料に基づく創作台本＋デモビートで再生</small></div></footer>
   </section>
-  <button id="return-to-news" class="return-to-news" type="button" hidden>〈 記事に戻る</button>
+
   <button id="btn-toggle-drawer" class="mobile-drawer-btn" type="button">⚙️ 設定・記事入力</button>
 
   <div class="app-layout">
     <!-- ==================== 左パネル：設定＆記事入力ドロワー ==================== -->
     <aside id="control-drawer" class="control-drawer">
+      <nav class="dev-preview-switch" aria-label="プレビュー画面切り替え">
+        <button type="button" id="dev-show-news">ニュース表示</button>
+        <button type="button" id="dev-show-battle">バトル表示</button>
+      </nav>
       <header class="brand-header">
         <div>
           <div class="brand-logo">
@@ -39,31 +47,16 @@
       </header>
 
       <section class="panel-section">
-        <div class="section-header">
-          <h2 class="section-title">🔑 接続状態 ＆ APIキー設定</h2>
-          <button id="btn-save-keys" class="btn-small" type="button">💾 キー保存</button>
-        </div>
-        <p id="api-config-status" class="status-log" role="status" style="margin-bottom: 8px;">接続状態を確認中…</p>
-        <div class="input-group">
-          <label for="input-gemini-key">Gemini API Key (台本・8小節×4本作詞用)</label>
-          <input
-            id="input-gemini-key"
-            type="password"
-            class="cyber-input"
-            placeholder="AIzaSy... (ブラウザまたはconfig.local.jsonに保存)"
-            autocomplete="off"
-          />
-        </div>
-        <div class="input-group" style="margin-top: 6px;">
-          <label for="input-suno-key">Mureka API Key (公式API ボーカル＆ビート生成用)</label>
-          <input
-            id="input-suno-key"
-            type="password"
-            class="cyber-input"
-            placeholder="Mureka API Key を入力..."
-            autocomplete="off"
-          />
-        </div>
+        <h2 class="section-title">接続状態</h2>
+        <p id="api-config-status" class="status-log" role="status">ローカル設定を確認中…</p>
+        <form id="dev-api-form" class="dev-api-form" autocomplete="off">
+          <label for="dev-gemini-key">Gemini APIキー</label>
+          <input id="dev-gemini-key" class="cyber-input" type="password" autocomplete="new-password" placeholder="新しいキーを入力" />
+          <label for="dev-mureka-key">Mureka APIキー</label>
+          <input id="dev-mureka-key" class="cyber-input" type="password" autocomplete="new-password" placeholder="新しいキーを入力" />
+          <button type="submit" class="btn-sub-action">このPCに設定を保存</button>
+          <p class="reflection-footnote">空欄は現在の設定を維持します。キーはGit対象外のconfig.local.jsonに保存します。</p>
+        </form>
       </section>
 
       <section class="panel-section">
@@ -148,6 +141,19 @@
         </div>
       </section>
 
+      <section id="ai-review-panel" class="panel-section ai-review-panel" tabindex="-1">
+        <h2 class="section-title">AI審判</h2>
+        <p id="ai-review-status" role="status" aria-live="polite">未確認：新しく生成する歌詞・音源を確認します。</p>
+        <p class="reflection-footnote">元記事との照合です。意見や比喩だけでは不適切としません。AIの判定にも誤りがあります。</p>
+        <div id="ai-review-issues"></div>
+        <p id="ai-review-cost" class="reflection-footnote"></p>
+        <div class="sub-action-row">
+          <button id="btn-review-regenerate" class="btn-sub-action" type="button" hidden>指摘を反映して再生成する</button>
+          <button id="btn-review-dismiss" class="btn-sub-action" type="button" hidden>今回は再生成しない</button>
+          <button id="btn-review-recheck" class="btn-sub-action" type="button" hidden>審判だけ再確認（Gemini）</button>
+        </div>
+      </section>
+
       <!-- ④ テスト用フォールバック（手元のMP3読み込み＆生成プロンプト確認） -->
       <section class="panel-section">
         <div class="section-header">
@@ -171,7 +177,7 @@
         <details class="debug-details" style="margin-top: 10px;">
           <summary>▼ Mureka送信メタタグ付き歌詞 ＆ Gemini JSONを表示</summary>
           <div class="input-group" style="margin-top: 8px;">
-            <label for="suno-prompt-preview">Lyrics Prompt (男女ボーカル切替メタタグ付き)</label>
+            <label for="suno-prompt-preview">Mureka送信用歌詞（音声用かな表記・パート指定付き）</label>
             <textarea id="suno-prompt-preview" class="cyber-textarea" readonly style="min-height: 90px; font-size: 11px;"></textarea>
           </div>
           <pre id="gemini-json-preview" class="debug-pre"></pre>
@@ -183,7 +189,11 @@
 
     <!-- ==================== 右メインステージ：9:16 縦型バトル画面 ==================== -->
     <main class="stage-viewport">
-      <div id="battle-stage" class="battle-stage" data-active-mc="KENTA">
+      <div id="battle-stage" class="battle-stage live-battle-player" data-active-mc="KENTA" data-playing="false">
+        <div class="battle-mobile-header">
+          <button id="return-to-news" class="return-to-news" type="button" hidden aria-label="記事に戻る">〈 戻る</button>
+          <a class="news-brand battle-brand" href="#" aria-label="DOPANEWS トップ">DOPA<span>NEWS</span></a>
+        </div>
         <!-- 【拡張用レイヤー】Phase 2: カットイン演出（乱入・パンチライン特大エフェクト）オーバーレイ -->
         <div id="cutin-overlay-layer" class="cutin-overlay-layer" data-last-trigger="NONE"></div>
 
@@ -203,12 +213,8 @@
               <span id="stage-timer" class="stage-timer">00:00 / 01:07</span>
             </div>
           </div>
-          <div class="stage-progress-track">
-            <div id="stage-progress-fill" class="stage-progress-fill"></div>
-          </div>
           <h2 id="stage-battle-title" class="stage-battle-title">バトルタイトル読込中...</h2>
           <p id="stage-topic-summary" class="stage-topic-summary"></p>
-          <div id="stage-verse-pills" class="verse-pills-row"></div>
         </header>
 
         <!-- ステージ中央：男女MCアバター ＆ パンチライン字幕 ＆ 要点解説カード -->
@@ -216,19 +222,22 @@
           <!-- 男女MC対決アバター -->
           <div class="mc-versus-arena">
             <div id="mc-card-kenta" class="mc-fighter-card mc-kenta mc-active">
-              <div class="mc-avatar-ring">🔥</div>
-              <div class="mc-name" style="color: #FF9F1C;">MC KENTA</div>
-              <div class="mc-role-tag">DEEP MALE / 庶民・変革派</div>
+              <img class="mc-stage-portrait" src="./css/images/mc-kenta.png" alt="MC KENTAのポートレート" />
+              <span class="mc-speaking-label">ON MIC</span>
+              <div class="mc-crowd" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="mc-identity"><div class="mc-name">MC KENTA</div><p id="stage-kenta-stance" class="mc-stance"></p></div>
             </div>
 
             <div class="vs-emblem">VS</div>
 
             <div id="mc-card-reina" class="mc-fighter-card mc-reina mc-dim">
-              <div class="mc-avatar-ring">❄️</div>
-              <div class="mc-name" style="color: #00F0FF;">MC REINA</div>
-              <div class="mc-role-tag">COOL FEMALE / データ・合理派</div>
+              <img class="mc-stage-portrait" src="./css/images/mc-reina.png" alt="MC REINAのポートレート" />
+              <span class="mc-speaking-label">ON MIC</span>
+              <div class="mc-crowd" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="mc-identity"><div class="mc-name">MC REINA</div><p id="stage-reina-stance" class="mc-stance"></p></div>
             </div>
           </div>
+          <p id="stage-speaking-status" class="stage-speaking-status" role="status" aria-live="polite"></p>
 
           <!-- パンチライン字幕＆要点メモ＆韻バッジ -->
           <div class="punchline-card">
@@ -259,15 +268,22 @@
 
         <!-- ステージ下部：オーディオスペクトラム風ビジュアライザー＆再生コントロール -->
         <footer class="stage-bottom">
-          <canvas id="spectrum-canvas" class="spectrum-canvas" width="360" height="44"></canvas>
+          <button id="btn-show-ai-review" class="btn-small" type="button">AI審判：未確認</button>
+          <div class="battle-seek-row">
+            <div class="stage-progress-track"><div id="stage-progress-fill" class="stage-progress-fill"></div></div>
+            <input id="battle-seek" type="range" min="0" max="48" value="0" step="0.1" aria-label="再生位置" />
+          </div>
+          <div id="stage-verse-pills" class="verse-pills-row" aria-label="バースを選択"></div>
+          <canvas id="spectrum-canvas" class="spectrum-canvas" width="360" height="24" aria-hidden="true"></canvas>
           <audio id="battle-audio"></audio>
           <div class="stage-controls-row">
-            <button id="btn-play-pause" type="button" class="btn-stage-play">
-              ▶ 再生
-            </button>
-            <button id="btn-open-judge" type="button" class="btn-stage-judge">
-              💭 あなたはどっち派？
-            </button>
+            <button id="btn-prev-verse" class="btn-verse-step" type="button" aria-label="前のバース" title="前のバース">❮</button>
+            <button id="btn-play-pause" type="button" class="btn-stage-play" aria-label="再生" title="再生">▶</button>
+            <button id="btn-next-verse" class="btn-verse-step" type="button" aria-label="次のバース" title="次のバース">❯</button>
+          </div>
+          <div class="battle-secondary-controls">
+            <label class="battle-volume" for="battle-volume"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3zM16 8q4 4 0 8M19 5q7 7 0 14"/></svg><input id="battle-volume" type="range" min="0" max="100" value="100" step="1" aria-label="音量"/><output id="battle-volume-value" for="battle-volume">100%</output></label>
+            <button id="btn-open-judge" type="button" class="btn-stage-judge">投票する <span aria-hidden="true">↗</span></button>
           </div>
         </footer>
       </div>
@@ -321,4 +337,5 @@
   <script src="./js/app.js?v=20261027_4"></script>
   <script src="./js/news.js?v=20261027_4"></script>
 </body>
+<script src="./js/dev-workspace.js"></script>
 </html>

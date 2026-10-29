@@ -5,9 +5,11 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { Readable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
+const { reviewBattle, reviewFingerprint } = require('./review.cjs');
 
 function createServer({ root = __dirname, libraryDir = path.join(root, '.local', 'library'),
   configPath = path.join(root, 'config.local.json'), env = process.env, fetchImpl = fetch } = {}) {
+  const reviewJobs = new Map();
   const json = (res, data, status = 200) => {
     res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
     res.end(JSON.stringify(data));
@@ -65,6 +67,61 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
       const url = new URL(req.url, `http://${host}`), route = url.pathname;
       if (route === '/api/config' && req.method === 'GET') {
         const config = await readConfig();
+        json(res, { geminiConfigured: Boolean(config.gemini), murekaConfigured: Boolean(config.mureka), reviewSupported: true }); return;
+      }
+      if (route === '/api/review' && req.method === 'POST') {
+        const input = await readBody(req);
+        if (!['script', 'audio'].includes(input.stage)) throw new Error('Unknown review stage.');
+        let articleText = input.articleText, battleData = input.battleData, record, recordFile, audio;
+        if (input.recordId) {
+          if (!/^[a-f0-9]{32}$/.test(input.recordId)) throw new Error('Invalid saved record.');
+          recordFile = path.join(libraryDir, `${input.recordId}.json`);
+          record = JSON.parse(await fsp.readFile(recordFile, 'utf8'));
+          articleText = record.articleText; battleData = record.battleData;
+        }
+        if (input.stage === 'audio') {
+          if (!record?.audioUrl) throw new Error('音源審判には保存済みの音声が必要です。先に音源を保存してください。');
+          const audioFile = path.join(libraryDir, `${input.recordId}.mp3`);
+          if ((await fsp.stat(audioFile)).size > 12 * 1024 * 1024) throw new Error('音源が12MBを超えるため審判できません。');
+          audio = await fsp.readFile(audioFile);
+        }
+        const fingerprint = reviewFingerprint(articleText, battleData, audio);
+        const cached = record?.reviews?.[input.stage];
+        if (!input.force && cached?.fingerprint === fingerprint) { json(res, cached); return; }
+        const jobKey = `${input.stage}:${input.recordId || ''}:${fingerprint}`;
+        let job = reviewJobs.get(jobKey);
+        if (!job) {
+          job = (async () => {
+            const config = await readConfig();
+            const report = { ...await reviewBattle({ articleText, battleData, stage: input.stage, audio, key: config.gemini, fetchImpl }), fingerprint };
+            if (recordFile) {
+              const latest = JSON.parse(await fsp.readFile(recordFile, 'utf8'));
+              latest.reviews = { ...latest.reviews, [input.stage]: report };
+              const temporary = `${recordFile}.${crypto.randomUUID()}.part`;
+              try { await fsp.writeFile(temporary, JSON.stringify(latest, null, 2), 'utf8'); await fsp.rename(temporary, recordFile); }
+              finally { await fsp.rm(temporary, { force: true }); }
+            }
+            return report;
+          })();
+          reviewJobs.set(jobKey, job);
+        }
+        try { json(res, await job); }
+        finally { if (reviewJobs.get(jobKey) === job) reviewJobs.delete(jobKey); }
+        return;
+      }
+      if (route === '/api/config' && req.method === 'POST') {
+        const input = await readBody(req);
+        const fields = ['GeminiApiKey', 'MurekaApiKey'];
+        if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(k => !fields.includes(k)) || fields.some(k => k in input && (typeof input[k] !== 'string' || input[k].length > 4096 || /[\r\n]/.test(input[k])))) {
+          json(res, { error: 'Invalid API key settings' }, 400); return;
+        }
+        let settings = {};
+        try { settings = JSON.parse(await fsp.readFile(configPath, 'utf8')); }
+        catch (err) { if (err.code !== 'ENOENT') throw err; }
+        // Blank fields leave existing values unchanged. Never send keys back to the browser.
+        for (const key of fields) if (input[key]?.trim()) settings[key] = input[key].trim();
+        await fsp.writeFile(configPath, JSON.stringify(settings, null, 2), { mode: 0o600 });
+        const config = await readConfig();
         json(res, { geminiConfigured: Boolean(config.gemini), murekaConfigured: Boolean(config.mureka) }); return;
       }
       if (route === '/api/config' && req.method === 'POST') {
@@ -93,11 +150,13 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
         const method = mureka[1] === 'generate' ? 'POST' : 'GET';
         if (req.method !== method) { json(res, { error: 'Method not allowed' }, 405); return; }
         const config = await readConfig();
-        const headerAuth = (req.headers.authorization || '').toString().replace(/^Bearer\s+/i, '').trim();
-        const murekaKey = headerAuth || config.mureka;
-        if (!murekaKey) { json(res, { error: 'Set MurekaApiKey in config.local.json or in the browser API Key input.' }, 400); return; }
-        const options = { method, headers: { Authorization: `Bearer ${murekaKey}`, 'Content-Type': 'application/json' } };
-        if (method === 'POST') options.body = JSON.stringify(await readBody(req));
+        if (!config.mureka) { json(res, { error: 'Set MurekaApiKey in config.local.json' }, 400); return; }
+        const options = { method, headers: { Authorization: `Bearer ${config.mureka}`, 'Content-Type': 'application/json' } };
+        if (method === 'POST') {
+          const input = await readBody(req);
+          // Pin the model here too so a stale browser cannot select the latest model.
+          options.body = JSON.stringify({ ...input, model: 'mureka-9', n: 1 });
+        }
         await proxy(res, `https://api.mureka.ai/v1/song/${mureka[1]}`, options, 'Mureka'); return;
       }
       if (route === '/api/fetch-url' && req.method === 'GET') {
@@ -142,7 +201,7 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
           }
           const record = { id, createdAt: new Date().toISOString(), battleData: input.battleData,
             articleText: input.articleText || '', audioUrl, synthDuration: input.synthDuration || 45,
-            murekaTrack: input.murekaTrack || null };
+            murekaTrack: input.murekaTrack || null, reviews: input.reviews || {} };
           const tempRecord = path.join(libraryDir, `${id}.json.part`);
           await fsp.writeFile(tempRecord, JSON.stringify(record, null, 2), 'utf8');
           await fsp.rename(tempRecord, path.join(libraryDir, `${id}.json`));
@@ -156,13 +215,22 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
       const audio = /^\/api\/library\/([a-f0-9]{32})\/audio$/.exec(route);
       if (audio && req.method === 'GET') { await sendFile(req, res, path.join(libraryDir, `${audio[1]}.mp3`), 'audio/mpeg'); return; }
       const publicPath = route === '/' ? '/index.html' : route;
+      if (req.method === 'GET' && /^\/css\/images\/[a-zA-Z0-9_-]+\.png$/.test(publicPath)) {
+        await sendFile(req, res, path.join(root, publicPath.slice(1)), 'image/png'); return;
+      }
       if (req.method === 'GET' && (publicPath === '/index.html' || /^\/(js|css)\/[a-zA-Z0-9_/-]+\.(js|css)$/.test(publicPath))) {
         const mime = publicPath.endsWith('.js') ? 'application/javascript' : publicPath.endsWith('.css') ? 'text/css' : 'text/html';
         await sendFile(req, res, path.join(root, publicPath.slice(1)), `${mime}; charset=utf-8`); return;
       }
       json(res, { error: 'Not found' }, 404);
     } catch (err) {
-      if (!res.headersSent) json(res, { error: err.code === 'ENOENT' ? 'Not found' : err.message }, err.code === 'ENOENT' ? 404 : 400);
+      if (!res.headersSent) {
+        const missingReviewSource = err.code === 'ENOENT' && req.url.split('?')[0] === '/api/review';
+        json(res, {
+          error: missingReviewSource ? '保存した歌詞または音源が見つかりません。保存一覧を更新してください。' : err.code === 'ENOENT' ? 'Not found' : err.message,
+          ...(missingReviewSource ? { code: 'REVIEW_SOURCE_NOT_FOUND' } : {})
+        }, err.code === 'ENOENT' ? 404 : 400);
+      }
       else res.destroy();
     }
   });
