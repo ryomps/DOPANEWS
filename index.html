@@ -44,7 +44,7 @@
             <span class="brand-badge">9:16 RAP NEWS</span>
             <h1 class="brand-title">DOPANEWS</h1>
           </div>
-          <p class="brand-tagline">長文ニュースを45秒の男女マイクリレーで論破バトル化</p>
+          <p class="brand-tagline">ニュースを96 BPM・8小節×4本の男女マイクリレーに</p>
         </div>
       </header>
 
@@ -101,9 +101,9 @@
 
         <!-- 🎛️ ビート＆ボーカル Style 指定欄 -->
         <div class="input-group" style="margin-top: 8px; display: flex; flex-direction: column; gap: 5px;">
-          <label for="input-battle-style">🎛️ ビート＆ボーカル Style (Murekaへ送る曲調・BPM指定)</label>
+          <label for="input-battle-style">🎛️ ビート＆ボーカル Style（標準96 BPM・8小節約20秒）</label>
           <select id="select-style-preset" class="cyber-input" style="width: 100%; padding: 6px 8px; font-size: 11.5px;">
-            <option value="Japanese Pop Rap, Educational Rap, Male and Female Duet, Alternating Male Verse and Female Chorus, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Groovy Funky Beat, 115 BPM">🎵 Pop & Educational Funky Rap (115 BPM・標準)</option>
+            <option value="Japanese Pop Rap, Educational Rap, Male and Female Duet, Alternating Male Verse and Female Chorus, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Groovy Funky Beat, 96 BPM">🎵 Pop & Educational Funky Rap (96 BPM・標準)</option>
             <option value="Japanese Hip Hop MC Battle, Male and Female Duet, Alternating Male Verse and Female Chorus, Clear Male Rapper vs Clear Female Rapper, Hard Boom Bap Beat, 95 BPM">🔥 王道Boom Bap (95 BPM)</option>
             <option value="Japanese Trap Rap Battle, Male and Female Duet, Alternating Male Verse and Female Chorus, Heavy 808 Bass, Clear Male Rap vs Fast Female Rap, 136 BPM">⚡ 高速Trap / 808 (136 BPM)</option>
             <option value="Japanese Jazz Hip Hop Battle, Male and Female Duet, Alternating Male Verse and Female Chorus, Melodic Piano Loop, Groovy Drums, 105 BPM">🎷 メロディックJazz Rap (105 BPM)</option>
@@ -112,12 +112,12 @@
             id="input-battle-style"
             type="text"
             class="cyber-input"
-            value="Japanese Pop Rap, Educational Rap, Male and Female Duet, Alternating Male Verse and Female Chorus, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Groovy Funky Beat, 115 BPM"
+            value="Japanese Pop Rap, Educational Rap, Male and Female Duet, Alternating Male Verse and Female Chorus, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Groovy Funky Beat, 96 BPM"
           />
         </div>
 
         <button id="btn-start-battle" type="button" class="btn-fire-start">
-          🔥 8小節×4本 バトル生成スタート (Gemini ➔ Mureka)
+          🔥 8小節×4本 バトル生成スタート (Gemini ➔ Mureka・1曲生成)
         </button>
 
         <div class="sub-action-row">
@@ -128,6 +128,34 @@
             🎧 プリセット即再生デモ
           </button>
         </div>
+      </section>
+
+      <section class="panel-section" id="backing-panel">
+        <h2 class="section-title">🎵 伴奏にラップを追加</h2>
+        <form id="backing-form" class="dev-api-form">
+          <label for="backing-file">① 伴奏ファイルを選択</label>
+          <input id="backing-file" type="file" accept=".mp3,.m4a,.wav,audio/mpeg,audio/mp4,audio/wav" />
+          <button id="backing-upload" type="button" class="btn-sub-action">伴奏をアップロード</button>
+          <p class="reflection-footnote">MP3／M4A：10MB以内。WAV：16bit PCM・40MB以内。アップロードするとMurekaへ送信します。</p>
+          <audio id="backing-preview" controls hidden style="width:100%"></audio>
+          <label for="backing-start">② 開始秒（96 BPMの8小節＝20秒）</label>
+          <input id="backing-start" class="cyber-input" type="number" min="0" step="0.01" value="0" required />
+          <label for="backing-end">終了秒</label>
+          <input id="backing-end" class="cyber-input" type="number" min="0.01" step="0.01" value="20" required />
+          <label for="backing-speaker">③ 担当MC</label>
+          <select id="backing-speaker" class="cyber-input"><option value="KENTA">KENTA（男声）</option><option value="REINA">REINA（女声）</option></select>
+          <label for="backing-verse">作成済みの歌詞から選ぶ</label>
+          <select id="backing-verse" class="cyber-input"><option value="0">V1 KENTA</option><option value="1">V2 REINA</option><option value="2">V3 KENTA</option><option value="3">V4 REINA</option></select>
+          <button id="backing-use-verse" type="button" class="btn-sub-action">このバースの歌詞をセット</button>
+          <p class="reflection-footnote">先に「Gemini作詞のみ実行」で歌詞を作れます。下の歌詞を直接編集することもできます。</p>
+          <label for="backing-lyric">④ 表示用の歌詞</label>
+          <textarea id="backing-lyric" class="cyber-input" rows="8" maxlength="5000" required></textarea>
+          <label for="backing-reading">音声用の読み（同じ行数・かな表記）</label>
+          <textarea id="backing-reading" class="cyber-input" rows="8" maxlength="4900" required></textarea>
+          <button id="backing-generate" type="submit" class="btn-sub-action" disabled>指定区間にラップを追加</button>
+          <p class="reflection-footnote">歌詞審判にGemini、音声生成にMurekaを使用します。1回押すと指定した1区間だけを生成します。出力の歌詞・タイミング・伴奏の保持は生成結果によります。</p>
+          <p id="backing-status" class="status-log" role="status" style="white-space:pre-wrap">ここから伴奏ファイルをアップロードできます。</p>
+        </form>
       </section>
 
       <!-- ③ 生成ステップ進捗バー -->
@@ -197,7 +225,7 @@
                 id="btn-sync-vocal-start"
                 type="button"
                 class="btn-vocal-sync"
-                title="前奏（イントロ）が終わって歌い始めた瞬間に押すと、そこから115BPM（8小節＝約16.7秒）で画面をピタッと同期します！"
+                title="前奏（イントロ）が終わって歌い始めた瞬間に押すと、そこから96BPM（8小節＝20秒）で画面をピタッと同期します！"
               >
                 🎤 歌い出し同期
               </button>
@@ -318,14 +346,6 @@
     </div>
   </div>
 
-  <script src="./js/types.js?v=20261027_4"></script>
-  <script src="./js/api.js?v=20261027_4"></script>
-  <script src="./js/audioController.js?v=20261027_4"></script>
-  <script src="./js/components/StageView.js?v=20261027_4"></script>
-  <script src="./js/components/JudgeModal.js?v=20261027_4"></script>
-  <script src="./js/app.js?v=20261027_4"></script>
-  <script src="./js/news.js?v=20261027_4"></script>
-  <script src="./js/news-live.js?v=20261029_1"></script>
+  <script src="./js/bootstrap.js"></script>
 </body>
-<script src="./js/dev-workspace.js"></script>
 </html>

@@ -71,6 +71,7 @@
       }
       this.manualIntroOffsetSec = currentAudioSec - verseIndex * eightBarSec;
       this.battleData.mureka_sync = null;
+      this.battleData.part_segments = null;
       this._renderVersePills();
       this.activateVerse(verseIndex, true);
     }
@@ -147,6 +148,14 @@
       }
 
       if (!this.battleData || !this.battleData.verses.length) return;
+
+      if (this.battleData.part_segments) {
+        const index = this.battleData.part_segments.findIndex(part => currentTimeSec >= part.start && currentTimeSec < part.end);
+        if (index < 0) { this._showUnassignedPart(false); return; }
+        if (index !== this.currentVerseIndex) this.activateVerse(index, true);
+        this._highlightCurrentBar(index, currentTimeSec);
+        return;
+      }
 
       // Mureka timings are used only for lines matched to the script, never equal divisions.
       if (this.battleData.mureka_sync) {

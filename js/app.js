@@ -181,7 +181,7 @@
       if (this.currentSavedId) return { audioUrl: this.currentAudioUrl };
       const record = await DOPANEWS.saveBattle({
         battleData: this.currentBattleData, articleText: this.currentArticleText,
-        audioUrl: this.currentAudioUrl, synthDuration: this.currentSynthDuration,
+        audioUrl: this.currentAudioWavBase64 ? null : this.currentAudioUrl, audioWavBase64: this.currentAudioWavBase64, synthDuration: this.currentSynthDuration,
         murekaTrack: this.currentMurekaTrack || null, reviews: this.currentReviews
       });
       this.currentSavedId = record.id;
@@ -209,7 +209,7 @@
         this.currentReviews = item.reviews || {};
         const report = this.currentReviews.audio || this.currentReviews.script;
         if (report) {
-          this.reviewContext = { mode: 'full', stage: report.stage, articleText: this.currentArticleText, battleData: item.battleData, report };
+          this.reviewContext = { mode: item.murekaTrack?.backing_request ? 'backing' : 'full', stage: report.stage, articleText: this.currentArticleText, battleData: item.battleData, report };
           this.reviewState = { status: report.verdict, stage: report.stage, report };
         }
         this.stageView.syncTime(0, item.murekaTrack?.duration / 1000 || this.currentSynthDuration);
@@ -436,7 +436,7 @@
       }
 
       this._setLog(
-        '② Mureka 公式API に8小節×4本の歌詞＆Styleを送信し、男女マイクリレー楽曲をレコーディング中...'
+        '② Murekaで8小節×4本を1曲として生成中。96 BPMでは各バース約20秒を目安に、男女交互の歌唱を指定します。'
       );
       const { audioUrl, murekaTrack } = await DOPANEWS.generateBattleTrackWithMureka(
         battleData,
@@ -451,6 +451,7 @@
       this._applyBattleData(battleData);
       this.currentAudioUrl = audioUrl;
       this.currentMurekaTrack = murekaTrack;
+      this.currentAudioWavBase64 = null;
       await this._autoSaveBattle();
 
       this._setStepState(3);
@@ -519,6 +520,10 @@
         if (mode === 'full' && this.battleStyleInputEl?.value.trim()) {
           battleData.suno_style = this.battleStyleInputEl.value.trim();
         }
+        if (mode === 'full') {
+          battleData.suno_style = battleData.suno_style.replace(/\b\d{2,3}\s*BPM\b/gi, '96 BPM');
+          if (this.battleStyleInputEl) this.battleStyleInputEl.value = battleData.suno_style;
+        }
         const approved = await this._reviewScript(battleData, articleText, mode);
         attempts.push({ attempt, ...this.reviewState });
         this.currentReviews.scriptAttempts = attempts;
@@ -551,7 +556,7 @@
     async _startAudioReview(force = false) {
       const version = this.reviewVersion;
       this.reviewContext = { stage: 'audio', articleText: this.currentArticleText,
-        battleData: this.currentBattleData, mode: 'full', recordId: this.currentSavedId };
+        battleData: this.currentBattleData, mode: this.currentMurekaTrack?.backing_request ? 'backing' : 'full', recordId: this.currentSavedId };
       this.reviewState = { status: 'checking', stage: 'audio' };
       try {
         if (!this.currentSavedId) throw new Error('音源の保存に失敗したため未確認です。保存してから審判を再実行してください。');
@@ -576,6 +581,8 @@
       this.currentAudioUrl = null;
       this.currentSavedId = null;
       this.currentMurekaTrack = null;
+      this.currentAudioWavBase64 = null;
+      if (this.partBlobUrl) { URL.revokeObjectURL(this.partBlobUrl); this.partBlobUrl = null; }
       const responsePreview = document.getElementById('mureka-json-preview');
       if (responsePreview) responsePreview.textContent = '';
       if (!this.judgeModal.overlayEl.classList.contains('hidden')) {
@@ -627,6 +634,8 @@
     _applyBattleData(battleData) {
       this.currentBattleData = battleData;
       this.stageView.setBattleData(battleData);
+      const syncButton = document.getElementById('btn-sync-vocal-start');
+      if (syncButton) syncButton.disabled = Boolean(battleData.part_segments);
       this._updateTransport();
 
       if (this.sunoPromptPreviewEl) {

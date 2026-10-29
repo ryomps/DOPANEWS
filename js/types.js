@@ -2,16 +2,16 @@
  * DOPANEWS Data Schema & Preset Sample Data
  * - 8小節（8行）× 4本（KENTA [Verse] ➔ REINA [Chorus] ➔ KENTA [Verse] ➔ REINA [Chorus]）
  * - Murekaで男女の声と曲展開が確実に切り替わる [Verse] ⇄ [Chorus] 交互デュエット構造
- * - BPM（デフォルト115 BPM ＝ 8小節 約16.7秒）に基づく正確な小節・バース同期
+ * - BPM（デフォルト96 BPM ＝ 8小節 20秒）に基づく正確な小節・バース同期
  */
 (function (global) {
   const DOPANEWS = (global.DOPANEWS = global.DOPANEWS || {});
 
   const DEFAULT_BATTLE_STYLE =
-    'Japanese Pop Rap, Educational Rap, Male and Female Duet, Alternating Male Verse and Female Chorus, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Groovy Funky Beat, 115 BPM';
+    'Japanese Pop Rap, Educational Rap, Male and Female Duet, Alternating Male Verse and Female Chorus, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Groovy Funky Beat, 96 BPM, Four 8-bar sections performed once, KENTA male solo then REINA female solo then KENTA male solo then REINA female solo, no additional chorus repeats, short intro and outro';
 
   /**
-   * Style文字列からBPM数値を抽出（デフォルト 115 BPM）
+   * Style文字列からBPM数値を抽出（デフォルト 96 BPM）
    */
   function extractBpmFromStyle(styleStr) {
     const match = String(styleStr || '').match(/(\d{2,3})\s*BPM/i);
@@ -19,14 +19,14 @@
       const bpm = parseInt(match[1], 10);
       if (bpm >= 60 && bpm <= 200) return bpm;
     }
-    return 115;
+    return 96;
   }
 
   /**
    * BPMから「8小節（4拍子×8＝32拍）」の正確な秒数を計算
-   * 例: 115 BPM => (60 / 115) * 32 = 16.695秒
+   * 例: 96 BPM => (60 / 115) * 32 = 20秒
    */
-  function calcEightBarsDurationSec(bpm = 115) {
+  function calcEightBarsDurationSec(bpm = 96) {
     return (60 / bpm) * 4 * 8;
   }
 
@@ -44,7 +44,7 @@
   /**
    * Verseアイテムの正規化ヘルパー
    */
-  function normalizeVerse(verse, index = 0, bpm = 115) {
+  function normalizeVerse(verse, index = 0, bpm = 96) {
     const isReina = verse.speaker === 'REINA' || (!verse.speaker && index % 2 === 1);
     const eightBarSec = calcEightBarsDurationSec(bpm);
 

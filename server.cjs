@@ -7,6 +7,7 @@ const { Readable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 const { reviewBattle, reviewFingerprint } = require('./review.cjs');
 const { createNewsService, publicNewsFailure } = require('./news-service.cjs');
+const { createBackingHandler } = require('./backing.cjs');
 
 function createServer({ root = __dirname, libraryDir = path.join(root, '.local', 'library'),
   newsDirectory = path.join(root, '.local', 'news'), configPath = path.join(root, 'config.local.json'), env = process.env, fetchImpl = fetch } = {}) {
@@ -60,6 +61,7 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
       json(res, await upstream.json());
     } catch { json(res, { error: `${provider} connection failed. Check the local API configuration.` }, 502); }
   }
+  const handleBacking = createBackingHandler({ root, readConfig, readBody, json, sendFile, fetchImpl });
   return http.createServer(async (req, res) => {
     try {
       const host = req.headers.host || '';
@@ -87,6 +89,7 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
         const record = await news.get(newsArticle[1]);
         json(res, record || { error: '保存したニュースが見つかりません。' }, record ? 200 : 404); return;
       }
+      if (route.startsWith('/api/backing/') && await handleBacking(req, res, url)) return;
       if (route === '/api/config' && req.method === 'GET') {
         const config = await readConfig();
         json(res, { geminiConfigured: Boolean(config.gemini), murekaConfigured: Boolean(config.mureka), openaiConfigured: Boolean(config.openai), reviewSupported: true }); return;
@@ -103,7 +106,7 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
         }
         if (input.stage === 'audio') {
           if (!record?.audioUrl) throw new Error('音源審判には保存済みの音声が必要です。先に音源を保存してください。');
-          const audioFile = path.join(libraryDir, `${input.recordId}.mp3`);
+          const audioFile = path.join(libraryDir, `${input.recordId}.${record.audioFormat === 'wav' ? 'wav' : 'mp3'}`);
           if ((await fsp.stat(audioFile)).size > 12 * 1024 * 1024) throw new Error('音源が12MBを超えるため審判できません。');
           audio = await fsp.readFile(audioFile);
         }
@@ -178,6 +181,14 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
         if (!page.ok) throw new Error(`Article download failed (${page.status}).`);
         json(res, { ok: true, html: await page.text() }); return;
       }
+      if (route === '/api/audio-source' && req.method === 'GET') {
+        const source = new URL(url.searchParams.get('url'));
+        if (source.protocol !== 'https:' || !['.mureka.ai', '.mureka.cn'].some(suffix => source.hostname.endsWith(suffix))) throw new Error('Only Mureka audio sources are allowed.');
+        const upstream = await fetchImpl(source.href, { signal: AbortSignal.timeout(120000), redirect: 'error' });
+        if (!upstream.ok || !upstream.body) throw new Error('Audio download failed.');
+        res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Cache-Control': 'no-store' });
+        await pipeline(Readable.fromWeb(upstream.body), res); return;
+      }
       if (route === '/api/library' && req.method === 'GET') {
         await fsp.mkdir(libraryDir, { recursive: true });
         const files = (await fsp.readdir(libraryDir)).filter(name => /^[a-f0-9]{32}\.json$/.test(name));
@@ -197,9 +208,16 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
         const id = crypto.randomUUID().replaceAll('-', '');
         await fsp.mkdir(libraryDir, { recursive: true });
         let audioUrl = null;
-        const audioFile = path.join(libraryDir, `${id}.mp3`), tempAudio = path.join(libraryDir, `${id}.part`);
+        const audioFile = path.join(libraryDir, `${id}.${input.audioWavBase64 ? 'wav' : 'mp3'}`), tempAudio = path.join(libraryDir, `${id}.part`);
         try {
-          if (input.audioUrl) {
+          if (input.audioWavBase64) {
+            if (typeof input.audioWavBase64 !== 'string' || !/^[A-Za-z0-9+/]+={0,2}$/.test(input.audioWavBase64)) throw new Error('Invalid WAV encoding.');
+            const wav = Buffer.from(input.audioWavBase64, 'base64');
+            if (wav.length !== 3528044 || wav.toString('ascii', 0, 4) !== 'RIFF' || wav.toString('ascii', 8, 16) !== 'WAVEfmt ' || wav.readUInt32LE(16) !== 16 || wav.readUInt16LE(20) !== 1 || wav.readUInt16LE(22) !== 1 || wav.readUInt32LE(24) !== 22050 || wav.readUInt32LE(28) !== 44100 || wav.readUInt16LE(32) !== 2 || wav.readUInt16LE(34) !== 16 || wav.toString('ascii', 36, 40) !== 'data' || wav.readUInt32LE(40) !== wav.length - 44 || wav.readUInt32LE(4) !== wav.length - 8) throw new Error('Expected an 80-second mono PCM WAV.');
+            await fsp.writeFile(tempAudio, wav);
+            await fsp.rename(tempAudio, audioFile);
+            audioUrl = '/api/library/' + id + '/audio';
+          } else if (input.audioUrl) {
             const source = new URL(input.audioUrl);
             if (source.protocol !== 'https:' || !['.mureka.ai', '.mureka.cn'].some(suffix => source.hostname.endsWith(suffix))) {
               throw new Error('Only Mureka audio URLs can be saved. Local MP3 imports are playback-only.');
@@ -212,7 +230,7 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
             audioUrl = `/api/library/${id}/audio`;
           }
           const record = { id, createdAt: new Date().toISOString(), battleData: input.battleData,
-            articleText: input.articleText || '', audioUrl, synthDuration: input.synthDuration || 45,
+            articleText: input.articleText || '', audioUrl, ...(input.audioWavBase64 ? { audioFormat: 'wav' } : {}), synthDuration: input.synthDuration || 45,
             murekaTrack: input.murekaTrack || null, reviews: input.reviews || {} };
           const tempRecord = path.join(libraryDir, `${id}.json.part`);
           await fsp.writeFile(tempRecord, JSON.stringify(record, null, 2), 'utf8');
@@ -225,7 +243,11 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
         return;
       }
       const audio = /^\/api\/library\/([a-f0-9]{32})\/audio$/.exec(route);
-      if (audio && req.method === 'GET') { await sendFile(req, res, path.join(libraryDir, `${audio[1]}.mp3`), 'audio/mpeg'); return; }
+      if (audio && req.method === 'GET') {
+        const record = JSON.parse(await fsp.readFile(path.join(libraryDir, audio[1] + '.json'), 'utf8'));
+        const wav = record.audioFormat === 'wav';
+        await sendFile(req, res, path.join(libraryDir, audio[1] + (wav ? '.wav' : '.mp3')), wav ? 'audio/wav' : 'audio/mpeg'); return;
+      }
       const publicPath = route === '/' ? '/index.html' : route;
       if (req.method === 'GET' && /^\/css\/images\/[a-zA-Z0-9_-]+\.png$/.test(publicPath)) {
         await sendFile(req, res, path.join(root, publicPath.slice(1)), 'image/png'); return;

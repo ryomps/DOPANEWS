@@ -187,3 +187,29 @@ test('developer config writes stay private, preserve blank fields and reject for
   assert.ok(!(await (await fetch(url + '/api/config')).text()).includes('private-openai'));
   assert.equal((await post(url + '/api/config', { OpenAIApiKey: 'bad\nkey' })).status, 400);
 });
+
+
+test('composed 80-second WAV survives save/restart, range playback and audio review', async t => {
+  const calls = [];
+  const { url, start } = await fixture(t, async (target, options) => {
+    calls.push(JSON.parse(options.body));
+    return Response.json({ candidates: [{ content: { parts: [{ text: JSON.stringify({ verdict: 'pass', summary: '確認済み', issues: [], transcript: '歌詞' }) }] } }] });
+  });
+  const wav = Buffer.alloc(3528044);
+  wav.write('RIFF'); wav.writeUInt32LE(wav.length - 8, 4); wav.write('WAVEfmt ', 8);
+  wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
+  wav.writeUInt32LE(22050, 24); wav.writeUInt32LE(44100, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34);
+  wav.write('data', 36); wav.writeUInt32LE(wav.length - 44, 40);
+  const response = await post(url + '/api/library', { battleData: script, articleText: '元記事', audioWavBase64: wav.toString('base64') });
+  assert.equal(response.status, 201);
+  const record = await response.json(); assert.equal(record.audioFormat, 'wav');
+  const restarted = await start();
+  const audio = await fetch(restarted.url + record.audioUrl, { headers: { Range: 'bytes=0-43' } });
+  assert.equal(audio.status, 206); assert.equal(audio.headers.get('content-type'), 'audio/wav');
+  assert.deepEqual(Buffer.from(await audio.arrayBuffer()), wav.subarray(0, 44));
+  const review = await post(restarted.url + '/api/review', { stage: 'audio', recordId: record.id });
+  assert.equal(review.status, 200);
+  assert.equal(calls[0].contents[0].parts.find(p => p.inlineData).inlineData.mimeType, 'audio/wav');
+  assert.equal((await post(url + '/api/library', { battleData: script, audioWavBase64: 'YmFk' })).status, 400);
+  assert.equal((await fetch(url + '/api/audio-source?url=' + encodeURIComponent('https://example.com/audio'))).status, 400);
+});

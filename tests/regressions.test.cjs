@@ -654,3 +654,20 @@ test('normalized vocal tags keep male verses and female choruses with pronunciat
   assert.match(battle.verses[3].section_tag, /^\[Chorus 2:/);
   assert.match(data.buildMurekaPrompt(battle), /ひょうじ/);
 });
+
+
+test('composed parts switch MC at exactly 20/40/60 seconds including lyric gaps and seeking backwards', () => {
+  const { app, data, get } = setup();
+  const battle = JSON.parse(JSON.stringify(data.PRESET_BATTLE_DATA));
+  battle.part_segments = battle.verses.map((verse, i) => ({ speaker: verse.speaker, start: i * 20, end: (i + 1) * 20 }));
+  battle.mureka_sync = { status: 'matched' };
+  battle.verses.forEach((verse, i) => Object.assign(verse, { synced_from_mureka: true, start_time_sec: i * 20, end_time_sec: (i + 1) * 20, timed_lines: [{ start_sec: i * 20 + 2, end_sec: i * 20 + 10, line_indices: [0] }] }));
+  app._applyBattleData(battle);
+  for (const [time, index] of [[0,0],[19.99,0],[20,1],[39.99,1],[40,2],[60,3],[79.99,3],[5,0]]) {
+    app.stageView.syncTime(time, 80);
+    assert.equal(app.stageView.currentVerseIndex, index);
+    assert.equal(get('battle-stage').attrs['data-active-mc'], battle.verses[index].speaker);
+  }
+  app.stageView.syncTime(80, 80);
+  assert.equal(get('battle-stage').attrs['data-active-mc'], 'NONE');
+});
