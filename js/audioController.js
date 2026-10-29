@@ -29,6 +29,8 @@
 
       this.audioCtx = null;
       this.analyser = null;
+      this.masterGain = null;
+      this.volume = 1;
       this.dataArray = null;
       this.rafId = null;
 
@@ -46,6 +48,11 @@
     }
 
     _bindAudioEvents() {
+      this.audio.addEventListener('loadedmetadata', () => {
+        if (!this.usingSynthFallback && Number.isFinite(this.audio.duration) && this.audio.duration > 0) {
+          this.onTimeUpdate(this.audio.currentTime, this.audio.duration);
+        }
+      });
       this.audio.addEventListener('timeupdate', () => {
         if (!this.usingSynthFallback) {
           const dur =
@@ -83,6 +90,10 @@
         this.analyser = this.audioCtx.createAnalyser();
         this.analyser.fftSize = 64;
         this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+        this.masterGain = this.audioCtx.createGain();
+        this.masterGain.gain.value = this.volume;
+        this.analyser.connect(this.masterGain);
+        this.masterGain.connect(this.audioCtx.destination);
       }
       if (this.audioCtx.state === 'suspended') {
         this.audioCtx.resume();
@@ -129,6 +140,7 @@
       this.usingSynthFallback = true;
       this.synthDuration = durationSec;
       this.synthPausedAt = 0;
+      this.onTimeUpdate(0, this.synthDuration);
       this.playSynth();
     }
 
@@ -230,6 +242,19 @@
       this.activeSpeaker = speaker === 'REINA' ? 'REINA' : 'KENTA';
     }
 
+    setVolume(value) {
+      if (!Number.isFinite(value)) return;
+      this.volume = Math.max(0, Math.min(1, value));
+      this.audio.volume = this.volume;
+      if (this.masterGain) this.masterGain.gain.setValueAtTime(this.volume, this.audioCtx.currentTime);
+    }
+
+    getCurrentTime() {
+      return this.usingSynthFallback
+        ? (this.synthPlaying ? (performance.now() - this.synthStartTime) / 1000 : this.synthPausedAt)
+        : this.audio.currentTime;
+    }
+
     _triggerBoomBapStep(step16) {
       if (!this.audioCtx) return;
       const now = this.audioCtx.currentTime;
@@ -244,7 +269,6 @@
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
         osc.connect(gain);
         gain.connect(this.analyser);
-        this.analyser.connect(this.audioCtx.destination);
         osc.start(now);
         osc.stop(now + 0.17);
       }
@@ -259,7 +283,6 @@
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
         osc.connect(gain);
         gain.connect(this.analyser);
-        this.analyser.connect(this.audioCtx.destination);
         osc.start(now);
         osc.stop(now + 0.11);
       }
@@ -274,7 +297,6 @@
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
         osc.connect(gain);
         gain.connect(this.analyser);
-        this.analyser.connect(this.audioCtx.destination);
         osc.start(now);
         osc.stop(now + 0.13);
       }
@@ -320,14 +342,10 @@
           const x = i * (barWidth + gap);
           const y = height - barHeight;
 
-          const grad = this.ctx2d.createLinearGradient(0, height, 0, 0);
-          if (this.activeSpeaker === 'REINA') {
-            grad.addColorStop(0, '#0066FF');
-            grad.addColorStop(1, '#00F0FF');
-          } else {
-            grad.addColorStop(0, '#FF2A54');
-            grad.addColorStop(1, '#FF9F1C');
-          }
+          const grad = this.ctx2d.createLinearGradient(0, 0, width, 0);
+          grad.addColorStop(0, '#2363ED');
+          grad.addColorStop(0.5, '#A6ABC0');
+          grad.addColorStop(1, '#F04448');
 
           this.ctx2d.fillStyle = grad;
           this.ctx2d.beginPath();

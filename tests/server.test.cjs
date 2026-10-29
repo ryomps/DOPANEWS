@@ -166,3 +166,17 @@ test('review errors retain the provider reason and model without leaking the key
     });
   assert.equal(calls, 1);
 });
+
+test('developer config writes stay private, preserve blank fields and reject foreign origins', async t => {
+  const { url, root } = await fixture(t);
+  let response = await post(url + '/api/config', { GeminiApiKey: 'replacement', MurekaApiKey: '' });
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { geminiConfigured: true, murekaConfigured: true });
+  const stored = JSON.parse(await fs.readFile(path.join(root, 'config.local.json'), 'utf8'));
+  assert.equal(stored.GeminiApiKey, 'replacement');
+  assert.equal(stored.MurekaApiKey, 'test-mureka');
+  assert.ok(!(await (await fetch(url + '/api/config')).text()).includes('replacement'));
+  response = await fetch(url + '/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://example.com' }, body: JSON.stringify({ GeminiApiKey: 'bad' }) });
+  assert.equal(response.status, 403);
+  assert.equal((await post(url + '/api/config', { GeminiApiKey: 123 })).status, 400);
+});

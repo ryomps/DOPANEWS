@@ -1,0 +1,63 @@
+/* Desktop authoring workspace; the right pane is the consumer phone preview. */
+.dev-api-form { display:grid; gap:10px; margin-top:14px; }
+.dev-api-form label { font-size:12px; color:#bcc9dc; }
+.dev-api-form input { width:100%; min-width:0; }
+.dev-preview-switch { display:flex; gap:8px; }
+.dev-preview-switch button { flex:1; min-height:40px; background:#172538; border:1px solid #35465c; border-radius:6px; color:#e0eafb; cursor:pointer; font:inherit; font-size:12px; }
+@media(min-width:901px) {
+  :root { --dev-width:380px; --phone-width:430px; }
+  .app-layout,.news-mode .app-layout { display:grid; grid-template-columns:var(--dev-width) minmax(0,1fr); height:100dvh; }
+  .control-drawer { width:var(--dev-width); height:100dvh; position:relative; left:auto; top:auto; transform:none; }
+  .control-drawer::before { content:'DEVELOPMENT / 開発用パネル'; color:#8b9fba; letter-spacing:1.5px; font-size:10px; padding:4px 0 10px; border-bottom:1px solid #ffffff20; }
+  .news-mode .stage-viewport { visibility:hidden; }
+  .stage-viewport { height:100dvh; padding:54px 20px 12px; }
+  .stage-viewport::before { content:'MOBILE PREVIEW / スマホ表示'; position:absolute; top:17px; left:0; right:0; text-align:center; color:#77869b; font-size:10px; letter-spacing:2px; }
+  .battle-stage.live-battle-player { width:var(--phone-width); max-width:100%; height:calc(100dvh - 70px); max-height:calc(100dvh - 70px); border-radius:18px; }
+  .news-screen { left:calc(var(--dev-width) + (100% - var(--dev-width))/2); top:54px; bottom:12px; width:var(--phone-width); height:calc(100dvh - 66px); border:1px solid #ffffff26; border-radius:18px; }
+  .news-header { border-radius:18px 18px 0 0; }
+  .news-battle-bar { left:calc(var(--dev-width) + (100% - var(--dev-width))/2); bottom:12px; width:calc(var(--phone-width) - 2px); border-radius:0 0 18px 18px; }
+  .news-mode::after { content:'MOBILE PREVIEW / スマホ表示'; position:fixed; top:17px; left:var(--dev-width); right:0; text-align:center; color:#77869b; font-size:10px; letter-spacing:2px; pointer-events:none; }
+  .mobile-drawer-btn { display:none; }
+  .return-to-news { right:calc((100% - var(--dev-width) - var(--phone-width))/2 + 8px); top:8px; padding:8px 12px; font-size:11px; }
+  .news-versus-cutin { left:calc(var(--dev-width) + (100% - var(--dev-width))/2); right:auto; transform:translateX(-50%); top:54px; bottom:12px; width:var(--phone-width); border-radius:18px; }
+  .cutin-topic { width:92%; }
+  .cutin-topic h2 { font-size:18px; }
+  .cutin-stance h3 { font-size:19px; }
+  .cutin-stance > span { font-size:9px; }
+  .judge-modal-overlay { left:var(--dev-width); }
+  .judge-modal-card { width:var(--phone-width); max-width:calc(100% - 24px); }
+}
+
+/* Consumer navigation belongs inside the phone, not the development toolbar. */
+.battle-mobile-header { position:relative; flex:0 0 48px; height:48px; width:100%; margin-bottom:10px; border-bottom:1px solid #ffffff1c; }
+.battle-mobile-header .news-brand { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); font-size:24px; line-height:1; margin:0; white-space:nowrap; }
+.battle-mobile-header .news-brand::before { width:17px; height:17px; margin-right:5px; }
+.battle-mobile-header #return-to-news { position:absolute; top:50%; left:0; right:auto; transform:translateY(-50%); padding:8px 5px; min-height:40px; font-size:11px; border:0; background:transparent; box-shadow:none; border-radius:5px; z-index:1; }
+.battle-mobile-header #return-to-news:focus-visible,.battle-mobile-header a:focus-visible { outline:2px solid #91b8ff; outline-offset:2px; }
+@media(max-height:740px) { .battle-mobile-header { flex-basis:42px; height:42px; margin-bottom:6px; } }
+
+/* Shared consumer header dimensions for news and battle views. */
+:root { --consumer-header-height:52px; --consumer-logo-size:24px; }
+.news-header { padding-top:env(safe-area-inset-top); }
+.news-header-inner { height:var(--consumer-header-height); min-height:var(--consumer-header-height); padding:4px 16px; }
+.battle-mobile-header { flex:0 0 calc(var(--consumer-header-height) + env(safe-area-inset-top)); height:calc(var(--consumer-header-height) + env(safe-area-inset-top)); min-height:calc(var(--consumer-header-height) + env(safe-area-inset-top)); margin:0 0 10px; padding-top:env(safe-area-inset-top); }
+.news-header-inner .news-brand,.battle-mobile-header .news-brand { font-size:var(--consumer-logo-size); line-height:1; top:50%; margin:0; }
+.battle-mobile-header .news-brand { top:calc(env(safe-area-inset-top) + var(--consumer-header-height)/2); }
+.news-header-inner .news-brand::before,.battle-mobile-header .news-brand::before { width:18px; height:18px; margin-right:5px; }
+.news-header-inner .news-back,.battle-mobile-header #return-to-news { min-height:44px; padding:6px; font-size:11px; }
+.battle-mobile-header #return-to-news { top:calc(env(safe-area-inset-top) + var(--consumer-header-height)/2); }
+
+/* One phone rectangle and one header origin across both screens. */
+:root { --preview-top:54px; --preview-bottom:12px; --preview-height:calc(100dvh - var(--preview-top) - var(--preview-bottom)); }
+.battle-stage.live-battle-player { padding-top:0; justify-content:flex-start; }
+.battle-stage.live-battle-player .battle-mobile-header { width:calc(100% + 32px); margin:0 -16px 10px; }
+.battle-mobile-header #return-to-news { left:16px; }
+@media(max-width:420px) {
+  .battle-stage.live-battle-player .battle-mobile-header { width:calc(100% + 24px); margin-inline:-12px; }
+  .battle-mobile-header #return-to-news { left:12px; }
+}
+@media(min-width:901px) {
+  .stage-viewport { padding:var(--preview-top) 20px var(--preview-bottom); align-items:flex-start; }
+  .battle-stage.live-battle-player,.news-screen { width:var(--phone-width); height:var(--preview-height); max-height:var(--preview-height); border:1px solid #ffffff26; border-radius:18px; }
+  .news-screen,.news-versus-cutin { top:var(--preview-top); bottom:var(--preview-bottom); height:var(--preview-height); }
+}

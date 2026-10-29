@@ -67,6 +67,11 @@
       this.audioEl = document.getElementById('battle-audio');
       this.canvasEl = document.getElementById('spectrum-canvas');
       this.playPauseBtnEl = document.getElementById('btn-play-pause');
+      this.prevVerseBtnEl = document.getElementById('btn-prev-verse');
+      this.nextVerseBtnEl = document.getElementById('btn-next-verse');
+      this.seekInputEl = document.getElementById('battle-seek');
+      this.volumeInputEl = document.getElementById('battle-volume');
+      this.volumeValueEl = document.getElementById('battle-volume-value');
       this.openJudgeBtnEl = document.getElementById('btn-open-judge');
       this.mobileDrawerToggleEl = document.getElementById('btn-toggle-drawer');
       this.sidebarPanelEl = document.getElementById('control-drawer');
@@ -82,6 +87,7 @@
             this.audioController.setActiveSpeaker(verse.speaker);
           }
           this.audioController.seekTo(startSec);
+          this._updateTransport();
         }
       });
 
@@ -100,6 +106,12 @@
         canvasElement: this.canvasEl,
         onTimeUpdate: (currentSec, durationSec) => {
           this.stageView.syncTime(currentSec, durationSec);
+          if (this.seekInputEl) {
+            this.seekInputEl.max = String(this.stageView.lastKnownDuration);
+            this.seekInputEl.value = String(currentSec);
+            this.seekInputEl.setAttribute('aria-valuetext', this.stageView.timerEl.textContent);
+          }
+          this._updateTransport();
           const activeIdx = this.stageView.currentVerseIndex;
           const activeVerse = this.currentBattleData?.verses?.[activeIdx];
           if (activeVerse) {
@@ -113,9 +125,12 @@
         },
         onPlayStateChange: (isPlaying) => {
           if (this.playPauseBtnEl) {
-            this.playPauseBtnEl.innerHTML = isPlaying ? '⏸ 一時停止' : '▶ 再生・再開';
+            this.playPauseBtnEl.textContent = isPlaying ? 'Ⅱ' : '▶';
+            this.playPauseBtnEl.setAttribute('aria-label', isPlaying ? '一時停止' : '再生');
+            this.playPauseBtnEl.title = isPlaying ? '一時停止' : '再生';
             this.playPauseBtnEl.classList.toggle('playing', isPlaying);
           }
+          this.stageView.setPlaybackState(isPlaying);
         },
         onPlaybackError: () => {
           this._setLog('音声を再生できませんでした。保存一覧から読み直すか、音声ファイルを確認してください。', true);
@@ -292,6 +307,20 @@
       this.playPauseBtnEl?.addEventListener('click', () => {
         if (this.isGenerating) return;
         this.audioController.togglePlay();
+      });
+      this.prevVerseBtnEl?.addEventListener('click', () => this._moveVerse(-1));
+      this.nextVerseBtnEl?.addEventListener('click', () => this._moveVerse(1));
+      this.seekInputEl?.addEventListener('input', () => {
+        if (this.isGenerating) return;
+        const seconds = Number(this.seekInputEl.value);
+        this.audioController.seekTo(seconds);
+        this.stageView.syncTime(seconds, this.stageView.lastKnownDuration);
+        this._updateTransport();
+      });
+      this.volumeInputEl?.addEventListener('input', () => {
+        const volume = Number(this.volumeInputEl.value);
+        this.audioController.setVolume(volume / 100);
+        if (this.volumeValueEl) this.volumeValueEl.textContent = `${volume}%`;
       });
 
       this.openJudgeBtnEl?.addEventListener('click', () => {
@@ -626,6 +655,28 @@
       this._stopCurrentBattle();
     }
 
+    _verseTarget(direction) {
+      const current = this.stageView.currentVerseIndex;
+      const time = this.audioController.getCurrentTime();
+      const windows = this.stageView.getVerseWindows(this.stageView.lastKnownDuration);
+      const available = this.currentBattleData.verses.map((verse, index) => ({verse, index, start: windows[index].start}))
+        .filter(item => !this.currentBattleData.mureka_sync || item.verse.synced_from_mureka);
+      return direction > 0
+        ? available.find(item => current >= 0 ? item.index > current : item.start > time)
+        : available.filter(item => current >= 0 ? item.index < current : item.start < time).pop();
+    }
+
+    _moveVerse(direction) {
+      if (this.isGenerating) return;
+      const target = this._verseTarget(direction);
+      if (target) this.stageView.onSelectVerse(target.index, target.start);
+    }
+
+    _updateTransport() {
+      if (this.prevVerseBtnEl) this.prevVerseBtnEl.disabled = this.isGenerating || !this._verseTarget(-1);
+      if (this.nextVerseBtnEl) this.nextVerseBtnEl.disabled = this.isGenerating || !this._verseTarget(1);
+    }
+
     _setGenerating(isGenerating) {
       this.isGenerating = isGenerating;
       this._renderReview();
@@ -635,14 +686,16 @@
         this.localMp3InputEl, this.playPauseBtnEl, this.openJudgeBtnEl,
         this.fetchUrlBtnEl, this.newsUrlInputEl, this.articleInputEl,
         this.stylePresetSelectEl, this.battleStyleInputEl, this.saveBattleBtnEl,
-        this.refreshLibraryBtnEl].forEach((element) => {
+        this.refreshLibraryBtnEl, this.seekInputEl].forEach((element) => {
         if (element) element.disabled = isGenerating;
       });
+      this._updateTransport();
     }
 
     _applyBattleData(battleData) {
       this.currentBattleData = battleData;
       this.stageView.setBattleData(battleData);
+      this._updateTransport();
 
       if (this.sunoPromptPreviewEl) {
         this.sunoPromptPreviewEl.value = DOPANEWS.buildSunoPrompt(battleData);

@@ -25,6 +25,10 @@
 
       this.cardKentaEl = document.getElementById('mc-card-kenta');
       this.cardReinaEl = document.getElementById('mc-card-reina');
+      this.kentaStanceEl = document.getElementById('stage-kenta-stance');
+      this.reinaStanceEl = document.getElementById('stage-reina-stance');
+      this.speakingStatusEl = document.getElementById('stage-speaking-status');
+      this.isPlaying = false;
       this.activeSpeakerBadgeEl = document.getElementById('active-speaker-badge');
       this.sectionTagEl = document.getElementById('stage-section-tag');
       this.lyricBoxEl = document.getElementById('stage-lyric-box');
@@ -42,6 +46,8 @@
 
       if (this.titleEl) this.titleEl.textContent = battleData.title;
       if (this.topicEl) this.topicEl.textContent = battleData.topic_summary;
+      if (this.kentaStanceEl) this.kentaStanceEl.textContent = battleData.kenta_stance;
+      if (this.reinaStanceEl) this.reinaStanceEl.textContent = battleData.reina_stance;
 
       this._renderVersePills();
       if (battleData.verses.length > 0) {
@@ -211,6 +217,7 @@
       if (this.stageEl) {
         this.stageEl.setAttribute('data-active-mc', verse.speaker);
       }
+      this._updateSpeakingStatus();
 
       if (this.cardKentaEl && this.cardReinaEl) {
         this.cardKentaEl.classList.toggle('mc-active', !isReina);
@@ -228,8 +235,8 @@
 
       if (this.activeSpeakerBadgeEl) {
         this.activeSpeakerBadgeEl.innerHTML = isReina
-          ? '❄️ MC REINA <span class="mc-sub">8 BARS / DATA & LOGIC</span>'
-          : '🔥 MC KENTA <span class="mc-sub">8 BARS / STREET PASSION</span>';
+          ? 'MC REINA <span class="mc-sub">8 BARS / DATA & LOGIC</span>'
+          : 'MC KENTA <span class="mc-sub">8 BARS / STREET PASSION</span>';
         this.activeSpeakerBadgeEl.className = `active-speaker-badge ${isReina ? 'badge-reina' : 'badge-kenta'}`;
       }
 
@@ -268,6 +275,7 @@
       this.currentVerseIndex = -1;
       this.currentLineIndex = -1;
       this.stageEl?.setAttribute('data-active-mc', 'NONE');
+      this._updateSpeakingStatus();
       [this.cardKentaEl, this.cardReinaEl].forEach((card) => {
         card?.classList.remove('mc-active');
         card?.classList.add('mc-dim');
@@ -283,6 +291,20 @@
       if (this.rhymeBadgeEl) this.rhymeBadgeEl.textContent = '—';
       if (this.pointSummaryEl) this.pointSummaryEl.textContent = '—';
       if (this.factCheckSlotEl) this.factCheckSlotEl.dataset.factStatus = 'UNVERIFIED';
+    }
+
+    setPlaybackState(isPlaying) {
+      this.isPlaying = isPlaying;
+      this.stageEl?.setAttribute('data-playing', String(isPlaying));
+      this._updateSpeakingStatus();
+    }
+
+    _updateSpeakingStatus() {
+      if (!this.speakingStatusEl) return;
+      const verse = this.battleData?.verses?.[this.currentVerseIndex];
+      this.speakingStatusEl.textContent = verse
+        ? `MC ${verse.speaker} ${this.isPlaying ? 'が発言中' : 'のバース・一時停止中'}`
+        : '間奏・次のバースを待っています';
     }
 
     _renderFutureFactCheckSlot(verse) {

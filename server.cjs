@@ -109,6 +109,21 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
         finally { if (reviewJobs.get(jobKey) === job) reviewJobs.delete(jobKey); }
         return;
       }
+      if (route === '/api/config' && req.method === 'POST') {
+        const input = await readBody(req);
+        const fields = ['GeminiApiKey', 'MurekaApiKey'];
+        if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(k => !fields.includes(k)) || fields.some(k => k in input && (typeof input[k] !== 'string' || input[k].length > 4096 || /[\r\n]/.test(input[k])))) {
+          json(res, { error: 'Invalid API key settings' }, 400); return;
+        }
+        let settings = {};
+        try { settings = JSON.parse(await fsp.readFile(configPath, 'utf8')); }
+        catch (err) { if (err.code !== 'ENOENT') throw err; }
+        // Blank fields leave existing values unchanged. Never send keys back to the browser.
+        for (const key of fields) if (input[key]?.trim()) settings[key] = input[key].trim();
+        await fsp.writeFile(configPath, JSON.stringify(settings, null, 2), { mode: 0o600 });
+        const config = await readConfig();
+        json(res, { geminiConfigured: Boolean(config.gemini), murekaConfigured: Boolean(config.mureka) }); return;
+      }
       const gemini = /^\/api\/gemini\/([a-zA-Z0-9.-]+)$/.exec(route);
       if (gemini && req.method === 'POST') {
         const config = await readConfig();
@@ -188,6 +203,9 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
       const audio = /^\/api\/library\/([a-f0-9]{32})\/audio$/.exec(route);
       if (audio && req.method === 'GET') { await sendFile(req, res, path.join(libraryDir, `${audio[1]}.mp3`), 'audio/mpeg'); return; }
       const publicPath = route === '/' ? '/index.html' : route;
+      if (req.method === 'GET' && /^\/css\/images\/[a-zA-Z0-9_-]+\.png$/.test(publicPath)) {
+        await sendFile(req, res, path.join(root, publicPath.slice(1)), 'image/png'); return;
+      }
       if (req.method === 'GET' && (publicPath === '/index.html' || /^\/(js|css)\/[a-zA-Z0-9_/-]+\.(js|css)$/.test(publicPath))) {
         const mime = publicPath.endsWith('.js') ? 'application/javascript' : publicPath.endsWith('.css') ? 'text/css' : 'text/html';
         await sendFile(req, res, path.join(root, publicPath.slice(1)), `${mime}; charset=utf-8`); return;
