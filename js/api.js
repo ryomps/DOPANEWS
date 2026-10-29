@@ -178,7 +178,7 @@
 ユーザーが入力したニュース記事の対立軸（賛成派 vs 反対派 / メリット vs デメリット / 推進派 vs 慎重派）を抽出し、
 男性MC「KENTA」と女性MC「REINA」が交互にマイクリレーする【8小節×4本（計32小節）】の本格ラップバトル台本をJSON形式で出力してください。
 
-【キャラクター設定（Murekaで男女の声を確実に切り替えるため [Verse] と [Chorus] を交互に使用）】
+【キャラクター設定（Murekaに男女交互の歌唱を指定するため [Verse] と [Chorus] を交互に使用）】
 - MC KENTA（男性MC / 1本目・3本目）:
   - 1本目のsection_tagは必ず "[Verse 1: Clear Male Vocal, Upbeat Pop Rap]"
   - 3本目のsection_tagは必ず "[Verse 2: Clear Male Vocal, Upbeat Pop Rap]"
@@ -188,7 +188,8 @@
   - 4本目のsection_tagは必ず "[Chorus 2: Clear Female Vocal, Upbeat Pop Rap]"
   - スタンス: クール・データや国際標準・経済合理性・現実的なトレードオフを分かりやすく突く側（または記事のもう一方の立場）
 
-【厳守ルール：8小節×4本構成】
+【厳守ルール：96 BPM・4拍子・8小節×4本構成】
+歌声の交代は8小節を歌い切った直後に行う。1本目はKENTA男声のみ、2本目はREINA女声のみ、3本目は同じKENTA男声、4本目は同じREINA女声。全32小節を1曲として作る。各8小節は約20秒で、途中の追加サビ・歌詞の繰り返し・二人同時の歌唱は入れない。
 1. verses 配列は必ず要素4つ（KENTA [Verse 1] ➔ REINA [Chorus 1] ➔ KENTA [Verse 2] ➔ REINA [Chorus 2]）にすること。
 2. 各バースの lyric は【必ず改行区切りで8行（＝8小節、1行が1小節のリズム）】で書くこと！4行ではなく必ず8行（8小節）にすること。
 3. 1小節（1行）あたり20〜30文字程度の耳馴染みが良くキャッチーで分かりやすい教育的ポップラップ（Educational Pop Rap）にし、小節末で心地よい脚韻・頭韻を踏むこと。
@@ -226,7 +227,7 @@
       "lyric_reading": "いちしょうせつめのはんろんかし\\nにしょうせつめのかし\\nさんしょうせつめのかし\\nよんしょうせつめのかし\\nごしょうせつめのかし\\nろくしょうせつめのかし\\nななしょうせつめのかし\\nはちしょうせつめのパンチライン",
       "point_summary": "このパートの解説要点（1行）",
       "rhyme_words": "踏んでいる韻のペア",
-      "start_time_sec": 17
+      "start_time_sec": 20
     }
   ]
 }`;
@@ -305,6 +306,15 @@
    */
   async function generateBattleTrackWithMureka(battleData, onProgress = () => {}) {
 
+    // Canonical section ownership applies to the generated audio, not old saved tracks.
+    battleData.verses.forEach((verse, index) => {
+      const female = index % 2 === 1;
+      verse.speaker = female ? 'REINA' : 'KENTA';
+      verse.section_tag = '[' + (female ? 'Chorus ' : 'Verse ') + (Math.floor(index / 2) + 1)
+        + ': Clear ' + (female ? 'Female' : 'Male') + ' Vocal, Upbeat Pop Rap]';
+    });
+    battleData.suno_style = String(battleData.suno_style || DOPANEWS.DEFAULT_BATTLE_STYLE)
+      .replace(/\b\d{2,3}\s*BPM\b/gi, '96 BPM');
     const lyrics = DOPANEWS.buildMurekaPrompt(battleData);
     if (lyrics.length > 5000) {
       throw new Error('音声用かな歌詞がMurekaの上限（5000文字）を超えています。歌詞を短くしてください。');
@@ -315,7 +325,10 @@
       lyrics,
       model: 'mureka-9',
       n: 1,
-      prompt: stylePrompt
+      prompt: stylePrompt + ', Strict 96 BPM, 4/4 time. One continuous song with exactly four 8-bar sections (32 bars total). '
+        + 'Bars 1-8: KENTA male solo; bars 9-16: REINA female solo; bars 17-24: the same KENTA male solo; bars 25-32: the same REINA female solo. '
+        + 'Switch the lead voice immediately at every 8-bar boundary. Each supplied lyric line occupies one bar. '
+        + 'Female Chorus tags denote new 8-bar rap verses, not repeated hooks. No extra choruses, no repeated sections, no overlapping duet vocals, minimal intro and outro.'
     };
 
     const baseUrl = getMurekaBaseUrl();

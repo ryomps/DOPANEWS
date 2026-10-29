@@ -51,3 +51,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File server.ps1 -NoBrowser
 ```
 
 追加依存パッケージはありません。Node.js 22以降が必要です。Windowsの起動用バッチからNode.js製ローカルサーバーを起動します。
+
+## 曲の構成
+
+96 BPM・4拍子・8小節×4本を1曲としてMureka 9で生成します。KENTA→REINA→KENTA→REINAの男女交互歌唱を指定し、音声生成は1回・1曲です。8小節は計算上20秒ですが、生成音源の正確な秒数・声の交代は保証されません。20秒への強制編集やパート別生成は行いません。歌詞表示はMurekaの返却時刻を優先します。既存の保存音源はそのまま再生できます。
+
+## 伴奏にラップを追加
+
+左パネルの「伴奏にラップを追加」で伴奏を選択し「伴奏をアップロード」を押します。MP3/M4Aは10MB、16bit PCM WAVは40MB・10分以内。WAVは同梱のlamejs 1.2.1（vendor/）でMP3へ変換し、サーバー経由でMurekaにpurpose=audioのmultipartで送ります。アップロード済み音声とタスク情報はGit対象外の.local/backing-uploads/に保存します。
+
+開始・終了秒、担当MC、表示歌詞、かな表記の読みを入力し「指定区間にラップを追加」を押します。「このバースの歌詞をセット」で現在の台本からコピーできます。元記事はニュース記事入力欄を使います。Geminiの歌詞審判を通過した場合のみ、Mureka /v1/track/generateにgenerate_type=Vocals、vocal_gender、ミリ秒の区間を送ります。1操作につき1区間を生成します。生成結果をステージで再生・自動保存し、音源審判に送ります。返却音源の構成や区間の厳密な遵守は生成結果によるため、元伴奏の試聴と比較してください。自動の追加生成はしません。
+
+直接開く： http://localhost:8080/?studio=backing
+検証： node --test tests/backing.test.cjs tests/server.test.cjs tests/regressions.test.cjs

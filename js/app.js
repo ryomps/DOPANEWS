@@ -188,7 +188,7 @@
       if (this.currentSavedId) return { audioUrl: this.currentAudioUrl };
       const record = await DOPANEWS.saveBattle({
         battleData: this.currentBattleData, articleText: this.currentArticleText,
-        audioUrl: this.currentAudioUrl, synthDuration: this.currentSynthDuration,
+        audioUrl: this.currentAudioWavBase64 ? null : this.currentAudioUrl, audioWavBase64: this.currentAudioWavBase64, synthDuration: this.currentSynthDuration,
         murekaTrack: this.currentMurekaTrack || null, reviews: this.currentReviews
       });
       this.currentSavedId = record.id;
@@ -216,7 +216,7 @@
         this.currentReviews = item.reviews || {};
         const report = this.currentReviews.audio || this.currentReviews.script;
         if (report) {
-          this.reviewContext = { mode: 'full', stage: report.stage, articleText: this.currentArticleText, battleData: item.battleData, report };
+          this.reviewContext = { mode: item.murekaTrack?.backing_request ? 'backing' : 'full', stage: report.stage, articleText: this.currentArticleText, battleData: item.battleData, report };
           this.reviewState = { status: report.verdict, stage: report.stage, report };
           this._renderReview();
         }
@@ -442,6 +442,8 @@
         if (this.battleStyleInputEl?.value.trim()) {
           battleData.suno_style = this.battleStyleInputEl.value.trim();
         }
+        battleData.suno_style = battleData.suno_style.replace(/\b\d{2,3}\s*BPM\b/gi, '96 BPM');
+        if (this.battleStyleInputEl) this.battleStyleInputEl.value = battleData.suno_style;
         this._applyBattleData(battleData);
 
         if (!await this._reviewScript(battleData, articleText, 'full')) return;
@@ -469,7 +471,7 @@
       }
 
       this._setLog(
-        '② Mureka 公式API に8小節×4本の歌詞＆Styleを送信し、男女マイクリレー楽曲をレコーディング中...'
+        '② Murekaで8小節×4本を1曲として生成中。96 BPMでは各バース約20秒を目安に、男女交互の歌唱を指定します。'
       );
       const { audioUrl, murekaTrack } = await DOPANEWS.generateBattleTrackWithMureka(
         battleData,
@@ -484,6 +486,7 @@
       this._applyBattleData(battleData);
       this.currentAudioUrl = audioUrl;
       this.currentMurekaTrack = murekaTrack;
+      this.currentAudioWavBase64 = null;
       await this._autoSaveBattle();
 
       this._setStepState(3);
@@ -561,7 +564,7 @@
     async _startAudioReview(force = false) {
       const version = this.reviewVersion;
       this.reviewContext = { stage: 'audio', articleText: this.currentArticleText,
-        battleData: this.currentBattleData, mode: 'full', recordId: this.currentSavedId };
+        battleData: this.currentBattleData, mode: this.currentMurekaTrack?.backing_request ? 'backing' : 'full', recordId: this.currentSavedId };
       this.reviewState = { status: 'checking', stage: 'audio' };
       this._renderReview();
       try {
@@ -632,7 +635,7 @@
         this.reviewIssuesEl.appendChild(item);
       }
       const flagged = ['needs_revision', 'uncertain'].includes(state.status);
-      this.reviewRegenerateBtnEl.hidden = !flagged || Boolean(state.dismissed);
+      this.reviewRegenerateBtnEl.hidden = !flagged || Boolean(state.dismissed) || this.reviewContext?.mode === 'backing';
       this.reviewDismissBtnEl.hidden = !flagged || Boolean(state.dismissed);
       this.reviewRecheckBtnEl.hidden = !['error', 'uncertain'].includes(state.status) || Boolean(state.dismissed);
       const lyricsOnly = this.reviewContext?.mode === 'lyrics';
@@ -643,6 +646,7 @@
         ? `${state.dismissed ? '今回は再生成しません。' : '自動では再生成しません。'}再生成を選ぶと${lyricsOnly ? 'Gemini' : 'GeminiとMureka'}を使用します。${proceedsToAudio ? '歌詞の再確認で問題がなければ、Mureka 9で音源生成へ進みます。' : '審判の再確認はGeminiのみ使用します。'}`
         : state.status === 'checking' ? (proceedsToAudio ? 'Geminiで確認中です。指摘がなければ音源生成へ進みます。' : 'Geminiで確認中です。音源の自動再生成は行いません。')
         : state.status === 'error' ? `未確認の状態です。自動では再試行しません。再確認にはGeminiを使用します。${proceedsToAudio ? '指摘がなければ、そのままMureka 9で音源生成へ進みます。' : ''}` : '';
+      if (this.reviewContext?.mode === 'backing' && flagged) this.reviewCostEl.textContent = '修正する場合は「伴奏にラップを追加」欄で歌詞と区間を指定してください。審判の再確認はGeminiのみ使用します。';
       [this.reviewRegenerateBtnEl, this.reviewDismissBtnEl, this.reviewRecheckBtnEl]
         .forEach((button) => { button.disabled = this.isGenerating || state.status === 'checking'; });
     }
@@ -657,6 +661,8 @@
       this.currentAudioUrl = null;
       this.currentSavedId = null;
       this.currentMurekaTrack = null;
+      this.currentAudioWavBase64 = null;
+      if (this.partBlobUrl) { URL.revokeObjectURL(this.partBlobUrl); this.partBlobUrl = null; }
       const responsePreview = document.getElementById('mureka-json-preview');
       if (responsePreview) responsePreview.textContent = '';
       if (!this.judgeModal.overlayEl.classList.contains('hidden')) {
@@ -709,6 +715,8 @@
     _applyBattleData(battleData) {
       this.currentBattleData = battleData;
       this.stageView.setBattleData(battleData);
+      const syncButton = document.getElementById('btn-sync-vocal-start');
+      if (syncButton) syncButton.disabled = Boolean(battleData.part_segments);
       this._updateTransport();
 
       if (this.sunoPromptPreviewEl) {
