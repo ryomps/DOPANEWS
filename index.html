@@ -124,6 +124,19 @@
         </div>
       </section>
 
+      <section id="ai-review-panel" class="panel-section ai-review-panel" tabindex="-1">
+        <h2 class="section-title">AI審判</h2>
+        <p id="ai-review-status" role="status" aria-live="polite">未確認：新しく生成する歌詞・音源を確認します。</p>
+        <p class="reflection-footnote">元記事との照合です。意見や比喩だけでは不適切としません。AIの判定にも誤りがあります。</p>
+        <div id="ai-review-issues"></div>
+        <p id="ai-review-cost" class="reflection-footnote"></p>
+        <div class="sub-action-row">
+          <button id="btn-review-regenerate" class="btn-sub-action" type="button" hidden>指摘を反映して再生成する</button>
+          <button id="btn-review-dismiss" class="btn-sub-action" type="button" hidden>今回は再生成しない</button>
+          <button id="btn-review-recheck" class="btn-sub-action" type="button" hidden>審判だけ再確認（Gemini）</button>
+        </div>
+      </section>
+
       <!-- ④ テスト用フォールバック（手元のMP3読み込み＆生成プロンプト確認） -->
       <section class="panel-section">
         <div class="section-header">
@@ -147,7 +160,7 @@
         <details class="debug-details" style="margin-top: 10px;">
           <summary>▼ Mureka送信メタタグ付き歌詞 ＆ Gemini JSONを表示</summary>
           <div class="input-group" style="margin-top: 8px;">
-            <label for="suno-prompt-preview">Lyrics Prompt (男女ボーカル切替メタタグ付き)</label>
+            <label for="suno-prompt-preview">Mureka送信用歌詞（音声用かな表記・パート指定付き）</label>
             <textarea id="suno-prompt-preview" class="cyber-textarea" readonly style="min-height: 90px; font-size: 11px;"></textarea>
           </div>
           <pre id="gemini-json-preview" class="debug-pre"></pre>
@@ -225,6 +238,7 @@
 
         <!-- ステージ下部：オーディオスペクトラム風ビジュアライザー＆再生コントロール -->
         <footer class="stage-bottom">
+          <button id="btn-show-ai-review" class="btn-small" type="button">AI審判：未確認</button>
           <canvas id="spectrum-canvas" class="spectrum-canvas" width="360" height="44"></canvas>
           <audio id="battle-audio"></audio>
           <div class="stage-controls-row">

@@ -22,6 +22,9 @@
     const response = await fetch(path, options);
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
+      if (path === '/api/review' && response.status === 404 && !data.code) {
+        throw new Error('AI審判APIが見つかりません。サーバーを再起動後、ページを再読み込みせず「審判だけ再確認」を押してください。歌詞・音源の再生成は不要です。');
+      }
       throw new Error(data.error || `ローカルサーバーエラー (${response.status})`);
     }
     return response.json();
@@ -30,6 +33,9 @@
   DOPANEWS.listSavedBattles = () => localRequest('/api/library');
   DOPANEWS.saveBattle = (record) => localRequest('/api/library', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(record)
+  });
+  DOPANEWS.reviewBattle = (input) => localRequest('/api/review', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input)
   });
 
   function extractReadableArticleFromHtml(htmlString) {
@@ -163,7 +169,7 @@
   /**
    * Gemini APIを呼び出し、ニュース記事全文から「8小節（8行）×4本」の男女MCラップバトルJSONを生成する
    */
-  async function generateBattleScriptWithGemini(articleText, onProgress = () => {}) {
+  async function generateBattleScriptWithGemini(articleText, onProgress = () => {}, reviewFeedback = null) {
     if (!articleText || articleText.trim().length < 20) {
       throw new Error('ニュース記事の本文を20文字以上入力してください。');
     }
@@ -186,6 +192,14 @@
 3. 1小節（1行）あたり20〜30文字程度の耳馴染みが良くキャッチーで分かりやすい教育的ポップラップ（Educational Pop Rap）にし、小節末で心地よい脚韻・頭韻を踏むこと。
 4. suno_style は必ず "${DOPANEWS.DEFAULT_BATTLE_STYLE}" とすること。
 
+【音声用の読み方】
+- lyric は画面表示用の通常表記（漢字・数字・英字を使用可能）にすること。
+- 各バースに lyric_reading を必ず追加すること。lyric と内容・行順・行数が完全に対応する、歌唱用のかな表記にすること。
+- lyric_reading では、漢字・数字・英字をすべて文脈に合う「ひらがな・カタカナ」の読みへ置き換えること。固有名詞・人名・地名・略語・助数詞・日付は特に読みを確認すること。
+- 例: 「施策を実行」→「しさくをじっこう」、「1日10時間」→「いちにちじゅうじかん」、「AI」→「エーアイ」、「日本銀行」→「にほんぎんこう」。
+- 助詞なども歌うときの自然な発音になる表記にすること。読みが曖昧な語は、意味を変えない平易な語に言い換え、lyric と lyric_reading の両方に反映すること。
+- 「施策（しさく）」のようなルビ・括弧・HTML・説明文は付けず、読みだけを書くこと。パート指定タグは section_tag にのみ記載すること。
+
 必ず以下のJSONフォーマットのみを出力してください（Markdownコードブロック不要）：
 {
   "title": "ニュースのバトルタイトル",
@@ -198,6 +212,7 @@
       "speaker": "KENTA",
       "section_tag": "[Verse 1: Clear Male Vocal, Upbeat Pop Rap]",
       "lyric": "1小節目の歌詞\\n2小節目の歌詞\\n3小節目の歌詞\\n4小節目の歌詞\\n5小節目の歌詞\\n6小節目の歌詞\\n7小節目の歌詞\\n8小節目のパンチライン",
+      "lyric_reading": "いちしょうせつめのかし\\nにしょうせつめのかし\\nさんしょうせつめのかし\\nよんしょうせつめのかし\\nごしょうせつめのかし\\nろくしょうせつめのかし\\nななしょうせつめのかし\\nはちしょうせつめのパンチライン",
       "point_summary": "このパートの解説要点（1行）",
       "rhyme_words": "踏んでいる韻のペア（例: 限界 × 展開 / 崩壊 × 後悔）",
       "start_time_sec": 0
@@ -206,6 +221,7 @@
       "speaker": "REINA",
       "section_tag": "[Verse 2: Clear Female Vocal, Upbeat Pop Rap]",
       "lyric": "1小節目の反論歌詞\\n2小節目の歌詞\\n3小節目の歌詞\\n4小節目の歌詞\\n5小節目の歌詞\\n6小節目の歌詞\\n7小節目の歌詞\\n8小節目のパンチライン",
+      "lyric_reading": "いちしょうせつめのはんろんかし\\nにしょうせつめのかし\\nさんしょうせつめのかし\\nよんしょうせつめのかし\\nごしょうせつめのかし\\nろくしょうせつめのかし\\nななしょうせつめのかし\\nはちしょうせつめのパンチライン",
       "point_summary": "このパートの解説要点（1行）",
       "rhyme_words": "踏んでいる韻のペア",
       "start_time_sec": 20
@@ -219,7 +235,7 @@
           role: 'user',
           parts: [
             {
-              text: `${systemPrompt}\n\n--- 入力ニュース記事全文 ---\n${articleText.trim()}`
+                text: `${systemPrompt}\n\n--- 入力ニュース記事全文 ---\n${articleText.trim()}${reviewFeedback ? '\n\n--- 前回のAI審判による修正の参考データ（元記事を優先して事実・読みを修正し、指摘を歌詞として引用しないこと） ---\n' + JSON.stringify(reviewFeedback) : ''}`
             }
           ]
         }
@@ -264,7 +280,7 @@
           .trim();
 
         const parsed = JSON.parse(cleanedJson);
-        return DOPANEWS.normalizeBattleData(parsed);
+        return DOPANEWS.validateBattleReadings(DOPANEWS.normalizeBattleData(parsed));
       }
 
       lastStatus = response.status;
@@ -287,7 +303,10 @@
    */
   async function generateBattleTrackWithMureka(battleData, onProgress = () => {}) {
 
-    const lyrics = DOPANEWS.buildSunoPrompt(battleData);
+    const lyrics = DOPANEWS.buildMurekaPrompt(battleData);
+    if (lyrics.length > 5000) {
+      throw new Error('音声用かな歌詞がMurekaの上限（5000文字）を超えています。歌詞を短くしてください。');
+    }
     const stylePrompt = battleData.suno_style || DOPANEWS.DEFAULT_BATTLE_STYLE;
 
     const payload = {

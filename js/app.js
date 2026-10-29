@@ -13,6 +13,9 @@
       this.currentBattleData = DOPANEWS.PRESET_BATTLE_DATA;
       this.isGenerating = false;
       this.lastFetchedUrl = '';
+      this.reviewVersion = 0;
+      this.currentReviews = {};
+      this.reviewState = { status: 'idle' };
 
       this._cacheDom();
       this._initComponents();
@@ -34,6 +37,13 @@
       this.libraryStatusEl = document.getElementById('library-status');
       this.saveBattleBtnEl = document.getElementById('btn-save-battle');
       this.refreshLibraryBtnEl = document.getElementById('btn-refresh-library');
+      this.reviewStatusEl = document.getElementById('ai-review-status');
+      this.reviewIssuesEl = document.getElementById('ai-review-issues');
+      this.reviewCostEl = document.getElementById('ai-review-cost');
+      this.reviewRegenerateBtnEl = document.getElementById('btn-review-regenerate');
+      this.reviewDismissBtnEl = document.getElementById('btn-review-dismiss');
+      this.reviewRecheckBtnEl = document.getElementById('btn-review-recheck');
+      this.showReviewBtnEl = document.getElementById('btn-show-ai-review');
 
       this.newsUrlInputEl = document.getElementById('input-news-url');
       this.fetchUrlBtnEl = document.getElementById('btn-fetch-url');
@@ -125,7 +135,9 @@
     async _loadLocalConfig() {
       try {
         const config = await DOPANEWS.getLocalConfig();
-        this.apiConfigStatusEl.textContent = `Gemini：${config.geminiConfigured ? '接続設定済み' : '未設定'} ／ Mureka：${config.murekaConfigured ? '接続設定済み' : '未設定'}`;
+        this.apiConfigStatusEl.textContent = config.reviewSupported
+          ? `Gemini：${config.geminiConfigured ? '接続設定済み' : '未設定'} ／ Mureka：${config.murekaConfigured ? '接続設定済み' : '未設定'}`
+          : 'サーバーが古いためAI審判を利用できません。サーバーを再起動してください。';
         return config;
       } catch {
         this.apiConfigStatusEl.textContent = 'start_server.bat から起動してください。';
@@ -162,7 +174,7 @@
       const record = await DOPANEWS.saveBattle({
         battleData: this.currentBattleData, articleText: this.currentArticleText,
         audioUrl: this.currentAudioUrl, synthDuration: this.currentSynthDuration,
-        murekaTrack: this.currentMurekaTrack || null
+        murekaTrack: this.currentMurekaTrack || null, reviews: this.currentReviews
       });
       this.currentSavedId = record.id;
       this.currentAudioUrl = record.audioUrl;
@@ -186,6 +198,13 @@
         this.currentSavedId = item.id; this.currentAudioUrl = item.audioUrl;
         this.currentSynthDuration = item.synthDuration || 45;
         this.currentMurekaTrack = item.murekaTrack;
+        this.currentReviews = item.reviews || {};
+        const report = this.currentReviews.audio || this.currentReviews.script;
+        if (report) {
+          this.reviewContext = { mode: 'full', stage: report.stage, articleText: this.currentArticleText, battleData: item.battleData, report };
+          this.reviewState = { status: report.verdict, stage: report.stage, report };
+          this._renderReview();
+        }
         this.stageView.syncTime(0, item.murekaTrack?.duration / 1000 || this.currentSynthDuration);
         this._setLog(`保存したラップ「${item.battleData.title}」を読み込みました。`);
         if (item.audioUrl) await this.audioController.loadAndPlayUrl(item.audioUrl);
@@ -194,6 +213,16 @@
     }
 
     _bindEvents() {
+      this.showReviewBtnEl?.addEventListener('click', () => {
+        this.sidebarPanelEl?.classList.add('drawer-open');
+        document.getElementById('ai-review-panel')?.focus();
+      });
+      this.reviewRegenerateBtnEl?.addEventListener('click', () => this._regenerateReviewedBattle());
+      this.reviewRecheckBtnEl?.addEventListener('click', () => this._recheckReview());
+      this.reviewDismissBtnEl?.addEventListener('click', () => {
+        this.reviewState.dismissed = true;
+        this._renderReview();
+      });
       this.refreshLibraryBtnEl?.addEventListener('click', () => this._refreshLibrary());
       this.saveBattleBtnEl?.addEventListener('click', async () => {
         if (this.isGenerating) return;
@@ -337,10 +366,14 @@
       return textFieldVal;
     }
 
-    async handleFullBattleGeneration() {
+    async handleFullBattleGeneration(options = {}) {
       if (this.isGenerating) return;
 
       const config = await this._loadLocalConfig();
+      if (!config.reviewSupported) {
+        this._setLog('AI審判対応のサーバーを起動してください。start_server.batで再起動後、もう一度お試しください。APIはまだ使用していません。', true);
+        return;
+      }
       if (!config.geminiConfigured) {
         this._setLog('config.local.json に GeminiApiKey を設定してください。', true);
         return;
@@ -349,7 +382,7 @@
       this._beginGeneration();
 
       try {
-        const articleText = await this._resolveArticleTextBeforeGenerate();
+        const articleText = options.articleText ?? await this._resolveArticleTextBeforeGenerate();
         this.currentArticleText = articleText;
 
         this._setStepState(1);
@@ -359,7 +392,8 @@
 
         const battleData = await DOPANEWS.generateBattleScriptWithGemini(
           articleText,
-          (progressMsg) => this._setLog(`① ${progressMsg}`)
+          (progressMsg) => this._setLog(`① ${progressMsg}`),
+          options.reviewFeedback || null
         );
         // ユーザーが画面上で指定したStyleプロンプトを優先適用
         if (this.battleStyleInputEl?.value.trim()) {
@@ -367,42 +401,8 @@
         }
         this._applyBattleData(battleData);
 
-        this._setStepState(2);
-        if (!config.murekaConfigured) {
-          this._setLog(
-            '⚠️ Murekaが未設定のため、Gemini生成リリック＋内蔵112BPMビートでステージを開始します！'
-          );
-          this._setStepState(3);
-          this.currentSynthDuration = 64;
-          await this._autoSaveBattle();
-          this.audioController.startSynthBattle(64);
-          return;
-        }
-
-        this._setLog(
-          '② Mureka 公式API に8小節×4本の歌詞＆Styleを送信し、男女マイクリレー楽曲をレコーディング中...'
-        );
-        const { audioUrl, murekaTrack } = await DOPANEWS.generateBattleTrackWithMureka(
-          battleData,
-          (progressMsg) => {
-            this._setLog(`② ${progressMsg}`);
-          }
-        );
-
-        // Keep the returned track available for inspecting actual lyric timings.
-        const responsePreview = document.getElementById('mureka-json-preview');
-        if (responsePreview) responsePreview.textContent = JSON.stringify(murekaTrack || {}, null, 2);
-        this._applyBattleData(battleData);
-        this.currentAudioUrl = audioUrl;
-        this.currentMurekaTrack = murekaTrack;
-        await this._autoSaveBattle();
-
-        this._setStepState(3);
-        const sync = battleData.mureka_sync;
-        this._setLog(sync
-          ? `③ 楽曲完成！歌詞と台本の照合：${sync.matched_lines}/${sync.total_lines}行。未照合部分のMC表示は保留します。`
-          : '③ Murekaバトル楽曲が完成！ステージで再生します。');
-        await this.audioController.loadAndPlayUrl(this.currentAudioUrl || audioUrl);
+        if (!await this._reviewScript(battleData, articleText, 'full')) return;
+        await this._generateApprovedBattle(battleData, config);
       } catch (err) {
         console.error(err);
         this._setLog(`❌ エラー: ${err.message}`, true);
@@ -411,10 +411,56 @@
       }
     }
 
-    async handleGeminiOnlyGeneration() {
+    async _generateApprovedBattle(battleData, config) {
+      this._renderReview();
+      this._setStepState(2);
+      if (!config.murekaConfigured) {
+        this._setLog(
+          '⚠️ Murekaが未設定のため、Gemini生成リリック＋内蔵112BPMビートでステージを開始します！'
+        );
+        this._setStepState(3);
+        this.currentSynthDuration = 64;
+        await this._autoSaveBattle();
+        this.audioController.startSynthBattle(64);
+        return;
+      }
+
+      this._setLog(
+        '② Mureka 公式API に8小節×4本の歌詞＆Styleを送信し、男女マイクリレー楽曲をレコーディング中...'
+      );
+      const { audioUrl, murekaTrack } = await DOPANEWS.generateBattleTrackWithMureka(
+        battleData,
+        (progressMsg) => {
+          this._setLog(`② ${progressMsg}`);
+        }
+      );
+
+      // Keep the returned track available for inspecting actual lyric timings.
+      const responsePreview = document.getElementById('mureka-json-preview');
+      if (responsePreview) responsePreview.textContent = JSON.stringify(murekaTrack || {}, null, 2);
+      this._applyBattleData(battleData);
+      this.currentAudioUrl = audioUrl;
+      this.currentMurekaTrack = murekaTrack;
+      await this._autoSaveBattle();
+
+      this._setStepState(3);
+      const sync = battleData.mureka_sync;
+      this._setLog(sync
+        ? `③ 楽曲完成！歌詞と台本の照合：${sync.matched_lines}/${sync.total_lines}行。未照合部分のMC表示は保留します。`
+        : '③ Murekaバトル楽曲が完成！ステージで再生します。');
+      await this.audioController.loadAndPlayUrl(this.currentAudioUrl || audioUrl);
+      this.audioReviewPromise = this._startAudioReview();
+    }
+
+
+    async handleGeminiOnlyGeneration(options = {}) {
       if (this.isGenerating) return;
 
       const config = await this._loadLocalConfig();
+      if (!config.reviewSupported) {
+        this._setLog('AI審判対応のサーバーを起動してください。start_server.batで再起動後、もう一度お試しください。APIはまだ使用していません。', true);
+        return;
+      }
       if (!config.geminiConfigured) {
         this._setLog('config.local.json に GeminiApiKey を設定してください。', true);
         return;
@@ -422,16 +468,18 @@
       if (this.isGenerating) return;
       this._beginGeneration();
       try {
-        const articleText = await this._resolveArticleTextBeforeGenerate();
+        const articleText = options.articleText ?? await this._resolveArticleTextBeforeGenerate();
         this.currentArticleText = articleText;
 
         this._setStepState(1);
         this._setLog('① Gemini 3.8 Flash でニュース記事からラップバトル歌詞JSONを生成中...');
         const battleData = await DOPANEWS.generateBattleScriptWithGemini(
           articleText,
-          (progressMsg) => this._setLog(`① ${progressMsg}`)
+          (progressMsg) => this._setLog(`① ${progressMsg}`),
+          options.reviewFeedback || null
         );
         this._applyBattleData(battleData);
+        if (!await this._reviewScript(battleData, articleText, 'lyrics')) return;
         this._setStepState(3);
         this._setLog(
           '③ Gemini作詞完了！ステージに歌詞をセットし、112BPMビートで再生を開始します🔥'
@@ -446,7 +494,122 @@
       }
     }
 
+    async _reviewScript(battleData, articleText, mode) {
+      this.reviewContext = { stage: 'script', battleData, articleText, mode };
+      this.reviewState = { status: 'checking', stage: 'script' };
+      this._renderReview();
+      this._setLog('AI審判が元記事と歌詞・読み方を確認しています。Murekaはまだ使用していません。');
+      try {
+        const report = await DOPANEWS.reviewBattle({ stage: 'script', articleText, battleData });
+        this.currentReviews.script = report;
+        this.reviewContext.report = report;
+        this.reviewState = { status: report.verdict, stage: 'script', report };
+        this._renderReview();
+        if (report.verdict !== 'pass') this._setLog('歌詞に確認・修正候補があります。内容を確認して再生成するか選んでください。Murekaは使用していません。', true);
+        return report.verdict === 'pass';
+      } catch (err) {
+        this.reviewState = { status: 'error', stage: 'script', message: err.message };
+        this._renderReview();
+        this._setLog('AI審判を完了できなかったため、音源生成を停止しました。自動で再生成しません。', true);
+        return false;
+      }
+    }
+
+    async _startAudioReview(force = false) {
+      const version = this.reviewVersion;
+      this.reviewContext = { stage: 'audio', articleText: this.currentArticleText,
+        battleData: this.currentBattleData, mode: 'full', recordId: this.currentSavedId };
+      this.reviewState = { status: 'checking', stage: 'audio' };
+      this._renderReview();
+      try {
+        if (!this.currentSavedId) throw new Error('音源の保存に失敗したため未確認です。保存してから審判を再実行してください。');
+        const report = await DOPANEWS.reviewBattle({ stage: 'audio', recordId: this.currentSavedId, force });
+        if (version !== this.reviewVersion) return;
+        this.currentReviews.audio = report;
+        this.reviewContext.report = report;
+        this.reviewState = { status: report.verdict, stage: 'audio', report };
+        await this._refreshLibrary();
+      } catch (err) {
+        if (version !== this.reviewVersion) return;
+        this.reviewState = { status: 'error', stage: 'audio', message: err.message };
+      }
+      if (version === this.reviewVersion) this._renderReview();
+    }
+
+    async _regenerateReviewedBattle() {
+      const context = this.reviewContext;
+      if (this.isGenerating || this.reviewState.status === 'checking' || !context?.report || context.report.verdict === 'pass') return;
+      const options = { articleText: context.articleText, reviewFeedback: context.report };
+      if (context.mode === 'lyrics') await this.handleGeminiOnlyGeneration(options);
+      else await this.handleFullBattleGeneration(options);
+    }
+
+    async _recheckReview() {
+      if (this.isGenerating || this.reviewState.status === 'checking' || !this.reviewContext) return;
+      if (this.reviewContext.stage === 'audio') { this.audioReviewPromise = this._startAudioReview(true); return this.audioReviewPromise; }
+      const context = this.reviewContext;
+      const config = await this._loadLocalConfig();
+      if (this.isGenerating || this.reviewContext !== context) return;
+      if (!config.reviewSupported || !config.geminiConfigured) {
+        this._setLog('AI審判の接続設定とサーバーを確認してください。', true);
+        return;
+      }
+      this._setGenerating(true);
+      try {
+        const approved = await this._reviewScript(context.battleData, context.articleText, context.mode);
+        if (!approved) return;
+        if (context.mode === 'full') await this._generateApprovedBattle(context.battleData, config);
+        else {
+          this._setStepState(3);
+          this.currentSynthDuration = 45;
+          await this._autoSaveBattle();
+          this.audioController.startSynthBattle(45);
+          this._setLog('歌詞の再確認が完了し、内蔵ビートで再生を開始しました。');
+        }
+      } catch (err) { this._setLog(`音源生成エラー：${err.message}`, true); }
+      finally { this._setGenerating(false); }
+    }
+
+    _renderReview() {
+      if (!this.reviewStatusEl) return;
+      const state = this.reviewState || { status: 'idle' };
+      const label = state.stage === 'audio' ? '音源' : '歌詞';
+      const statuses = { idle: '未確認', checking: `${label}を確認中`, pass: `${label}：指摘なし`,
+        needs_revision: `${label}に修正候補があります`, uncertain: `${label}：判断を保留しています`, error: `${label}：確認できませんでした` };
+      const title = statuses[state.status] || '未確認';
+      this.reviewStatusEl.textContent = title + (state.report ? `。${state.report.summary}` : state.message ? `。${state.message}` : '');
+      if (this.showReviewBtnEl) this.showReviewBtnEl.textContent = `AI審判：${title}`;
+      this.reviewIssuesEl.innerHTML = '';
+      for (const issue of state.report?.issues || []) {
+        const item = document.createElement('div'); item.className = 'ai-review-issue';
+        for (const text of [`歌詞・音声：${issue.quote}`, `指摘：${issue.reason}`,
+          `元記事の根拠：${issue.source_quote || '元記事から確認できません'}`, `修正案：${issue.suggestion}`]) {
+          const paragraph = document.createElement('p'); paragraph.textContent = text; item.appendChild(paragraph);
+        }
+        this.reviewIssuesEl.appendChild(item);
+      }
+      const flagged = ['needs_revision', 'uncertain'].includes(state.status);
+      this.reviewRegenerateBtnEl.hidden = !flagged || Boolean(state.dismissed);
+      this.reviewDismissBtnEl.hidden = !flagged || Boolean(state.dismissed);
+      this.reviewRecheckBtnEl.hidden = !['error', 'uncertain'].includes(state.status) || Boolean(state.dismissed);
+      const lyricsOnly = this.reviewContext?.mode === 'lyrics';
+      const proceedsToAudio = !lyricsOnly && state.stage === 'script';
+      this.reviewRecheckBtnEl.textContent = proceedsToAudio ? '再確認して、問題なければ音源生成' : '審判を再確認（Gemini）';
+      this.reviewRegenerateBtnEl.textContent = lyricsOnly ? '指摘を反映して歌詞を再生成（Gemini）' : '指摘を反映して再生成（Gemini＋Mureka 9）';
+      this.reviewCostEl.textContent = flagged
+        ? `${state.dismissed ? '今回は再生成しません。' : '自動では再生成しません。'}再生成を選ぶと${lyricsOnly ? 'Gemini' : 'GeminiとMureka'}を使用します。${proceedsToAudio ? '歌詞の再確認で問題がなければ、Mureka 9で音源生成へ進みます。' : '審判の再確認はGeminiのみ使用します。'}`
+        : state.status === 'checking' ? (proceedsToAudio ? 'Geminiで確認中です。指摘がなければ音源生成へ進みます。' : 'Geminiで確認中です。音源の自動再生成は行いません。')
+        : state.status === 'error' ? `未確認の状態です。自動では再試行しません。再確認にはGeminiを使用します。${proceedsToAudio ? '指摘がなければ、そのままMureka 9で音源生成へ進みます。' : ''}` : '';
+      [this.reviewRegenerateBtnEl, this.reviewDismissBtnEl, this.reviewRecheckBtnEl]
+        .forEach((button) => { button.disabled = this.isGenerating || state.status === 'checking'; });
+    }
+
     _stopCurrentBattle() {
+      this.reviewVersion++;
+      this.currentReviews = {};
+      this.reviewContext = null;
+      this.reviewState = { status: 'idle' };
+      this._renderReview();
       this.audioController.stopPlayback();
       this.currentAudioUrl = null;
       this.currentSavedId = null;
@@ -465,6 +628,7 @@
 
     _setGenerating(isGenerating) {
       this.isGenerating = isGenerating;
+      this._renderReview();
       this.libraryListEl?.querySelectorAll('button').forEach((button) => { button.disabled = isGenerating; });
       // Keep the displayed script paired with its audio until generation finishes.
       [this.generateBtnEl, this.geminiOnlyBtnEl, this.presetTestBtnEl,

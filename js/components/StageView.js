@@ -163,14 +163,20 @@
       if (!lineEls.length) return;
 
       let activeLineIdx = 0;
+      let activeIndices = null;
 
       // Murekaの行単位タイムスタンプがある場合
       if (Array.isArray(verse.timed_lines) && verse.timed_lines.length > 0) {
+        activeLineIdx = -1;
+        activeIndices = new Set();
         for (let i = 0; i < verse.timed_lines.length; i++) {
-          if (currentTimeSec >= verse.timed_lines[i].start_sec) {
-            activeLineIdx = Math.min(lineEls.length - 1, i);
+          const timedLine = verse.timed_lines[i];
+          if (currentTimeSec >= timedLine.start_sec && currentTimeSec < timedLine.end_sec) {
+            const indices = timedLine.line_indices || (verse.lyric_reading ? [] : [i]);
+            indices.forEach((index) => { if (index >= 0 && index < lineEls.length) activeIndices.add(index); });
           }
         }
+        if (activeIndices.size) activeLineIdx = Math.min(...activeIndices);
       } else if (verseWindow) {
         // バースの開始〜終了時間から8小節の進行度を算出
         const span = Math.max(4, verseWindow.end - verseWindow.start);
@@ -178,11 +184,13 @@
         activeLineIdx = Math.floor(rel * lineEls.length);
       }
 
-      if (activeLineIdx === this.currentLineIndex) return;
+      const lineKey = activeIndices ? [...activeIndices].sort((a, b) => a - b).join(',') : String(activeLineIdx);
+      if (lineKey === this.currentLineKey) return;
+      this.currentLineKey = lineKey;
       this.currentLineIndex = activeLineIdx;
 
       lineEls.forEach((el, idx) => {
-        el.classList.toggle('line-active', idx === activeLineIdx);
+        el.classList.toggle('line-active', activeIndices ? activeIndices.has(idx) : idx === activeLineIdx);
         el.classList.toggle('line-past', idx < activeLineIdx);
       });
 
@@ -196,6 +204,7 @@
       if (!this.battleData || !this.battleData.verses[index]) return;
       this.currentVerseIndex = index;
       this.currentLineIndex = -1;
+      this.currentLineKey = null;
       const verse = this.battleData.verses[index];
       const isReina = verse.speaker === 'REINA';
 
@@ -234,9 +243,7 @@
           void this.lyricBoxEl.offsetWidth;
           this.lyricBoxEl.classList.add('lyric-slam-anim');
         }
-        const lines = verse.timed_lines?.length
-          ? verse.timed_lines.map((line) => line.text)
-          : verse.lyric.split('\n').filter(Boolean);
+        const lines = verse.lyric.split('\n').filter(Boolean);
         this.lyricBoxEl.innerHTML = lines
           .map(
             (line, i) =>

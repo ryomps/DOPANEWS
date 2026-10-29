@@ -57,8 +57,9 @@ function setup() {
     vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), context, { filename: file });
   }
   const savedRecords = [];
-  context.DOPANEWS.getLocalConfig = async () => ({ geminiConfigured: true, murekaConfigured: true });
+  context.DOPANEWS.getLocalConfig = async () => ({ geminiConfigured: true, murekaConfigured: true, reviewSupported: true });
   context.DOPANEWS.listSavedBattles = async () => ({ items: savedRecords });
+  context.DOPANEWS.reviewBattle = async input => ({ stage: input.stage, verdict: 'pass', summary: '指摘なし', issues: [] });
   context.DOPANEWS.saveBattle = async record => {
     const saved = JSON.parse(JSON.stringify({ ...record, id: 'saved-test', createdAt: new Date().toISOString(),
       audioUrl: record.audioUrl ? '/api/library/saved-test/audio' : null }));
@@ -299,4 +300,215 @@ test('failed autosave retains remote playback and allows retry', async () => {
   assert.equal(app.currentAudioUrl, 'https://cdn.mureka.ai/retry.mp3');
   data.saveBattle = save; await app._saveCurrentBattle();
   assert.equal(savedRecords.length, 1);
+});
+
+
+function pronunciationFixture(data) {
+  return data.normalizeBattleData({ title: '読み方のテスト', verses: [
+    { speaker: 'KENTA', lyric: '施策を実行\n1日10時間の現場', lyric_reading: 'しさくをじっこう\nいちにちじゅうじかんのげんば' },
+    { speaker: 'REINA', lyric: '生産性を高めよう\nAIで仕事を変えよう', lyric_reading: 'せいさんせいをたかめよう\nエーアイでしごとをかえよう' },
+    { speaker: 'KENTA', lyric: '日本銀行の判断\n人手不足を見逃すな', lyric_reading: 'にほんぎんこうのはんだん\nひとでぶそくをみのがすな' },
+    { speaker: 'REINA', lyric: '地方移住の選択肢\n未来を選ぶ自由', lyric_reading: 'ちほういじゅうのせんたくし\nみらいをえらぶじゆう' }
+  ] });
+}
+
+test('Mureka receives readings only while saved/display lyrics retain kanji, numbers and abbreviations', () => {
+  const { data, app, get } = setup();
+  const battle = pronunciationFixture(data);
+  data.validateBattleReadings(battle);
+  const prompt = data.buildMurekaPrompt(battle);
+  assert.match(prompt, /しさくをじっこう/);
+  assert.match(prompt, /いちにちじゅうじかん/);
+  assert.match(prompt, /エーアイ/);
+  assert.doesNotMatch(prompt, /施策|1日10時間|AIで/);
+  app._applyBattleData(battle);
+  assert.match(get('stage-lyric-box').innerHTML, /施策を実行/);
+  assert.doesNotMatch(get('stage-lyric-box').innerHTML, /しさくをじっこう/);
+  assert.match(battle.verses[0].lyric, /施策/);
+  const legacy = data.normalizeBattleData({ verses: [{ lyric: '既存の保存歌詞' }] });
+  assert.match(data.buildMurekaPrompt(legacy), /既存の保存歌詞/);
+});
+
+test('kana timestamps align with original display lines across split and merged returned lines', () => {
+  const { data, app, get } = setup();
+  const battle = pronunciationFixture(data);
+  data.applyMurekaTimestamps(battle, { lyrics_sections: [{ lines: [
+    { text: 'しさくをじっこう いちにちじゅうじかんのげんば', start: 400, end: 3000 },
+    { text: 'せいさんせいを', start: 4000, end: 5000 },
+    { text: 'たかめよう', start: 5000, end: 6000 },
+    { text: 'えーあいでしごとをかえよう', start: 6100, end: 8000 }
+  ] }] });
+  assert.deepEqual(Array.from(battle.mureka_timeline, line => line.verse_index), [0, 1, 1, 1]);
+  assert.deepEqual(Array.from(battle.mureka_timeline[0].line_indices), [0, 1]);
+  assert.deepEqual(Array.from(battle.mureka_timeline[2].line_indices), [0]);
+  assert.deepEqual(Array.from(battle.mureka_timeline[3].line_indices), [1]);
+  app._applyBattleData(battle);
+  const active = new Set();
+  const lineElements = [0, 1].map(index => ({ classList: { toggle(name, on) {
+    if (name === 'line-active') on ? active.add(index) : active.delete(index);
+  } } }));
+  get('stage-lyric-box').querySelectorAll = () => lineElements;
+  app.stageView.syncTime(1, 10);
+  assert.deepEqual([...active], [0, 1]);
+  app.stageView.syncTime(5.5, 10);
+  assert.equal(get('battle-stage').attrs['data-active-mc'], 'REINA');
+  assert.deepEqual([...active], [0]);
+  assert.match(get('stage-lyric-box').innerHTML, /生産性を高めよう/);
+  assert.doesNotMatch(get('stage-lyric-box').innerHTML, /せいさんせい/);
+  app.stageView.syncTime(7, 10);
+  assert.deepEqual([...active], [1]);
+});
+
+test('missing, ruby-annotated or misaligned readings are rejected before music generation', () => {
+  const { data } = setup();
+  for (const invalid of [null, 'しさくをじっこう', '施策（しさく）を実行\nげんば', 'しさくをじっこう\nAIでかいけつ', 'しさくをじっこう\n\nげんば']) {
+    const battle = pronunciationFixture(data);
+    battle.verses[0].lyric_reading = invalid;
+    assert.throws(() => data.validateBattleReadings(battle), /音声用かな歌詞が不正/);
+  }
+});
+
+test('Gemini pronunciation output flows into the Mureka 9 payload without an extra API request', async () => {
+  const { data } = setup();
+  const fixture = pronunciationFixture(data);
+  const calls = [];
+  const context = { window: null, DOPANEWS: data, setTimeout: resolve => resolve(),
+    fetch: async (url, options) => {
+      calls.push({ url, options });
+      if (url.startsWith('/api/gemini/')) return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify(fixture) }] } }] }) };
+      if (url.endsWith('/generate')) return { ok: true, json: async () => ({ id: 'test-task' }) };
+      return { ok: true, json: async () => ({ status: 'succeeded', choices: [{ url: 'test.mp3', lyrics_sections: [] }] }) };
+    }
+  };
+  context.window = context; vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(root, 'js/api.js'), 'utf8'), context);
+  const battle = await data.generateBattleScriptWithGemini('読み方を確かめるニュース記事の本文を入力するテストです。');
+  await data.generateBattleTrackWithMureka(battle);
+  assert.equal(calls.filter(call => call.url.startsWith('/api/gemini/')).length, 1);
+  assert.match(JSON.parse(calls[0].options.body).contents[0].parts[0].text, /lyric_reading/);
+  const payload = JSON.parse(calls.find(call => call.url.endsWith('/generate')).options.body);
+  assert.equal(payload.model, 'mureka-9');
+  assert.match(payload.lyrics, /しさくをじっこう/);
+  assert.doesNotMatch(payload.lyrics, /施策/);
+  assert.equal(battle.verses[0].lyric, fixture.verses[0].lyric);
+  context.fetch = async () => ({ ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({ verses: [{ lyric: '読みが欠けている歌詞' }] }) }] } }] }) });
+  await assert.rejects(data.generateBattleScriptWithGemini('読み方のない応答を返すニュース記事本文のテストです。'), /音声用かな歌詞が不正/);
+});
+
+
+const flaggedReview = stage => ({ stage, verdict: 'needs_revision', summary: '元記事と数値が異なります',
+  issues: [{ kind: 'contradiction', quote: '全員の給料が半分', reason: '断定の根拠がありません', source_quote: '', suggestion: '懸念として表現する' }] });
+
+test('script issues stop before Mureka; dismiss never retries or generates audio', async () => {
+  const { app, data, get } = setup();
+  let lyrics = 0, music = 0, reviews = 0;
+  data.generateBattleScriptWithGemini = async () => { lyrics++; return data.PRESET_BATTLE_DATA; };
+  data.generateBattleTrackWithMureka = async () => { music++; return { audioUrl: 'song.mp3' }; };
+  data.reviewBattle = async () => { reviews++; return flaggedReview('script'); };
+  await app.handleFullBattleGeneration();
+  assert.equal(lyrics, 1); assert.equal(music, 0); assert.equal(reviews, 1);
+  assert.equal(app.reviewState.status, 'needs_revision');
+  assert.equal(get('btn-review-regenerate').hidden, false);
+  get('btn-review-dismiss').emit('click'); await Promise.resolve();
+  assert.equal(get('btn-review-regenerate').hidden, true);
+  assert.equal(lyrics, 1); assert.equal(music, 0);
+});
+
+test('manual regeneration sends feedback and the original article; each click makes only one attempt', async () => {
+  const { app, data } = setup();
+  let lyrics = 0, music = 0, reviews = 0;
+  const source = app.articleInputEl.value;
+  data.generateBattleScriptWithGemini = async (article, progress, feedback) => {
+    lyrics++;
+    if (lyrics === 2) { assert.equal(article, source); assert.equal(feedback.verdict, 'needs_revision'); }
+    return JSON.parse(JSON.stringify(data.PRESET_BATTLE_DATA));
+  };
+  data.generateBattleTrackWithMureka = async () => { music++; return { audioUrl: 'song.mp3' }; };
+  data.reviewBattle = async input => { reviews++; return reviews === 1 ? flaggedReview('script') : { stage: input.stage, verdict: 'pass', summary: '確認完了', issues: [] }; };
+  await app.handleFullBattleGeneration(); assert.equal(music, 0);
+  app.articleInputEl.value = '別の入力';
+  await app._regenerateReviewedBattle(); await app.audioReviewPromise;
+  assert.equal(lyrics, 2); assert.equal(music, 1);
+  assert.equal(app.reviewState.stage, 'audio'); assert.equal(app.reviewState.status, 'pass');
+});
+
+test('failed review stops generation; passing recheck automatically generates audio without regenerating lyrics', async () => {
+  const { app, data } = setup();
+  let lyrics = 0, music = 0;
+  data.generateBattleScriptWithGemini = async () => { lyrics++; return data.PRESET_BATTLE_DATA; };
+  data.generateBattleTrackWithMureka = async () => { music++; return { audioUrl: 'song.mp3' }; };
+  data.reviewBattle = async () => { throw new Error('connection failed'); };
+  await app.handleFullBattleGeneration();
+  assert.equal(app.reviewState.status, 'error'); assert.equal(music, 0);
+  data.reviewBattle = async input => ({ stage: input.stage, verdict: 'pass', summary: '確認完了', issues: [] });
+  await app._recheckReview(); await app.audioReviewPromise;
+  assert.equal(lyrics, 1); assert.equal(music, 1);
+});
+
+test('audio review runs in background without regenerating and late results cannot overwrite another battle', async () => {
+  const { app, data, get } = setup();
+  let music = 0, finish;
+  data.generateBattleScriptWithGemini = async () => data.PRESET_BATTLE_DATA;
+  data.generateBattleTrackWithMureka = async () => { music++; return { audioUrl: 'song.mp3' }; };
+  data.reviewBattle = async input => input.stage === 'script'
+    ? { stage: 'script', verdict: 'pass', summary: '確認完了', issues: [] }
+    : new Promise(resolve => { finish = resolve; });
+  await app.handleFullBattleGeneration();
+  assert.equal(app.isGenerating, false); assert.equal(app.reviewState.status, 'checking');
+  assert.equal(get('battle-audio').paused, false); assert.equal(music, 1);
+  const pending = app.audioReviewPromise;
+  get('btn-load-preset').emit('click'); finish(flaggedReview('audio')); await pending;
+  assert.equal(app.reviewState.status, 'idle'); assert.equal(music, 1);
+});
+
+test('audio issues remain a user choice and keep the generated recording available', async () => {
+  const { app, data, get } = setup();
+  let music = 0;
+  data.generateBattleScriptWithGemini = async () => data.PRESET_BATTLE_DATA;
+  data.generateBattleTrackWithMureka = async () => { music++; return { audioUrl: 'song.mp3' }; };
+  data.reviewBattle = async input => input.stage === 'audio' ? flaggedReview('audio') : { stage: 'script', verdict: 'pass', summary: '確認完了', issues: [] };
+  await app.handleFullBattleGeneration(); await app.audioReviewPromise;
+  assert.equal(app.reviewState.status, 'needs_revision'); assert.equal(music, 1);
+  assert.equal(get('battle-audio').src, '/api/library/saved-test/audio');
+  assert.match(get('ai-review-cost').textContent, /GeminiとMureka/);
+  get('btn-review-dismiss').emit('click'); await Promise.resolve(); assert.equal(music, 1);
+});
+
+
+test('outdated local server is detected before spending Gemini or Mureka credits', async () => {
+  const { app, data, get } = setup();
+  let calls = 0;
+  data.getLocalConfig = async () => ({ geminiConfigured: true, murekaConfigured: true });
+  data.generateBattleScriptWithGemini = async () => { calls++; };
+  data.generateBattleTrackWithMureka = async () => { calls++; };
+  await app.handleFullBattleGeneration(); await app.handleGeminiOnlyGeneration();
+  assert.equal(calls, 0);
+  assert.match(get('generation-status-log').textContent, /サーバー/);
+  assert.match(get('api-config-status').textContent, /再起動/);
+});
+
+test('missing review route explains restart while missing audio keeps its own error', async () => {
+  const { data } = setup();
+  let detail = { error: 'Not found' };
+  const context = { window: null, DOPANEWS: data, fetch: async () => ({ ok: false, status: 404, json: async () => detail }) };
+  context.window = context; vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(root, 'js/api.js'), 'utf8'), context);
+  await assert.rejects(data.reviewBattle({ stage: 'script' }), /サーバーを再起動後.*審判だけ再確認/);
+  detail = { error: '保存音源がありません', code: 'REVIEW_SOURCE_NOT_FOUND' };
+  await assert.rejects(data.reviewBattle({ stage: 'audio' }), /保存音源がありません/);
+});
+
+
+test('a recheck with issues still stops before Mureka; audio rechecks never regenerate', async () => {
+  const { app, data } = setup();
+  let music = 0;
+  data.generateBattleScriptWithGemini = async () => data.PRESET_BATTLE_DATA;
+  data.generateBattleTrackWithMureka = async () => { music++; return { audioUrl: 'song.mp3' }; };
+  data.reviewBattle = async () => flaggedReview('script');
+  await app.handleFullBattleGeneration(); await app._recheckReview();
+  assert.equal(music, 0); assert.equal(app.reviewState.status, 'needs_revision');
+  data.reviewBattle = async input => ({ stage: input.stage, verdict: 'pass', summary: '指摘なし', issues: [] });
+  await app._recheckReview(); await app.audioReviewPromise;
+  assert.equal(music, 1);
+  await app._recheckReview(); assert.equal(music, 1);
 });

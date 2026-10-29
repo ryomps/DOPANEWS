@@ -22,6 +22,7 @@
           ? `[Verse ${index + 1}: Clear Female Vocal, Upbeat Pop Rap]`
           : `[Verse ${index + 1}: Clear Male Vocal, Upbeat Pop Rap]`),
       lyric: verse.lyric || '',
+      lyric_reading: typeof verse.lyric_reading === 'string' ? verse.lyric_reading.trim() : null,
       point_summary: verse.point_summary || '',
       rhyme_words: verse.rhyme_words || '',
       start_time_sec: typeof verse.start_time_sec === 'number' ? verse.start_time_sec : index * 20,
@@ -66,17 +67,35 @@
       const v = battleData.verses[i];
       if (i > 0) lines.push('');
       lines.push(v.section_tag.trim());
-      lines.push(v.lyric.trim());
+      lines.push((v.lyric_reading || v.lyric).trim());
     }
     return lines.join('\n');
+  }
+
+  // New Gemini output must have a separate, line-aligned pronunciation script.
+  // Existing saved battles without readings still use their original lyrics.
+  function validateBattleReadings(battleData) {
+    if (!battleData.verses.length) throw new Error('歌詞が生成されませんでした。');
+    battleData.verses.forEach((verse, index) => {
+      const reading = verse.lyric_reading;
+      const displayLines = verse.lyric.trim().split(/\r?\n/);
+      const readingLines = reading?.split(/\r?\n/) || [];
+      if (!reading || readingLines.length !== displayLines.length || readingLines.some((line) => !line.trim()) ||
+          /[\p{Script=Han}A-Za-z0-9()（）\[\]{}<>《》]/u.test(reading)) {
+        throw new Error(`V${index + 1}の音声用かな歌詞が不正です。表示歌詞と同じ行数の読みが必要です。楽曲生成は行っていません。`);
+      }
+    });
+    return battleData;
   }
 
   /** Match returned lyrics to the script; section boundaries do not identify singers. */
   function applyMurekaTimestamps(battleData, murekaChoice) {
     if (!battleData || !Array.isArray(battleData.verses) || !murekaChoice) return battleData;
     const normalize = (text) => String(text || '').normalize('NFKC').toLowerCase()
+      .replace(/[ァ-ヶ]/g, (character) => String.fromCharCode(character.charCodeAt(0) - 0x60))
       .replace(/[^\p{L}\p{N}]/gu, '');
-    const scripts = battleData.verses.map((verse) => normalize(verse.lyric));
+    const scripts = battleData.verses.map((verse) => [verse.lyric, verse.lyric_reading]
+      .filter(Boolean).map((text) => text.split(/\r?\n/).filter(Boolean).map(normalize)));
     const bigrams = (text) => {
       const characters = Array.from(text);
       return new Set(characters.slice(0, -1).map((character, index) => character + characters[index + 1]));
@@ -95,13 +114,33 @@
       if (!normalized) return null;
       const scores = scripts.map((script, index) => ({
         index,
-        score: Math.max(similarity(normalized, script), ...String(battleData.verses[index].lyric)
-          .split('\n').map((line) => similarity(normalized, normalize(line))))
+        score: Math.max(...script.map((lines) => Math.max(
+          similarity(normalized, lines.join('')), ...lines.map((line) => similarity(normalized, line)))))
       })).sort((a, b) => b.score - a.score);
       const best = scores[0];
       // Shared refrains and weak matches must not be assigned to an arbitrary MC.
       return best && best.score >= 0.65 && best.score - (scores[1]?.score || 0) >= 0.15
         ? best.index : null;
+    };
+    const identifyLines = (text, verseIndex) => {
+      if (verseIndex === null) return [];
+      const target = normalize(text);
+      const candidates = new Set();
+      for (const lines of scripts[verseIndex]) {
+        const joined = lines.join('');
+        const start = joined.indexOf(target);
+        if (!target || start < 0 || joined.indexOf(target, start + 1) >= 0) continue;
+        let offset = 0;
+        lines.forEach((line, index) => {
+          if (offset < start + target.length && offset + line.length > start) candidates.add(index);
+          offset += line.length;
+        });
+      }
+      if (candidates.size) return [...candidates].sort((a, b) => a - b);
+      const scores = battleData.verses[verseIndex].lyric.split(/\r?\n/).filter(Boolean).map((_, index) => ({
+        index, score: Math.max(...scripts[verseIndex].map((lines) => similarity(target, lines[index] || '')))
+      })).sort((a, b) => b.score - a.score);
+      return scores[0]?.score >= 0.65 && scores[0].score - (scores[1]?.score || 0) >= 0.15 ? [scores[0].index] : [];
     };
     battleData.verses.forEach((verse) => {
       verse.synced_from_mureka = false;
@@ -112,9 +151,11 @@
     for (const section of sections) {
       for (const line of Array.isArray(section?.lines) ? section.lines : []) {
         if (!Number.isFinite(line.start) || !Number.isFinite(line.end) || line.end <= line.start) continue;
+        const verseIndex = identifyVerse(line.text);
         timeline.push({
           text: String(line.text || ''), start_sec: line.start / 1000,
-          end_sec: line.end / 1000, verse_index: identifyVerse(line.text)
+          end_sec: line.end / 1000, verse_index: verseIndex,
+          line_indices: identifyLines(line.text, verseIndex)
         });
       }
     }
@@ -224,6 +265,8 @@
   DOPANEWS.normalizeVerse = normalizeVerse;
   DOPANEWS.normalizeBattleData = normalizeBattleData;
   DOPANEWS.buildSunoPrompt = buildSunoPrompt;
+  DOPANEWS.buildMurekaPrompt = buildSunoPrompt;
+  DOPANEWS.validateBattleReadings = validateBattleReadings;
   DOPANEWS.applyMurekaTimestamps = applyMurekaTimestamps;
   DOPANEWS.PRESET_NEWS_ARTICLE = PRESET_NEWS_ARTICLE;
   DOPANEWS.PRESET_BATTLE_DATA = PRESET_BATTLE_DATA;
