@@ -167,13 +167,7 @@
         const start = button('MCバトル', async () => {
           const app = global.dopaNewsApp;
           if (!app || app.isGenerating || busy) return;
-          app.newsUrlInputEl.value = ''; app.lastFetchedUrl = '';
-          app.articleInputEl.value = record.articleText;
-          app.currentArticleText = record.articleText;
-          document.body.classList.remove('news-mode');
-          const returnBtn = document.getElementById('return-to-news'); returnBtn.hidden = false;
-          app.audioController._ensureAudioContext();
-          await app.handleFullBattleGeneration({ articleText: record.articleText });
+          await app.handleArticleBattleGeneration({ articleText: record.articleText, title: record.article.title });
         });
         articleBattleBar = el('footer', undefined, 'news-battle-bar live-article-battle-bar');
         const barContent = el('div');
