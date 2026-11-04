@@ -1,17 +1,19 @@
 /**
  * DOPANEWS Data Schema & Preset Sample Data
  * - 8小節（8行）× 4本（KENTA [Verse] ➔ REINA [Chorus] ➔ KENTA [Verse] ➔ REINA [Chorus]）
- * - Murekaで男女の声と曲展開が確実に切り替わる [Verse] ⇄ [Chorus] 交互デュエット構造
- * - BPM（デフォルト96 BPM ＝ 8小節 20秒）に基づく正確な小節・バース同期
+ * - Mureka固定ビート（115 BPM）＋ 男女別AIボーカル合成（KENTA男声 / REINA女声）による完全同期構造
  */
 (function (global) {
   const DOPANEWS = (global.DOPANEWS = global.DOPANEWS || {});
 
   const DEFAULT_BATTLE_STYLE =
-    'Japanese Pop Rap, Educational Rap, Male and Female Duet, Alternating Male Verse and Female Chorus, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Groovy Funky Beat, 96 BPM, Four 8-bar sections performed once, KENTA male solo then REINA female solo then KENTA male solo then REINA female solo, no additional chorus repeats, short intro and outro';
+    'Japanese Pop Rap, Educational Rap, Male and Female Duet, Alternating Male Verse and Female Chorus, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Groovy Funky Beat, 115 BPM';
+
+  const DEFAULT_FIXED_BEAT_STYLE =
+    'Japanese Pop Rap, Educational Rap, Instrumental Hip Hop Backing Track, No Vocals, Catchy Melody, Upbeat, Groovy Funky Beat, 115 BPM';
 
   /**
-   * Style文字列からBPM数値を抽出（デフォルト 96 BPM）
+   * Style文字列からBPM数値を抽出（デフォルト 115 BPM）
    */
   function extractBpmFromStyle(styleStr) {
     const match = String(styleStr || '').match(/(\d{2,3})\s*BPM/i);
@@ -19,14 +21,14 @@
       const bpm = parseInt(match[1], 10);
       if (bpm >= 60 && bpm <= 200) return bpm;
     }
-    return 96;
+    return 115;
   }
 
   /**
    * BPMから「8小節（4拍子×8＝32拍）」の正確な秒数を計算
-   * 例: 96 BPM => (60 / 115) * 32 = 20秒
+   * 例: 115 BPM => (60 / 115) * 32 = 16.696秒
    */
-  function calcEightBarsDurationSec(bpm = 96) {
+  function calcEightBarsDurationSec(bpm = 115) {
     return (60 / bpm) * 4 * 8;
   }
 
@@ -44,11 +46,10 @@
   /**
    * Verseアイテムの正規化ヘルパー
    */
-  function normalizeVerse(verse, index = 0, bpm = 96) {
+  function normalizeVerse(verse, index = 0, bpm = 115) {
     const isReina = verse.speaker === 'REINA' || (!verse.speaker && index % 2 === 1);
     const eightBarSec = calcEightBarsDurationSec(bpm);
 
-    // もしGeminiが古い [Verse 2] [Verse 4] を出力しても、Mureka用に自動で [Chorus 1] [Chorus 2] へ変換
     let tag = getDefaultSectionTag(index, isReina);
     if (verse.section_tag) {
       if (isReina && /^\[Verse/i.test(verse.section_tag)) {
@@ -74,7 +75,6 @@
       timed_lines: Array.isArray(verse.timed_lines) ? verse.timed_lines : null,
       synced_from_mureka: Boolean(verse.synced_from_mureka),
 
-      // ====== 拡張用フィールド（Phase 2: ファクトチェッカー＆カットイン演出用） ======
       fact_check_status: verse.fact_check_status ?? null,
       source_quote: verse.source_quote ?? null,
       fact_check_note: verse.fact_check_note ?? null,
@@ -99,13 +99,15 @@
       reina_stance: raw?.reina_stance || 'データと国際基準・長期的合理性から冷静に反論',
       suno_style: sunoStyle,
       bpm,
-      verses
+      verses,
+      ...(raw?.mureka_sync ? { mureka_sync: raw.mureka_sync } : {}),
+      ...(Array.isArray(raw?.mureka_timeline) ? { mureka_timeline: raw.mureka_timeline } : {}),
+      ...(Array.isArray(raw?.part_segments) ? { part_segments: raw.part_segments } : {})
     };
   }
 
   /**
    * Mureka送信用メタタグ付き歌詞ビルダー
-   * [Verse 1: Male] ➔ [Chorus 1: Female] ➔ [Verse 2: Male] ➔ [Chorus 2: Female] ➔ [End]
    */
   function buildSunoPrompt(battleData) {
     const lines = [];
@@ -121,17 +123,21 @@
     return lines.join('\n');
   }
 
-  // New Gemini output must have a separate, line-aligned pronunciation script.
-  // Existing saved battles without readings still use their original lyrics.
   function validateBattleReadings(battleData) {
     if (!battleData.verses.length) throw new Error('歌詞が生成されませんでした。');
     battleData.verses.forEach((verse, index) => {
       const reading = verse.lyric_reading;
       const displayLines = verse.lyric.trim().split(/\r?\n/);
       const readingLines = reading?.split(/\r?\n/) || [];
-      if (!reading || readingLines.length !== displayLines.length || readingLines.some((line) => !line.trim()) ||
-          /[\p{Script=Han}A-Za-z0-9()（）\[\]{}<>《》]/u.test(reading)) {
-        throw new Error(`V${index + 1}の音声用かな歌詞が不正です。表示歌詞と同じ行数の読みが必要です。楽曲生成は行っていません。`);
+      if (
+        !reading ||
+        readingLines.length !== displayLines.length ||
+        readingLines.some((line) => !line.trim()) ||
+        /[\p{Script=Han}A-Za-z0-9()（）\[\]{}<>《》]/u.test(reading)
+      ) {
+        throw new Error(
+          `V${index + 1}の音声用かな歌詞が不正です。表示歌詞と同じ行数の読みが必要です。楽曲生成は行っていません。`
+        );
       }
     });
     return battleData;
@@ -140,36 +146,53 @@
   /** Match returned lyrics to the script; section boundaries do not identify singers. */
   function applyMurekaTimestamps(battleData, murekaChoice) {
     if (!battleData || !Array.isArray(battleData.verses) || !murekaChoice) return battleData;
-    const normalize = (text) => String(text || '').normalize('NFKC').toLowerCase()
-      .replace(/[ァ-ヶ]/g, (character) => String.fromCharCode(character.charCodeAt(0) - 0x60))
-      .replace(/[^\p{L}\p{N}]/gu, '');
-    const scripts = battleData.verses.map((verse) => [verse.lyric, verse.lyric_reading]
-      .filter(Boolean).map((text) => text.split(/\r?\n/).filter(Boolean).map(normalize)));
+    const normalize = (text) =>
+      String(text || '')
+        .normalize('NFKC')
+        .toLowerCase()
+        .replace(/[ァ-ヶ]/g, (character) => String.fromCharCode(character.charCodeAt(0) - 0x60))
+        .replace(/[^\p{L}\p{N}]/gu, '');
+    const scripts = battleData.verses.map((verse) =>
+      [verse.lyric, verse.lyric_reading]
+        .filter(Boolean)
+        .map((text) => text.split(/\r?\n/).filter(Boolean).map(normalize))
+    );
     const bigrams = (text) => {
       const characters = Array.from(text);
-      return new Set(characters.slice(0, -1).map((character, index) => character + characters[index + 1]));
+      return new Set(
+        characters.slice(0, -1).map((character, index) => character + characters[index + 1])
+      );
     };
     const similarity = (a, b) => {
       if (!a || !b) return 0;
       if (a === b) return 1;
       if (a.length >= 4 && b.includes(a)) return 1;
-      const left = bigrams(a), right = bigrams(b);
+      const left = bigrams(a),
+        right = bigrams(b);
       let overlap = 0;
       for (const pair of left) if (right.has(pair)) overlap++;
-      return left.size + right.size ? 2 * overlap / (left.size + right.size) : 0;
+      return left.size + right.size ? (2 * overlap) / (left.size + right.size) : 0;
     };
     const identifyVerse = (text) => {
       const normalized = normalize(text);
       if (!normalized) return null;
-      const scores = scripts.map((script, index) => ({
-        index,
-        score: Math.max(...script.map((lines) => Math.max(
-          similarity(normalized, lines.join('')), ...lines.map((line) => similarity(normalized, line)))))
-      })).sort((a, b) => b.score - a.score);
+      const scores = scripts
+        .map((script, index) => ({
+          index,
+          score: Math.max(
+            ...script.map((lines) =>
+              Math.max(
+                similarity(normalized, lines.join('')),
+                ...lines.map((line) => similarity(normalized, line))
+              )
+            )
+          )
+        }))
+        .sort((a, b) => b.score - a.score);
       const best = scores[0];
-      // Shared refrains and weak matches must not be assigned to an arbitrary MC.
       return best && best.score >= 0.65 && best.score - (scores[1]?.score || 0) >= 0.15
-        ? best.index : null;
+        ? best.index
+        : null;
     };
     const identifyLines = (text, verseIndex) => {
       if (verseIndex === null) return [];
@@ -186,24 +209,38 @@
         });
       }
       if (candidates.size) return [...candidates].sort((a, b) => a - b);
-      const scores = battleData.verses[verseIndex].lyric.split(/\r?\n/).filter(Boolean).map((_, index) => ({
-        index, score: Math.max(...scripts[verseIndex].map((lines) => similarity(target, lines[index] || '')))
-      })).sort((a, b) => b.score - a.score);
-      return scores[0]?.score >= 0.65 && scores[0].score - (scores[1]?.score || 0) >= 0.15 ? [scores[0].index] : [];
+      const scores = battleData.verses[verseIndex].lyric
+        .split(/\r?\n/)
+        .filter(Boolean)
+        .map((_, index) => ({
+          index,
+          score: Math.max(
+            ...scripts[verseIndex].map((lines) => similarity(target, lines[index] || ''))
+          )
+        }))
+        .sort((a, b) => b.score - a.score);
+      return scores[0]?.score >= 0.65 && scores[0].score - (scores[1]?.score || 0) >= 0.15
+        ? [scores[0].index]
+        : [];
     };
     battleData.verses.forEach((verse) => {
       verse.synced_from_mureka = false;
       verse.timed_lines = null;
     });
     const timeline = [];
-    const sections = Array.isArray(murekaChoice.lyrics_sections) ? murekaChoice.lyrics_sections : [];
+    const sections = Array.isArray(murekaChoice.lyrics_sections)
+      ? murekaChoice.lyrics_sections
+      : [];
     for (const section of sections) {
       for (const line of Array.isArray(section?.lines) ? section.lines : []) {
-        if (!Number.isFinite(line.start) || !Number.isFinite(line.end) || line.end <= line.start) continue;
+        if (!Number.isFinite(line.start) || !Number.isFinite(line.end) || line.end <= line.start)
+          continue;
         const verseIndex = identifyVerse(line.text);
         timeline.push({
-          text: String(line.text || ''), start_sec: line.start / 1000,
-          end_sec: line.end / 1000, verse_index: verseIndex,
+          text: String(line.text || ''),
+          start_sec: line.start / 1000,
+          end_sec: line.end / 1000,
+          verse_index: verseIndex,
           line_indices: identifyLines(line.text, verseIndex)
         });
       }
@@ -220,7 +257,8 @@
     battleData.mureka_timeline = timeline;
     const matched = timeline.filter((line) => line.verse_index !== null).length;
     battleData.mureka_sync = {
-      matched_lines: matched, total_lines: timeline.length,
+      matched_lines: matched,
+      total_lines: timeline.length,
       status: !matched ? 'unavailable' : matched === timeline.length ? 'matched' : 'partial'
     };
     return battleData;
@@ -304,6 +342,7 @@
   });
 
   DOPANEWS.DEFAULT_BATTLE_STYLE = DEFAULT_BATTLE_STYLE;
+  DOPANEWS.DEFAULT_FIXED_BEAT_STYLE = DEFAULT_FIXED_BEAT_STYLE;
   DOPANEWS.extractBpmFromStyle = extractBpmFromStyle;
   DOPANEWS.calcEightBarsDurationSec = calcEightBarsDurationSec;
   DOPANEWS.normalizeVerse = normalizeVerse;

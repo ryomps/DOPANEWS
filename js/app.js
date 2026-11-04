@@ -1,9 +1,9 @@
 /**
  * DOPANEWS Main Application Controller
  * - ニュースURLからの本文自動抽出（URL欄・本文欄のどちらにURLを貼っても自動判定）
- * - ローカルサーバーによるAPI設定・生成履歴の保存
- * - 進捗ステップバー（①Gemini作詞中 ➔ ②Mureka収録中 ➔ ③バトル開始！）制御
- * - プリセットデータ＆ローカルMP3テストフォールバック制御
+ * - Mureka 115 BPM 固定インストビート（伴奏）の生成＆PC永久ロック保存
+ * - 固定Murekaビート上に KENTA（男声）＆ REINA（女声）の8小節×4本を乗せるマルチボイス合成
+ * - 進捗ステップバー（①Gemini作詞中 ➔ ②固定ビート×男女収録 ➔ ③バトル開始！）制御
  */
 (function (global) {
   const DOPANEWS = (global.DOPANEWS = global.DOPANEWS || {});
@@ -16,19 +16,22 @@
       this.reviewVersion = 0;
       this.currentReviews = {};
       this.reviewState = { status: 'idle' };
+      this.fixedBeat = { exists: false, audioUrl: null };
 
       this._cacheDom();
       this._initComponents();
       this.currentAudioUrl = null;
       this.currentSavedId = null;
-      this.currentSynthDuration = 45;
+      this.currentSynthDuration = 67;
       this.currentArticleText = DOPANEWS.PRESET_NEWS_ARTICLE;
       this.configReady = this._loadLocalConfig();
+      this._loadFixedBeatStatus();
       this._refreshLibrary();
       this._bindEvents();
 
       this.articleInputEl.value = DOPANEWS.PRESET_NEWS_ARTICLE;
       this._applyBattleData(DOPANEWS.PRESET_BATTLE_DATA);
+      this.stageView.syncTime(0, 67);
     }
 
     _cacheDom() {
@@ -37,6 +40,11 @@
       this.articleGenerationStatusEl = document.getElementById('article-generation-status');
       this.articleGenerationRetryEl = document.getElementById('article-generation-retry');
       this.apiConfigStatusEl = document.getElementById('api-config-status');
+      this.fixedBeatStatusEl = document.getElementById('fixed-beat-status');
+      this.generateFixedBeatBtnEl = document.getElementById('btn-generate-fixed-beat');
+      this.previewFixedBeatBtnEl = document.getElementById('btn-preview-fixed-beat');
+      this.fixedBeatAudioPreviewEl = document.getElementById('fixed-beat-audio-preview');
+
       this.libraryListEl = document.getElementById('saved-battle-list');
       this.libraryStatusEl = document.getElementById('library-status');
       this.saveBattleBtnEl = document.getElementById('btn-save-battle');
@@ -136,7 +144,7 @@
         },
         onAutoplayBlocked: () => {
           this._setLog(
-            '🎵 楽曲の準備が完了しました！ブラウザの自動再生制限のため、右ステージ下の「▶ 再生・再開」ボタンを押してスタートしてください🔥'
+            '🎵 楽曲の準備が完了しました！ブラウザの自動再生制限のため、右ステージ下の「▶ 再生」ボタンを押してスタートしてください🔥'
           );
           if (this.playPauseBtnEl) {
             this.playPauseBtnEl.style.boxShadow = '0 0 20px #FFE600';
@@ -159,6 +167,84 @@
       }
     }
 
+    async _loadFixedBeatStatus() {
+      if (!this.fixedBeatStatusEl) return;
+      try {
+        const info = await DOPANEWS.getFixedBeat();
+        this._updateFixedBeatUi(info);
+      } catch {
+        this.fixedBeatStatusEl.textContent = '固定ビート状態を取得できません。サーバー接続を確認してください。';
+      }
+    }
+
+    _updateFixedBeatUi(info) {
+      this.fixedBeat = info && info.exists ? info : { exists: false, audioUrl: null };
+      if (!this.fixedBeatStatusEl) return;
+
+      if (this.fixedBeat.exists) {
+        const updatedStr = this.fixedBeat.updatedAt
+          ? new Date(this.fixedBeat.updatedAt).toLocaleString('ja-JP')
+          : '保存済み';
+        this.fixedBeatStatusEl.textContent = `🔒 固定ビート保存済み（${this.fixedBeat.bpm || 115} BPM ／ 更新: ${updatedStr}）— すべてのバトルでこのMureka伴奏を使用します`;
+        if (this.generateFixedBeatBtnEl) {
+          this.generateFixedBeatBtnEl.textContent = '🔄 Murekaで固定ビートを作り直す';
+        }
+        if (this.previewFixedBeatBtnEl) {
+          this.previewFixedBeatBtnEl.hidden = false;
+        }
+        if (this.fixedBeatAudioPreviewEl) {
+          this.fixedBeatAudioPreviewEl.src = this.fixedBeat.audioUrl;
+        }
+      } else {
+        this.fixedBeatStatusEl.textContent = '⚠️ Mureka固定ビートが未作成です。「🎹 Murekaで115BPM固定ビートを作成＆保存」を押すか、バトル生成スタート時に自動作成します。';
+        if (this.generateFixedBeatBtnEl) {
+          this.generateFixedBeatBtnEl.textContent = '🎹 Murekaで115BPM固定ビートを作成＆保存';
+        }
+        if (this.previewFixedBeatBtnEl) {
+          this.previewFixedBeatBtnEl.hidden = true;
+        }
+        if (this.fixedBeatAudioPreviewEl) {
+          this.fixedBeatAudioPreviewEl.hidden = true;
+          this.fixedBeatAudioPreviewEl.removeAttribute('src');
+        }
+      }
+    }
+
+    async handleGenerateFixedBeat() {
+      if (this.isGenerating) return;
+      const config = await this._loadLocalConfig();
+      if (!config.murekaConfigured) {
+        this._setLog('config.local.json または左上の設定欄で Mureka APIキー を保存してください。', true);
+        if (this.fixedBeatStatusEl) {
+          this.fixedBeatStatusEl.textContent = '❌ Mureka APIキーが未設定です。上の接続状態でキーを保存してください。';
+        }
+        return;
+      }
+
+      this._setGenerating(true);
+      try {
+        const beat = await DOPANEWS.generateFixedBeatWithMureka(
+          DOPANEWS.DEFAULT_FIXED_BEAT_STYLE,
+          (msg) => {
+            this._setLog(msg);
+            if (this.fixedBeatStatusEl) this.fixedBeatStatusEl.textContent = msg;
+          }
+        );
+        this._updateFixedBeatUi(beat);
+        if (this.fixedBeatAudioPreviewEl) {
+          this.fixedBeatAudioPreviewEl.hidden = false;
+        }
+        this._setLog('✅ Mureka 115 BPM 固定インストビートを作成・保存しました！続けてニュースバトルを生成できます🔥');
+      } catch (err) {
+        this._setLog(`❌ 固定ビート生成エラー: ${err.message}`, true);
+        if (this.fixedBeatStatusEl) {
+          this.fixedBeatStatusEl.textContent = `❌ 固定ビート生成エラー: ${err.message}`;
+        }
+      } finally {
+        this._setGenerating(false);
+      }
+    }
+
     async _refreshLibrary() {
       try {
         const { items } = await DOPANEWS.listSavedBattles();
@@ -174,7 +260,9 @@
           button.type = 'button'; button.className = 'btn-sub-action'; button.textContent = '▶ 歌詞画面を開いて再生';
           button.disabled = this.isGenerating;
           button.addEventListener('click', () => this._playSavedBattle(item));
-          row.appendChild(title); row.appendChild(meta); row.appendChild(button);
+          row.appendChild(title);
+          row.appendChild(meta);
+          row.appendChild(button);
           this.libraryListEl.appendChild(row);
         }
         this.libraryStatusEl.textContent = items.length ? `${items.length}件をこのPCに保存済み` : 'まだ保存したラップはありません。';
@@ -186,9 +274,13 @@
     async _saveCurrentBattle() {
       if (this.currentSavedId) return { audioUrl: this.currentAudioUrl };
       const record = await DOPANEWS.saveBattle({
-        battleData: this.currentBattleData, articleText: this.currentArticleText,
-        audioUrl: this.currentAudioWavBase64 ? null : this.currentAudioUrl, audioWavBase64: this.currentAudioWavBase64, synthDuration: this.currentSynthDuration,
-        murekaTrack: this.currentMurekaTrack || null, reviews: this.currentReviews
+        battleData: this.currentBattleData,
+        articleText: this.currentArticleText,
+        audioUrl: this.currentAudioWavBase64 ? null : this.currentAudioUrl,
+        audioWavBase64: this.currentAudioWavBase64,
+        synthDuration: this.currentSynthDuration,
+        murekaTrack: this.currentMurekaTrack || null,
+        reviews: this.currentReviews
       });
       this.currentSavedId = record.id;
       this.currentAudioUrl = record.audioUrl;
@@ -198,8 +290,11 @@
     }
 
     async _autoSaveBattle() {
-      try { await this._saveCurrentBattle(); }
-      catch (err) { this.libraryStatusEl.textContent = `保存できませんでした。「今のラップを保存」で再試行できます：${err.message}`; }
+      try {
+        await this._saveCurrentBattle();
+      } catch (err) {
+        this.libraryStatusEl.textContent = `保存できませんでした。「今のラップを保存」で再試行できます：${err.message}`;
+      }
     }
 
     async _playSavedBattle(item) {
@@ -220,13 +315,20 @@
         this.sidebarPanelEl?.classList.remove('drawer-open');
         const back = document.getElementById('return-to-news');
         if (back) back.hidden = false;
-        this.currentSavedId = item.id; this.currentAudioUrl = item.audioUrl;
-        this.currentSynthDuration = item.synthDuration || 45;
+        this.currentSavedId = item.id;
+        this.currentAudioUrl = item.audioUrl;
+        this.currentSynthDuration = item.synthDuration || 67;
         this.currentMurekaTrack = item.murekaTrack;
         this.currentReviews = item.reviews || {};
         const report = this.currentReviews.audio || this.currentReviews.script;
         if (report) {
-          this.reviewContext = { mode: item.murekaTrack?.backing_request ? 'backing' : 'full', stage: report.stage, articleText: this.currentArticleText, battleData: item.battleData, report };
+          this.reviewContext = {
+            mode: item.murekaTrack?.backing_request ? 'backing' : 'full',
+            stage: report.stage,
+            articleText: this.currentArticleText,
+            battleData: item.battleData,
+            report
+          };
           this.reviewState = { status: report.verdict, stage: report.stage, report };
         }
         this.stageView.syncTime(0, item.murekaTrack?.duration / 1000 || this.currentSynthDuration);
@@ -234,7 +336,9 @@
         this._setStepState(3);
         if (item.audioUrl) await this.audioController.loadAndPlayUrl(item.audioUrl);
         else this.audioController.startSynthBattle(this.currentSynthDuration);
-      } finally { this._setGenerating(false); }
+      } finally {
+        this._setGenerating(false);
+      }
     }
 
     _bindEvents() {
@@ -249,6 +353,18 @@
         if (returnButton) returnButton.hidden = false;
         this.newsUrlInputEl?.focus();
       });
+
+      this.generateFixedBeatBtnEl?.addEventListener('click', () => this.handleGenerateFixedBeat());
+      this.previewFixedBeatBtnEl?.addEventListener('click', () => {
+        if (!this.fixedBeatAudioPreviewEl || !this.fixedBeat?.audioUrl) return;
+        this.fixedBeatAudioPreviewEl.hidden = false;
+        if (this.fixedBeatAudioPreviewEl.paused) {
+          this.fixedBeatAudioPreviewEl.play().catch(() => {});
+        } else {
+          this.fixedBeatAudioPreviewEl.pause();
+        }
+      });
+
       document.getElementById('btn-sync-vocal-start')?.addEventListener('click', () => {
         if (this.isGenerating || this.audioController.usingSynthFallback) return;
         this.stageView.alignVerseStartToCurrentTime(0, this.audioEl.currentTime);
@@ -260,12 +376,15 @@
         if (this.isGenerating) return;
         this.audioController.pause();
         this._setGenerating(true);
-        try { await this._saveCurrentBattle(); }
-        catch (err) { this.libraryStatusEl.textContent = `保存できませんでした：${err.message}`; }
-        finally { this._setGenerating(false); }
+        try {
+          await this._saveCurrentBattle();
+        } catch (err) {
+          this.libraryStatusEl.textContent = `保存できませんでした：${err.message}`;
+        } finally {
+          this._setGenerating(false);
+        }
       });
 
-      // URLから記事本文を読み込むボタン＆Enterキー対応
       this.fetchUrlBtnEl?.addEventListener('click', () => this.handleFetchUrl());
       this.newsUrlInputEl?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
@@ -274,7 +393,6 @@
         }
       });
 
-      // Styleプリセット選択時にテキストボックスへ反映
       this.stylePresetSelectEl?.addEventListener('change', (e) => {
         if (this.battleStyleInputEl && e.target.value) {
           this.battleStyleInputEl.value = e.target.value;
@@ -301,9 +419,9 @@
         this.currentArticleText = DOPANEWS.PRESET_NEWS_ARTICLE;
         this._applyBattleData(DOPANEWS.PRESET_BATTLE_DATA);
         this._setStepState(3);
-        this._setLog('🎧 プリセットニュース＆112BPMデモビートでバトルを開始しました！');
-        this.currentSynthDuration = 44;
-        this.audioController.startSynthBattle(44);
+        this._setLog('🎧 プリセットニュース＆115BPMデモビートでバトルを開始しました！');
+        this.currentSynthDuration = 67;
+        this.audioController.startSynthBattle(67);
       });
 
       this.localMp3InputEl?.addEventListener('change', (e) => {
@@ -357,9 +475,6 @@
       });
     }
 
-    /**
-     * ニュースURLから本文を抽出してテキストエリアにセットする
-     */
     async handleFetchUrl(customUrl) {
       const targetUrl = (customUrl || this.newsUrlInputEl?.value || '').trim();
       if (!targetUrl) {
@@ -393,20 +508,15 @@
       }
     }
 
-    /**
-     * テキストエリアまたはURL欄にURLが入っている場合、自動で本文を取得してから返す
-     */
     async _resolveArticleTextBeforeGenerate() {
       const urlFieldVal = this.newsUrlInputEl?.value.trim() || '';
       const textFieldVal = this.articleInputEl?.value.trim() || '';
 
-      // 1) テキストエリア自体にURLが1行だけ貼られている場合
       if (/^https?:\/\/\S+$/i.test(textFieldVal)) {
         if (this.newsUrlInputEl) this.newsUrlInputEl.value = textFieldVal;
         return await this.handleFetchUrl(textFieldVal);
       }
 
-      // 2) URL欄に新しいURLが入力されていて、まだ読み込んでいない場合
       if (
         /^https?:\/\/\S+$/i.test(urlFieldVal) &&
         urlFieldVal !== this.lastFetchedUrl &&
@@ -483,42 +593,57 @@
 
     async _generateApprovedBattle(battleData, config) {
       this._setStepState(2);
-      if (!config.murekaConfigured) {
-        this._setLog(
-          '⚠️ Murekaが未設定のため、Gemini生成リリック＋内蔵112BPMビートでステージを開始します！'
-        );
-        this._setStepState(3);
-        this.currentSynthDuration = 64;
-        await this._autoSaveBattle();
-        this.audioController.startSynthBattle(64);
-        return;
+
+      // 1. まだ固定Murekaビートが保存されておらず、Mureka APIが設定済みの場合は初回に自動生成してロック保存する
+      await this._loadFixedBeatStatus();
+      if (!this.fixedBeat?.exists && config.murekaConfigured) {
+        this._setLog('② 初回セットアップ: Mureka APIで115 BPMの固定インストビート（伴奏）を生成＆ロック保存中...');
+        try {
+          const beat = await DOPANEWS.generateFixedBeatWithMureka(
+            DOPANEWS.DEFAULT_FIXED_BEAT_STYLE,
+            (msg) => {
+              this._setLog(`② ${msg}`);
+              if (this.fixedBeatStatusEl) this.fixedBeatStatusEl.textContent = msg;
+            }
+          );
+          this._updateFixedBeatUi(beat);
+        } catch (beatErr) {
+          console.warn('Mureka固定ビート初回生成エラー（内蔵115BPMビートへフォールバック）:', beatErr);
+        }
       }
 
-      this._setLog(
-        '② Murekaで8小節×4本を1曲として生成中。96 BPMでは各バース約20秒を目安に、男女交互の歌唱を指定します。'
-      );
-      const { audioUrl, murekaTrack } = await DOPANEWS.generateBattleTrackWithMureka(
-        battleData,
-        (progressMsg) => {
-          this._setLog(`② ${progressMsg}`);
-        }
-      );
+      // 2. 固定ビート（115 BPM）の上に KENTA（男声）と REINA（女声）の8小節×4本ボーカルを合成・マスタリング
+      const { audioUrl, audioWavBase64, durationSec, murekaTrack, usedMurekaBeat } =
+        await DOPANEWS.synthesizeBattleOnFixedBeat(
+          battleData,
+          this.fixedBeat?.audioUrl || null,
+          (progressMsg) => {
+            this._setLog(`② ${progressMsg}`);
+          }
+        );
 
-      // Keep the returned track available for inspecting actual lyric timings.
       const responsePreview = document.getElementById('mureka-json-preview');
       if (responsePreview) responsePreview.textContent = JSON.stringify(murekaTrack || {}, null, 2);
+
+      this.currentSynthDuration = Math.round(durationSec || 73);
       this._applyBattleData(battleData);
+      this.stageView.syncTime(0, durationSec || 73);
+
       this.currentAudioUrl = audioUrl;
       this.currentMurekaTrack = murekaTrack;
-      this.currentAudioWavBase64 = null;
+      this.currentAudioWavBase64 = audioWavBase64;
+      this.partBlobUrl = audioUrl;
       await this._autoSaveBattle();
 
       this._setStepState(3);
-      this._setLog('③ 楽曲が完成しました。ステージで再生します。');
+      this._setLog(
+        usedMurekaBeat
+          ? '③ 固定Murekaビート(115 BPM) × KENTA(男声)＆REINA(女声) 8小節×4本バトルが完成！ステージで再生します🔥'
+          : '③ 115 BPMビート × KENTA(男声)＆REINA(女声) 8小節×4本バトルが完成！ステージで再生します🔥'
+      );
       await this.audioController.loadAndPlayUrl(this.currentAudioUrl || audioUrl);
       this.audioReviewPromise = this._startAudioReview();
     }
-
 
     async handleGeminiOnlyGeneration(options = {}) {
       if (this.isGenerating) return;
@@ -543,11 +668,11 @@
         this._applyBattleData(battleData);
         this._setStepState(3);
         this._setLog(
-          '③ Gemini作詞完了！ステージに歌詞をセットし、112BPMビートで再生を開始します🔥'
+          '③ Gemini作詞完了！ステージに歌詞をセットし、115BPMデモビートで再生を開始します🔥'
         );
-        this.currentSynthDuration = 45;
+        this.currentSynthDuration = 67;
         await this._autoSaveBattle();
-        this.audioController.startSynthBattle(45);
+        this.audioController.startSynthBattle(67);
       } catch (err) {
         this._setLog(`❌ エラー: ${err.message}`, true);
       } finally {
@@ -557,20 +682,23 @@
 
     async _generateCheckedLyrics(articleText, mode, feedback = null) {
       this._setStepState(1);
-      // The budget covers the initial lyrics plus up to two corrected versions.
-      // Only Gemini is used here. Mureka is called once, after approval.
       const attempts = [];
       for (let attempt = 1; attempt <= 3; attempt++) {
-        this._setLog('① 歌詞を作成しています…');
+        this._setLog('① Geminiで8小節×4本（KENTA＆REINA）の歌詞を作成しています…');
         let battleData;
         try {
           battleData = await DOPANEWS.generateBattleScriptWithGemini(
-            articleText, () => this._setLog('① 歌詞を作成しています…'), feedback || null
+            articleText,
+            () => this._setLog('① Geminiで8小節×4本（KENTA＆REINA）の歌詞を作成しています…'),
+            feedback || null
           );
         } catch (error) {
           if (error.code !== 'LYRIC_CONTENT_INVALID') throw error;
-          feedback = { verdict: 'needs_revision', summary: '歌詞の出力形式・読み方を修正してください。',
-            issues: [{ kind: 'pronunciation', reason: error.message }] };
+          feedback = {
+            verdict: 'needs_revision',
+            summary: '歌詞の出力形式・読み方を修正してください。',
+            issues: [{ kind: 'pronunciation', reason: error.message }]
+          };
           this.reviewState = { status: 'needs_revision', stage: 'script', report: feedback };
           attempts.push({ attempt, ...this.reviewState });
           this.currentReviews.scriptAttempts = attempts;
@@ -580,15 +708,13 @@
           battleData.suno_style = this.battleStyleInputEl.value.trim();
         }
         if (mode === 'full') {
-          battleData.suno_style = battleData.suno_style.replace(/\b\d{2,3}\s*BPM\b/gi, '96 BPM');
+          battleData.suno_style = battleData.suno_style.replace(/\b\d{2,3}\s*BPM\b/gi, '115 BPM');
           if (this.battleStyleInputEl) this.battleStyleInputEl.value = battleData.suno_style;
         }
         const approved = await this._reviewScript(battleData, articleText, mode);
         attempts.push({ attempt, ...this.reviewState });
         this.currentReviews.scriptAttempts = attempts;
         if (approved) return battleData;
-        // A connection/format failure supplies no correction to make. Do not spend
-        // more tokens generating different lyrics against an unavailable checker.
         if (this.reviewState.status === 'error') break;
         feedback = this.reviewContext.report;
       }
@@ -599,7 +725,7 @@
     async _reviewScript(battleData, articleText, mode) {
       this.reviewContext = { stage: 'script', battleData, articleText, mode };
       this.reviewState = { status: 'checking', stage: 'script' };
-      this._setLog('① 歌詞を作成しています…');
+      this._setLog('① AI審判が元記事と歌詞・読み仮名を照合しています…');
       try {
         const report = await DOPANEWS.reviewBattle({ stage: 'script', articleText, battleData });
         this.currentReviews.script = report;
@@ -614,8 +740,13 @@
 
     async _startAudioReview(force = false) {
       const version = this.reviewVersion;
-      this.reviewContext = { stage: 'audio', articleText: this.currentArticleText,
-        battleData: this.currentBattleData, mode: this.currentMurekaTrack?.backing_request ? 'backing' : 'full', recordId: this.currentSavedId };
+      this.reviewContext = {
+        stage: 'audio',
+        articleText: this.currentArticleText,
+        battleData: this.currentBattleData,
+        mode: this.currentMurekaTrack?.backing_request ? 'backing' : 'full',
+        recordId: this.currentSavedId
+      };
       this.reviewState = { status: 'checking', stage: 'audio' };
       try {
         if (!this.currentSavedId) throw new Error('音源の保存に失敗したため未確認です。保存してから審判を再実行してください。');
@@ -641,7 +772,10 @@
       this.currentSavedId = null;
       this.currentMurekaTrack = null;
       this.currentAudioWavBase64 = null;
-      if (this.partBlobUrl) { URL.revokeObjectURL(this.partBlobUrl); this.partBlobUrl = null; }
+      if (this.partBlobUrl) {
+        URL.revokeObjectURL(this.partBlobUrl);
+        this.partBlobUrl = null;
+      }
       const responsePreview = document.getElementById('mureka-json-preview');
       if (responsePreview) responsePreview.textContent = '';
       if (!this.judgeModal.overlayEl.classList.contains('hidden')) {
@@ -658,11 +792,12 @@
       const current = this.stageView.currentVerseIndex;
       const time = this.audioController.getCurrentTime();
       const windows = this.stageView.getVerseWindows(this.stageView.lastKnownDuration);
-      const available = this.currentBattleData.verses.map((verse, index) => ({verse, index, start: windows[index].start}))
-        .filter(item => !this.currentBattleData.mureka_sync || item.verse.synced_from_mureka);
+      const available = this.currentBattleData.verses
+        .map((verse, index) => ({ verse, index, start: windows[index].start }))
+        .filter((item) => !this.currentBattleData.mureka_sync || item.verse.synced_from_mureka);
       return direction > 0
-        ? available.find(item => current >= 0 ? item.index > current : item.start > time)
-        : available.filter(item => current >= 0 ? item.index < current : item.start < time).pop();
+        ? available.find((item) => (current >= 0 ? item.index > current : item.start > time))
+        : available.filter((item) => (current >= 0 ? item.index < current : item.start < time)).pop();
     }
 
     _moveVerse(direction) {
@@ -678,13 +813,27 @@
 
     _setGenerating(isGenerating) {
       this.isGenerating = isGenerating;
-      this.libraryListEl?.querySelectorAll('button').forEach((button) => { button.disabled = isGenerating; });
-      // Keep the displayed script paired with its audio until generation finishes.
-      [this.generateBtnEl, this.geminiOnlyBtnEl, this.presetTestBtnEl,
-        this.localMp3InputEl, this.playPauseBtnEl, this.openJudgeBtnEl,
-        this.fetchUrlBtnEl, this.newsUrlInputEl, this.articleInputEl,
-        this.stylePresetSelectEl, this.battleStyleInputEl, this.saveBattleBtnEl,
-        this.refreshLibraryBtnEl, this.seekInputEl].forEach((element) => {
+      this.libraryListEl?.querySelectorAll('button').forEach((button) => {
+        button.disabled = isGenerating;
+      });
+      [
+        this.generateFixedBeatBtnEl,
+        this.previewFixedBeatBtnEl,
+        this.generateBtnEl,
+        this.geminiOnlyBtnEl,
+        this.presetTestBtnEl,
+        this.localMp3InputEl,
+        this.playPauseBtnEl,
+        this.openJudgeBtnEl,
+        this.fetchUrlBtnEl,
+        this.newsUrlInputEl,
+        this.articleInputEl,
+        this.stylePresetSelectEl,
+        this.battleStyleInputEl,
+        this.saveBattleBtnEl,
+        this.refreshLibraryBtnEl,
+        this.seekInputEl
+      ].forEach((element) => {
         if (element) element.disabled = isGenerating;
       });
       this._updateTransport();

@@ -44,7 +44,7 @@
             <span class="brand-badge">9:16 RAP NEWS</span>
             <h1 class="brand-title">DOPANEWS</h1>
           </div>
-          <p class="brand-tagline">ニュースを96 BPM・8小節×4本の男女マイクリレーに</p>
+          <p class="brand-tagline">ニュースを115 BPM・8小節×4本の男女マイクリレーに</p>
         </div>
       </header>
 
@@ -61,6 +61,17 @@
           <button type="submit" class="btn-sub-action">このPCに設定を保存</button>
           <p class="reflection-footnote">空欄は現在の設定を維持します。キーはGit対象外のconfig.local.jsonに保存します。</p>
         </form>
+      </section>
+
+      <section class="panel-section" id="fixed-beat-panel">
+        <h2 class="section-title">🎹 STEP 1: Mureka固定ビート設定 (115 BPM)</h2>
+        <p id="fixed-beat-status" class="status-log" role="status">固定ビートの状態を確認中…</p>
+        <div class="sub-action-row" style="margin-top: 8px;">
+          <button id="btn-generate-fixed-beat" class="btn-sub-action" type="button">🎹 Murekaで115BPM固定ビートを作成＆保存</button>
+          <button id="btn-preview-fixed-beat" class="btn-sub-action" type="button" hidden>🔊 固定ビートを試聴</button>
+        </div>
+        <audio id="fixed-beat-audio-preview" controls hidden style="width: 100%; margin-top: 8px;"></audio>
+        <p class="reflection-footnote">一度Murekaで生成するとこのPCに永久保存され、以降のニュースバトルでKENTA（男声）とREINA（女声）の8小節×4本がこの固定ビートに乗ります。</p>
       </section>
 
       <section class="panel-section">
@@ -101,9 +112,9 @@
 
         <!-- 🎛️ ビート＆ボーカル Style 指定欄 -->
         <div class="input-group" style="margin-top: 8px; display: flex; flex-direction: column; gap: 5px;">
-          <label for="input-battle-style">🎛️ ビート＆ボーカル Style（標準96 BPM・8小節約20秒）</label>
+          <label for="input-battle-style">🎛️ ビート＆ボーカル Style（標準115 BPM・8小節約16.7秒）</label>
           <select id="select-style-preset" class="cyber-input" style="width: 100%; padding: 6px 8px; font-size: 11.5px;">
-            <option value="Japanese Pop Rap, Educational Rap, Male and Female Duet, Alternating Male Verse and Female Chorus, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Groovy Funky Beat, 96 BPM">🎵 Pop & Educational Funky Rap (96 BPM・標準)</option>
+            <option value="Japanese Pop Rap, Educational Rap, Male and Female Duet, Alternating Male Verse and Female Chorus, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Groovy Funky Beat, 115 BPM">🎵 Pop & Educational Funky Rap (115 BPM・標準)</option>
             <option value="Japanese Hip Hop MC Battle, Male and Female Duet, Alternating Male Verse and Female Chorus, Clear Male Rapper vs Clear Female Rapper, Hard Boom Bap Beat, 95 BPM">🔥 王道Boom Bap (95 BPM)</option>
             <option value="Japanese Trap Rap Battle, Male and Female Duet, Alternating Male Verse and Female Chorus, Heavy 808 Bass, Clear Male Rap vs Fast Female Rap, 136 BPM">⚡ 高速Trap / 808 (136 BPM)</option>
             <option value="Japanese Jazz Hip Hop Battle, Male and Female Duet, Alternating Male Verse and Female Chorus, Melodic Piano Loop, Groovy Drums, 105 BPM">🎷 メロディックJazz Rap (105 BPM)</option>
@@ -112,16 +123,16 @@
             id="input-battle-style"
             type="text"
             class="cyber-input"
-            value="Japanese Pop Rap, Educational Rap, Male and Female Duet, Alternating Male Verse and Female Chorus, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Groovy Funky Beat, 96 BPM"
+            value="Japanese Pop Rap, Educational Rap, Male and Female Duet, Alternating Male Verse and Female Chorus, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Groovy Funky Beat, 115 BPM"
           />
         </div>
 
         <button id="btn-start-battle" type="button" class="btn-fire-start">
-          🔥 8小節×4本 バトル生成スタート (Gemini ➔ Mureka・1曲生成)
+          🔥 8小節×4本 バトル生成スタート (固定ビート × KENTA＆REINA)
         </button>
 
         <div class="sub-action-row">
-          <button id="btn-gemini-only" type="button" class="btn-sub-action" title="Geminiで作詞のみ行い内蔵112BPMビートでテストします">
+          <button id="btn-gemini-only" type="button" class="btn-sub-action" title="Geminiで作詞のみ行い内蔵ビートでテストします">
             ⚡ Gemini作詞のみ実行
           </button>
           <button id="btn-load-preset" type="button" class="btn-sub-action" title="APIクレジット消費ゼロでプリセットバトルを即座に再生します">
@@ -138,10 +149,10 @@
           <button id="backing-upload" type="button" class="btn-sub-action">伴奏をアップロード</button>
           <p class="reflection-footnote">MP3／M4A：10MB以内。WAV：16bit PCM・40MB以内。アップロードするとMurekaへ送信します。</p>
           <audio id="backing-preview" controls hidden style="width:100%"></audio>
-          <label for="backing-start">② 開始秒（96 BPMの8小節＝20秒）</label>
+          <label for="backing-start">② 開始秒（115 BPMの8小節＝約16.7秒）</label>
           <input id="backing-start" class="cyber-input" type="number" min="0" step="0.01" value="0" required />
           <label for="backing-end">終了秒</label>
-          <input id="backing-end" class="cyber-input" type="number" min="0.01" step="0.01" value="20" required />
+          <input id="backing-end" class="cyber-input" type="number" min="0.01" step="0.01" value="16.7" required />
           <label for="backing-speaker">③ 担当MC</label>
           <select id="backing-speaker" class="cyber-input"><option value="KENTA">KENTA（男声）</option><option value="REINA">REINA（女声）</option></select>
           <label for="backing-verse">作成済みの歌詞から選ぶ</label>
@@ -165,7 +176,7 @@
         </div>
         <div class="step-progress-bar">
           <div id="step-1-gemini" class="step-item">① Gemini作詞中</div>
-          <div id="step-2-suno" class="step-item">② Mureka収録中</div>
+          <div id="step-2-suno" class="step-item">② 固定ビート×男女収録</div>
           <div id="step-3-battle" class="step-item">③ バトル開始！</div>
         </div>
         <div id="generation-status-log" class="status-log">
@@ -200,7 +211,7 @@
             <textarea id="suno-prompt-preview" class="cyber-textarea" readonly style="min-height: 90px; font-size: 11px;"></textarea>
           </div>
           <pre id="gemini-json-preview" class="debug-pre"></pre>
-          <p class="reflection-footnote">Mureka返却データ：歌詞と時刻を確認できます。歌手の識別情報は含まれていません。</p>
+          <p class="reflection-footnote">マスタリング＆小節タイムスタンプ同期データ：</p>
           <pre id="mureka-json-preview" class="debug-pre"></pre>
         </details>
       </section>
@@ -232,7 +243,7 @@
                 hidden
                 type="button"
                 class="btn-vocal-sync"
-                title="前奏（イントロ）が終わって歌い始めた瞬間に押すと、そこから96BPM（8小節＝20秒）で画面をピタッと同期します！"
+                title="前奏（イントロ）が終わって歌い始めた瞬間に押すと、そこから115BPM（8小節＝約16.7秒）で画面をピタッと同期します！"
               >
                 🎤 歌い出し同期
               </button>
@@ -295,7 +306,7 @@
         <footer class="stage-bottom">
           <div class="battle-seek-row">
             <div id="stage-progress-track" class="stage-progress-track"><div id="stage-progress-fill" class="stage-progress-fill"></div></div>
-            <input id="battle-seek" type="range" min="0" max="48" value="0" step="0.1" aria-label="再生位置" />
+            <input id="battle-seek" type="range" min="0" max="67" value="0" step="0.1" aria-label="再生位置" />
           </div>
           <div id="stage-verse-pills" class="verse-pills-row" aria-label="バースを選択"></div>
           <audio id="battle-audio"></audio>

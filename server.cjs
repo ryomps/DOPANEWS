@@ -10,6 +10,7 @@ const { createNewsService, publicNewsFailure } = require('./news-service.cjs');
 const { createBackingHandler } = require('./backing.cjs');
 
 function createServer({ root = __dirname, libraryDir = path.join(root, '.local', 'library'),
+  fixedBeatDir = path.join(root, '.local', 'fixed-beat'),
   newsDirectory = path.join(root, '.local', 'news'), configPath = path.join(root, 'config.local.json'), env = process.env, fetchImpl = fetch } = {}) {
   const reviewJobs = new Map();
   const json = (res, data, status = 200) => {
@@ -90,6 +91,119 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
         json(res, record || { error: '保存したニュースが見つかりません。' }, record ? 200 : 404); return;
       }
       if (route.startsWith('/api/backing/') && await handleBacking(req, res, url)) return;
+
+      // ==================== 🎹 固定ビート (Mureka Instrumental) 管理API ====================
+      if (route === '/api/fixed-beat' && req.method === 'GET') {
+        const metaFile = path.join(fixedBeatDir, 'meta.json');
+        const beatFile = path.join(fixedBeatDir, 'beat.mp3');
+        try {
+          const [metaRaw, stat] = await Promise.all([fsp.readFile(metaFile, 'utf8'), fsp.stat(beatFile)]);
+          if (stat.size > 0) {
+            const meta = JSON.parse(metaRaw);
+            json(res, { exists: true, audioUrl: `/api/fixed-beat/audio?t=${meta.updatedAt || Date.now()}`, ...meta });
+            return;
+          }
+        } catch {
+          // Not created yet
+        }
+        json(res, { exists: false }); return;
+      }
+      if (route === '/api/fixed-beat/audio' && req.method === 'GET') {
+        await sendFile(req, res, path.join(fixedBeatDir, 'beat.mp3'), 'audio/mpeg'); return;
+      }
+      if (route === '/api/fixed-beat/generate' && req.method === 'POST') {
+        const config = await readConfig();
+        if (!config.mureka) { json(res, { error: 'Mureka APIキーを設定してください。' }, 400); return; }
+        const body = await readBody(req);
+        const stylePrompt = String(body.prompt || 'Japanese Pop Rap, Educational Rap, Groovy Funky Beat, 115 BPM').trim();
+        const bpmMatch = stylePrompt.match(/(\d{2,3})\s*BPM/i);
+        const bpm = bpmMatch ? Number(bpmMatch[1]) : (Number(body.bpm) || 115);
+
+        // 1) Try Mureka Official /v1/instrumental/generate first
+        let endpointType = 'instrumental';
+        let genRes = await fetchImpl('https://api.mureka.ai/v1/instrumental/generate', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${config.mureka}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'auto',
+            prompt: `${stylePrompt}, Pure Instrumental Hip Hop Backing Track, No Vocals, Steady ${bpm} BPM Groove, 4/4 time`
+          }),
+          signal: AbortSignal.timeout(60000)
+        }).catch(() => null);
+
+        // 2) Fallback to /v1/song/generate in instrumental mode if /v1/instrumental/generate is unavailable
+        if (!genRes || !genRes.ok) {
+          endpointType = 'song';
+          genRes = await fetchImpl('https://api.mureka.ai/v1/song/generate', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${config.mureka}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'mureka-9',
+              n: 1,
+              prompt: `Instrumental Only, No Vocals, ${stylePrompt}, Steady ${bpm} BPM Hip Hop Backing Beat, Catchy Groove`,
+              lyrics: `[Instrumental Intro]\n\n[Verse 1: Groovy Funky Hip Hop Beat ${bpm} BPM]\n\n[Chorus 1: Upbeat Catchy Instrumental Groove ${bpm} BPM]\n\n[Verse 2: Groovy Funky Hip Hop Beat ${bpm} BPM]\n\n[Chorus 2: Upbeat Catchy Instrumental Groove ${bpm} BPM]\n\n[Outro: Short Fade Out]\n[End]`
+            }),
+            signal: AbortSignal.timeout(60000)
+          });
+        }
+
+        if (!genRes.ok) {
+          const errText = await genRes.text().catch(() => '');
+          json(res, { error: `Mureka固定ビート生成エラー (${genRes.status}): ${errText}` }, genRes.status); return;
+        }
+        const genData = await genRes.json();
+        const taskId = genData?.id || genData?.data?.id || genData?.task_id;
+        if (!taskId) { json(res, { error: 'MurekaからtaskIdを取得できませんでした。' }, 502); return; }
+        json(res, { taskId, endpointType, bpm, prompt: stylePrompt }); return;
+      }
+      const fixedBeatPoll = /^\/api\/fixed-beat\/poll\/(instrumental|song)\/([a-zA-Z0-9_-]+)$/.exec(route);
+      if (fixedBeatPoll && req.method === 'GET') {
+        const config = await readConfig();
+        if (!config.mureka) { json(res, { error: 'Mureka APIキーを設定してください。' }, 400); return; }
+        const [, endpointType, taskId] = fixedBeatPoll;
+        const pollRes = await fetchImpl(`https://api.mureka.ai/v1/${endpointType}/query/${encodeURIComponent(taskId)}`, {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${config.mureka}` },
+          signal: AbortSignal.timeout(60000)
+        });
+        if (!pollRes.ok) { json(res, { error: `Murekaクエリエラー (${pollRes.status})` }, pollRes.status); return; }
+        const pollData = await pollRes.json();
+        const status = String(pollData?.status || pollData?.data?.status || 'preparing').toLowerCase();
+        const choices = pollData?.choices || pollData?.data?.choices || [];
+        const firstTrack = Array.isArray(choices) && choices.length > 0 ? choices[0] : null;
+        const playableUrl = firstTrack?.url || firstTrack?.audio_url || firstTrack?.stream_url || firstTrack?.flac_url || pollData?.url || pollData?.audio_url;
+
+        if (status === 'succeeded' && playableUrl) {
+          await fsp.mkdir(fixedBeatDir, { recursive: true });
+          const tempFile = path.join(fixedBeatDir, 'beat.part');
+          const beatFile = path.join(fixedBeatDir, 'beat.mp3');
+          const audioRes = await fetchImpl(playableUrl, { signal: AbortSignal.timeout(120000) });
+          if (!audioRes.ok || !audioRes.body) throw new Error('Mureka固定ビート音源のダウンロードに失敗しました。');
+          await pipeline(Readable.fromWeb(audioRes.body), fs.createWriteStream(tempFile));
+          await fsp.rename(tempFile, beatFile);
+
+          const stylePrompt = url.searchParams.get('prompt') || 'Japanese Pop Rap, Groovy Funky Beat, 115 BPM';
+          const bpmMatch = stylePrompt.match(/(\d{2,3})\s*BPM/i);
+          const bpm = bpmMatch ? Number(bpmMatch[1]) : Number(url.searchParams.get('bpm') || 115);
+          const meta = {
+            bpm,
+            prompt: stylePrompt,
+            taskId,
+            endpointType,
+            duration: firstTrack?.duration ? Math.round(firstTrack.duration / 1000) : null,
+            updatedAt: Date.now(),
+            createdAt: new Date().toISOString()
+          };
+          await fsp.writeFile(path.join(fixedBeatDir, 'meta.json'), JSON.stringify(meta, null, 2), 'utf8');
+          json(res, {
+            status: 'succeeded',
+            beat: { exists: true, audioUrl: `/api/fixed-beat/audio?t=${meta.updatedAt}`, ...meta }
+          });
+          return;
+        }
+        json(res, { status, failed_reason: pollData?.failed_reason || null }); return;
+      }
+
       if (route === '/api/config' && req.method === 'GET') {
         const config = await readConfig();
         json(res, { geminiConfigured: Boolean(config.gemini), murekaConfigured: Boolean(config.mureka), openaiConfigured: Boolean(config.openai), reviewSupported: true }); return;
@@ -213,21 +327,27 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
           if (input.audioWavBase64) {
             if (typeof input.audioWavBase64 !== 'string' || !/^[A-Za-z0-9+/]+={0,2}$/.test(input.audioWavBase64)) throw new Error('Invalid WAV encoding.');
             const wav = Buffer.from(input.audioWavBase64, 'base64');
-            if (wav.length !== 3528044 || wav.toString('ascii', 0, 4) !== 'RIFF' || wav.toString('ascii', 8, 16) !== 'WAVEfmt ' || wav.readUInt32LE(16) !== 16 || wav.readUInt16LE(20) !== 1 || wav.readUInt16LE(22) !== 1 || wav.readUInt32LE(24) !== 22050 || wav.readUInt32LE(28) !== 44100 || wav.readUInt16LE(32) !== 2 || wav.readUInt16LE(34) !== 16 || wav.toString('ascii', 36, 40) !== 'data' || wav.readUInt32LE(40) !== wav.length - 44 || wav.readUInt32LE(4) !== wav.length - 8) throw new Error('Expected an 80-second mono PCM WAV.');
+            if (wav.length < 44000 || wav.length > 15000000 || wav.toString('ascii', 0, 4) !== 'RIFF' || wav.toString('ascii', 8, 16) !== 'WAVEfmt ' || wav.readUInt32LE(16) !== 16 || wav.readUInt16LE(20) !== 1) throw new Error('Invalid mono PCM WAV.');
             await fsp.writeFile(tempAudio, wav);
             await fsp.rename(tempAudio, audioFile);
             audioUrl = '/api/library/' + id + '/audio';
           } else if (input.audioUrl) {
-            const source = new URL(input.audioUrl);
-            if (source.protocol !== 'https:' || !['.mureka.ai', '.mureka.cn'].some(suffix => source.hostname.endsWith(suffix))) {
-              throw new Error('Only Mureka audio URLs can be saved. Local MP3 imports are playback-only.');
+            if (input.audioUrl === '/api/fixed-beat/audio' || input.audioUrl.startsWith('/api/fixed-beat/audio?')) {
+              await fsp.copyFile(path.join(fixedBeatDir, 'beat.mp3'), tempAudio);
+              await fsp.rename(tempAudio, audioFile);
+              audioUrl = `/api/library/${id}/audio`;
+            } else {
+              const source = new URL(input.audioUrl);
+              if (source.protocol !== 'https:' || !['.mureka.ai', '.mureka.cn'].some(suffix => source.hostname.endsWith(suffix))) {
+                throw new Error('Only Mureka audio URLs can be saved. Local MP3 imports are playback-only.');
+              }
+              const audio = await fetchImpl(source.href, { signal: AbortSignal.timeout(120000) });
+              if (!audio.ok || !audio.body) throw new Error('Audio download failed.');
+              await pipeline(Readable.fromWeb(audio.body), fs.createWriteStream(tempAudio));
+              if (!(await fsp.stat(tempAudio)).size) throw new Error('Audio download was empty.');
+              await fsp.rename(tempAudio, audioFile);
+              audioUrl = `/api/library/${id}/audio`;
             }
-            const audio = await fetchImpl(source.href, { signal: AbortSignal.timeout(120000) });
-            if (!audio.ok || !audio.body) throw new Error('Audio download failed.');
-            await pipeline(Readable.fromWeb(audio.body), fs.createWriteStream(tempAudio));
-            if (!(await fsp.stat(tempAudio)).size) throw new Error('Audio download was empty.');
-            await fsp.rename(tempAudio, audioFile);
-            audioUrl = `/api/library/${id}/audio`;
           }
           const record = { id, createdAt: new Date().toISOString(), battleData: input.battleData,
             articleText: input.articleText || '', audioUrl, ...(input.audioWavBase64 ? { audioFormat: 'wav' } : {}), synthDuration: input.synthDuration || 45,
