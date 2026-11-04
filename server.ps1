@@ -1,4 +1,4 @@
-﻿param([int]$Port = 8080, [switch]$NoBrowser, [string]$DataDirectory = '')
+﻿param([int]$Port = 8080, [switch]$NoBrowser, [string]$DataDirectory = '', [switch]$Lan)
 $ErrorActionPreference = 'Stop'
 
 # 1. Prefer Node.js (server.cjs) when available
@@ -15,6 +15,7 @@ $nodeExe = $nodeCandidates | Where-Object { $_ -and (Test-Path $_) } | Select-Ob
 
 if ($nodeExe) {
   $serverArgs = @((Join-Path $PSScriptRoot 'server.cjs'), '--port', "$Port")
+  if ($Lan) { $serverArgs += '--lan' }
   if ($NoBrowser) { $serverArgs += '--no-browser' }
   if ($DataDirectory) { $serverArgs += @('--data-directory', $DataDirectory) }
   & $nodeExe @serverArgs

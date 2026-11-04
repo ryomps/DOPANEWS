@@ -15,12 +15,13 @@
   <link rel="stylesheet" href="./css/news-live.css" />
   <link rel="stylesheet" href="./css/app-footer.css" />
   <link rel="stylesheet" href="./css/library.css" />
+  <link rel="stylesheet" href="./css/character-select.css" />
 </head>
 <body class="news-mode">
   <section id="news-screen" class="news-screen" aria-label="ニュース">
     <header class="news-header"><div class="news-header-inner">
       <button id="news-back" class="news-back" type="button" hidden>〈 戻る</button>
-      <a class="news-brand" href="#" aria-label="DOPANEWS トップ">DOPA<span>NEWS</span></a>
+      <a class="news-brand" href="#" aria-label="DOPANEWS トップ"><img class="header-logo-image" src="./css/images/dopanews-header-logo-v3.png" alt="ドパNEWS"/></a>
       <button id="news-open-search" type="button" aria-label="ニュースを検索"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></button>
     </div></header>
     <section id="news-live-panel" class="live-news" aria-label="ニュース記事" hidden></section>
@@ -211,7 +212,7 @@
       <div id="battle-stage" class="battle-stage live-battle-player" data-active-mc="KENTA" data-playing="false">
         <div class="battle-mobile-header">
           <button id="return-to-news" class="return-to-news" type="button" hidden aria-label="記事に戻る">〈 戻る</button>
-          <a class="news-brand battle-brand" href="#" aria-label="DOPANEWS トップ">DOPA<span>NEWS</span></a>
+          <a class="news-brand battle-brand" href="#" aria-label="DOPANEWS トップ"><img class="header-logo-image" src="./css/images/dopanews-header-logo-v3.png" alt="ドパNEWS"/></a>
         </div>
         <section id="article-generation-panel" class="article-generation-panel" hidden aria-label="ラップ生成">
           <h2 id="article-generation-title"></h2>
@@ -248,7 +249,7 @@
           <!-- 男女MC対決アバター -->
           <div class="mc-versus-arena">
             <div id="mc-card-kenta" class="mc-fighter-card mc-kenta mc-active">
-              <img class="mc-stage-portrait" src="./css/images/mc-kenta.png" alt="MC KENTAのポートレート" />
+              <img class="mc-stage-portrait" src="./css/images/mc-kenta-illustration.png" alt="MC KENTAのポートレート" />
               <span class="mc-speaking-label">ON MIC</span>
               <div class="mc-crowd" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
               <div class="mc-identity"><div class="mc-name">MC KENTA</div><p id="stage-kenta-stance" class="mc-stance"></p></div>
@@ -257,7 +258,7 @@
             <div class="vs-emblem">VS</div>
 
             <div id="mc-card-reina" class="mc-fighter-card mc-reina mc-dim">
-              <img class="mc-stage-portrait" src="./css/images/mc-reina.png" alt="MC REINAのポートレート" />
+              <img class="mc-stage-portrait" src="./css/images/mc-reina-illustration.png" alt="MC REINAのポートレート" />
               <span class="mc-speaking-label">ON MIC</span>
               <div class="mc-crowd" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
               <div class="mc-identity"><div class="mc-name">MC REINA</div><p id="stage-reina-stance" class="mc-stance"></p></div>
@@ -320,14 +321,14 @@
       <div class="judge-cards-grid" role="group" aria-label="今の自分に近い意見">
         <button id="btn-vote-kenta" type="button" class="judge-choice-card judge-choice-kenta" aria-pressed="false">
           <div>
-            <img class="judge-character-icon judge-character-kenta" src="./css/images/mc-kenta.png" alt="KENTA" width="64" height="64" />
+            <span class="judge-face-icon judge-face-kenta"><img class="judge-character-icon judge-character-kenta" src="./css/images/mc-kenta-illustration.png" alt="KENTA" width="64" height="64" /></span>
             <p id="judge-kenta-stance" class="judge-stance-text"></p>
           </div>
           <span class="judge-tap-cta">KENTA</span>
         </button>
         <button id="btn-vote-reina" type="button" class="judge-choice-card judge-choice-reina" aria-pressed="false">
           <div>
-            <img class="judge-character-icon judge-character-reina" src="./css/images/mc-reina.png" alt="REINA" width="64" height="64" />
+            <span class="judge-face-icon judge-face-reina"><img class="judge-character-icon judge-character-reina" src="./css/images/mc-reina-illustration.png" alt="REINA" width="64" height="64" /></span>
             <p id="judge-reina-stance" class="judge-stance-text"></p>
           </div>
           <span class="judge-tap-cta">REINA</span>
@@ -347,7 +348,7 @@
   </div>
 
   <section id="library-screen" class="news-screen library-screen" aria-label="ライブラリ" hidden>
-    <header class="news-header"><div class="news-header-inner"><a class="news-brand" href="#" aria-label="DOPANEWS トップ">DOPA<span>NEWS</span></a></div></header>
+    <header class="news-header"><div class="news-header-inner"><a class="news-brand" href="#" aria-label="DOPANEWS トップ"><img class="header-logo-image" src="./css/images/dopanews-header-logo-v3.png" alt="ドパNEWS"/></a></div></header>
     <main class="library-content">
       <div class="library-heading"><h1 tabindex="-1">Library</h1></div>
       <nav id="library-genres" class="library-filters" aria-label="バトルのジャンル"></nav>

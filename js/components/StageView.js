@@ -166,7 +166,7 @@
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = `verse-pill ${verse.speaker === 'REINA' ? 'pill-reina' : 'pill-kenta'}`;
-        btn.textContent = `V${idx + 1} ${verse.speaker}`;
+        btn.textContent = `V${idx + 1} ${DOPANEWS.getMcName?.(verse.speaker, this.battleData) || verse.speaker}`;
         btn.title = `${verse.point_summary}`;
         btn.disabled = Boolean(this.battleData.mureka_sync && !verse.synced_from_mureka);
         btn.addEventListener('click', () => {
@@ -312,9 +312,8 @@
       }
 
       if (this.activeSpeakerBadgeEl) {
-        this.activeSpeakerBadgeEl.innerHTML = isReina
-          ? 'MC REINA <span class="mc-sub">8 BARS / DATA & LOGIC</span>'
-          : 'MC KENTA <span class="mc-sub">8 BARS / STREET PASSION</span>';
+        const name = String(DOPANEWS.getMcName?.(verse.speaker, this.battleData) || verse.speaker).replace(/[&<>"']/g, '');
+        this.activeSpeakerBadgeEl.innerHTML = 'MC ' + name + '<span class="mc-sub">' + (isReina ? '8 BARS / DATA & LOGIC' : '8 BARS / STREET PASSION') + '</span>';
         this.activeSpeakerBadgeEl.className = `active-speaker-badge ${isReina ? 'badge-reina' : 'badge-kenta'}`;
       }
 
@@ -381,7 +380,7 @@
       if (!this.speakingStatusEl) return;
       const verse = this.battleData?.verses?.[this.currentVerseIndex];
       this.speakingStatusEl.textContent = verse
-        ? `MC ${verse.speaker} ${this.isPlaying ? 'が発言中' : 'のバース・一時停止中'}`
+        ? `MC ${DOPANEWS.getMcName?.(verse.speaker, this.battleData) || verse.speaker} ${this.isPlaying ? 'が発言中' : 'のバース・一時停止中'}`
         : '間奏・次のバースを待っています';
     }
 

@@ -116,7 +116,7 @@
         const voted = entry.vote;
         const vote = node('div', undefined, 'library-vote');
         vote.dataset.choice = voted?.choice || 'NONE';
-        vote.append(node('span', 'あなたの投票', 'library-vote-label'), node('strong', voted ? (voted.choice === 'UNDECIDED' ? 'どちらともいえない' : voted.choice + ' に共感') : '未投票'));
+        vote.append(node('span', 'あなたの投票', 'library-vote-label'), node('strong', voted ? (voted.choice === 'UNDECIDED' ? 'どちらともいえない' : (D.getMcName?.(voted.choice, data) || voted.choice) + ' に共感') : '未投票'));
         if (voted) {
           const stance = voted.choice === 'KENTA' ? data.kenta_stance : voted.choice === 'REINA' ? data.reina_stance : '';
           if (stance) vote.append(node('p', stance));

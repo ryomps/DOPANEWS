@@ -10,7 +10,9 @@ const { createNewsService, publicNewsFailure } = require('./news-service.cjs');
 const { createBackingHandler } = require('./backing.cjs');
 
 function createServer({ root = __dirname, libraryDir = path.join(root, '.local', 'library'),
-  newsDirectory = path.join(root, '.local', 'news'), configPath = path.join(root, 'config.local.json'), env = process.env, fetchImpl = fetch } = {}) {
+  newsDirectory = path.join(root, '.local', 'news'), configPath = path.join(root, 'config.local.json'), env = process.env, fetchImpl = fetch, lan = false } = {}) {
+  const allowedHosts = new Set(['localhost', '127.0.0.1']);
+  if (lan) Object.values(require('node:os').networkInterfaces()).flat().filter(item => item.family === 'IPv4' && !item.internal).forEach(item => allowedHosts.add(item.address));
   const reviewJobs = new Map();
   const json = (res, data, status = 200) => {
     res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -65,7 +67,7 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
   return http.createServer(async (req, res) => {
     try {
       const host = req.headers.host || '';
-      if (!/^(localhost|127\.0\.0\.1):\d+$/.test(host) || (req.headers.origin && req.headers.origin !== `http://${host}`)) {
+      if (!/^([^:]+):\d+$/.test(host) || !allowedHosts.has(host.split(':')[0]) || (req.headers.origin && req.headers.origin !== `http://${host}`)) {
         json(res, { error: 'Origin denied' }, 403); return;
       }
       const url = new URL(req.url, `http://${host}`), route = url.pathname;
@@ -274,11 +276,13 @@ if (require.main === module) {
   const args = process.argv.slice(2);
   const option = name => args.includes(name) ? args[args.indexOf(name) + 1] : undefined;
   const port = Number(option('--port') || 8080);
-  const server = createServer({ libraryDir: option('--data-directory') ? path.resolve(option('--data-directory')) : undefined });
+  const lan = args.includes('--lan');
+  const server = createServer({ lan, libraryDir: option('--data-directory') ? path.resolve(option('--data-directory')) : undefined });
   server.on('error', err => { console.error(`Server could not start: ${err.message}`); process.exitCode = 1; });
-  server.listen(port, '127.0.0.1', () => {
+  server.listen(port, lan ? '0.0.0.0' : '127.0.0.1', () => {
     const url = `http://localhost:${port}/`;
     console.log(`DOPANEWS: ${url}\nLocal API settings: config.local.json\nSaved music: .local/library/`);
+    if (lan) Object.values(require('node:os').networkInterfaces()).flat().filter(item => item.family === 'IPv4' && !item.internal).forEach(item => console.log('Phone: http://' + item.address + ':' + port + '/'));
     if (!args.includes('--no-browser')) {
       const child = require('node:child_process').spawn('powershell.exe', ['-NoProfile', '-Command', `Start-Process '${url}'`], { windowsHide: true, stdio: 'ignore' });
       child.on('error', () => console.log(`Open ${url} in your browser.`));
