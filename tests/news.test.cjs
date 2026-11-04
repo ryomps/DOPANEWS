@@ -13,7 +13,7 @@ const sourceTexts = [
 ];
 const facts = sourceTexts.map((text, i) => ({ id: `F${i + 1}`, statement: i ? '教育の実態について資料が公表された。' : '家計の収入と支出について調査結果が公表された。', when: '2025年', who: i ? '文部科学省' : '総務省統計局', event: '調査結果公表', numbers: '', uncertainty: '因果的な効果を判断できない', evidence: [{ sourceId: `S${i + 1}`, quote: text.slice(0, 45) }] }));
 const article = { title: '調査資料を読み解く', summary: '家計と教育の資料の対象期間を確認する。', paragraphs: [{ text: '家計の調査結果が公表された。', factIds: ['F1'] }, { text: '教育の資料も公表された。', factIds: ['F2'] }, { text: '対象期間を区別して読む必要がある。', factIds: ['F1', 'F2'] }], stances: ['家計への支援を考えよう', '教育環境を考えよう'] };
-const envelope = (value, search = false) => Response.json({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(value) }] }, ...(search ? { groundingMetadata: { webSearchQueries: ['test'], groundingChunks: [{ web: { uri: 'https://www.stat.go.jp/test.html' } }], searchEntryPoint: { renderedContent: '<div>Google search</div>' } } } : {}) }] });
+const envelope = value => Response.json({ status: 'completed', output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify(value) }] }] });
 async function fixture(t, options = {}) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'dopanews-news-test-'));
   t.after(async () => {
@@ -21,12 +21,21 @@ async function fixture(t, options = {}) {
     assert.ok(path.basename(directory).startsWith('dopanews-news-test-'));
     await fs.rm(directory, { recursive: true, force: true });
   });
-  const calls = []; let ai = 0, gemini = 0;
+  const calls = []; let ai = 0, generated = 0;
   const fetchImpl = async (url, init = {}) => {
     calls.push({ url, init });
     if (url.includes('/rss/')) {
       if (options.feedError) throw new Error('offline');
       return new Response(xml);
+    }
+    if (url === 'https://api.openai.com/v1/responses' && !JSON.parse(init.body).tools) {
+      ai++;
+      if (options.articleFailure) return Response.json({}, {status:options.articleStatus || 429});
+      const phase = (generated++ % 3) + 1;
+      if (phase === 1 && options.singleSource) return envelope({ facts: facts.map(f => ({ ...f, evidence: [{ sourceId: 'S1', quote: sourceTexts[0].slice(0, 45) }] })), unresolved: ['単一資料に基づく記事'] });
+      if (phase === 1) return envelope({ facts: options.badQuote ? [{ ...facts[0], evidence: [{ sourceId: 'S1', quote: '存在しない根拠です' }] }, facts[1]] : facts, unresolved: ['複数資料だけで政策の効果は確定しない'] });
+      if (phase === 2) return envelope(article);
+      return envelope(options.held ? { verdict: 'uncertain', summary: '関連性を確認できません。', issues: ['対象が異なる可能性'] } : { verdict: 'pass', summary: '資料との食い違いは見つかりませんでした。', issues: [] });
     }
     if (url === 'https://api.openai.com/v1/responses') {
       ai++;
@@ -34,18 +43,10 @@ async function fixture(t, options = {}) {
       const urls = options.urls || ['https://www.stat.go.jp/test.html','https://www.mext.go.jp/test.html'];
       return Response.json({id:'resp_test', status:'completed', output:options.noGrounding ? [] : [{type:'web_search_call',status:'completed',action:{type:'search',sources:urls.map(url=>({type:'url',url}))}}],usage:{input_tokens:100,output_tokens:30}});
     }
-    if (url.startsWith('https://generativelanguage.googleapis.com/')) {
-      ai++;
-      if (options.geminiFailure) return Response.json({}, {status:429});
-      const phase = (gemini++ % 3) + 1;
-      if (phase === 1) return envelope({ facts: options.badQuote ? [{ ...facts[0], evidence: [{ sourceId: 'S1', quote: '存在しない根拠です' }] }, facts[1]] : facts, unresolved: ['複数資料だけで政策の効果は確定しない'] });
-      if (phase === 2) return envelope(article);
-      return envelope(options.held ? { verdict: 'uncertain', summary: '関連性を確認できません。', issues: ['対象が異なる可能性'] } : { verdict: 'pass', summary: '資料との食い違いは見つかりませんでした。', issues: [] });
-    }
     const index = url.includes('stat.go.jp') ? 0 : 1;
-    return new Response(`<html><main><h1>調査結果</h1><p>${options.sameText ? sourceTexts[0] : sourceTexts[index]}</p></main></html>`, { headers: { 'Content-Type': 'text/html' } });
+    return new Response(`<html><main><h1>調査結果</h1><p>${(options.sameText || options.singleSource) ? sourceTexts[0] : sourceTexts[index]}</p></main></html>`, { headers: { 'Content-Type': 'text/html' } });
   };
-  const service = createNewsService({ directory, fetchImpl, readConfig: async () => ({ gemini: 'test-private-key', openai:'test-openai-key' }) });
+  const service = createNewsService({ directory, fetchImpl, readConfig: async () => ({ openai:'test-openai-key' }) });
   return { directory, service, fetchImpl, calls, aiCalls: () => ai };
 }
 test('RSS decodes titles, validates links and dates, rejects XML entities and dangerous links', () => {
@@ -55,14 +56,15 @@ test('RSS decodes titles, validates links and dates, rejects XML entities and da
   assert.equal(item.reportingOrigin, null);
   assert.equal(parseFeed(xml.replace('news.yahoo.co.jp', '127.0.0.1'), { id: 'test' }).length, 0);
   assert.throws(() => parseFeed('<!DOCTYPE rss><rss></rss>', {}));
-  for (const url of ['http://www.stat.go.jp/x', 'https://www.stat.go.jp.evil.com/x', 'https://user@www.stat.go.jp/x', 'https://www.stat.go.jp:8443/x', 'https://localhost/x']) assert.ok(!primaryFor(url));
+  for (const url of ['http://www.stat.go.jp/x', 'https://127.0.0.1/x', 'https://user@www.stat.go.jp/x', 'https://www.stat.go.jp:8443/x', 'https://localhost/x']) assert.ok(!primaryFor(url));
 });
 test('HTML parser selects nested main content and removes executable/navigation content', () => {
   const text = readable(`<nav>外のメニュー</nav><div id="main"><div>調査の概要</div><p>${sourceTexts[0]}</p><script>bad()</script><nav>メニュー</nav></div><footer>外の末尾</footer>`);
   assert.ok(text.includes(sourceTexts[0])); assert.doesNotMatch(text, /bad|メニュー|末尾/);
   assert.throws(() => readable('<body>本文なし</body>'));
+  assert.ok(readable(`<div class="single_body_contents"><p>${sourceTexts[0]}</p></div>`).includes(sourceTexts[0]));
 });
-test('headlines refresh automatically without Gemini and survive offline using dated stale cache', async t => {
+test('headlines refresh automatically without AI and survive offline using dated stale cache', async t => {
   const f = await fixture(t);
   const a = await f.service.headlines();
   assert.equal(a.items.length, 1); assert.equal(f.aiCalls(), 0);
@@ -73,7 +75,7 @@ test('headlines refresh automatically without Gemini and survive offline using d
   const stale = await offline.headlines();
   assert.equal(stale.stale, true); assert.equal(stale.fetchedAt, a.fetchedAt); assert.equal(stale.errors.length, 3);
 });
-test('OpenAI search passes real source documents to three Gemini stages and reuses results across restart', async t => {
+test('OpenAI search passes real source documents to three OpenAI stages and reuses results across restart', async t => {
   const f = await fixture(t);
   const id = (await f.service.headlines()).items[0].id;
   const [record, concurrent] = await Promise.all([f.service.generate(id), f.service.generate(id)]);
@@ -91,10 +93,15 @@ test('OpenAI search passes real source documents to three Gemini stages and reus
   assert.equal(aiRequests[0].init.headers.Authorization,'Bearer test-openai-key');
   assert.ok(!JSON.stringify(searchRequest).includes('test-private-key'));
   for (const call of aiRequests.slice(1)) {
-    assert.match(call.url, /gemini-3\.1-flash-lite:generateContent$/);
-    assert.equal(JSON.parse(call.init.body).tools, undefined);
+    assert.equal(call.url, 'https://api.openai.com/v1/responses');
+    assert.equal(call.init.headers.Authorization, 'Bearer test-openai-key');
+    const config = JSON.parse(call.init.body);
+    assert.equal(config.tools, undefined);
+    assert.equal(config.text.format.schema.type, 'object');
+    assert.ok(config.text.format.schema.required.length > 0);
   }
-  assert.equal(record.model, 'gemini-3.1-flash-lite');
+  assert.equal(record.model, 'gpt-6-luna');
+  assert.equal(record.provider, 'openai');
   assert.equal(record.search.model, 'gpt-6-luna');
   const restarted = createNewsService({ directory: f.directory, readConfig: async () => { throw new Error('must use cache'); }, fetchImpl: async () => { throw new Error('must use cache'); } });
   assert.equal((await restarted.generate(id)).status, 'ready');
@@ -102,17 +109,17 @@ test('OpenAI search passes real source documents to three Gemini stages and reus
   assert.equal((await f.service.generate(id, true)).status, 'ready'); assert.equal(f.aiCalls(), 4);
 });
 
-test('Gemini failure after OpenAI search never repeats the paid search on another explicit attempt', async t => {
-  const f = await fixture(t, { geminiFailure: true });
+test('Article failure after OpenAI search never repeats the paid search on another explicit attempt', async t => {
+  const f = await fixture(t, { articleFailure: true });
   const id = (await f.service.headlines()).items[0].id;
   await assert.rejects(f.service.generate(id), e => publicNewsFailure(e).code === 'NEWS_QUOTA_LIMIT');
   await assert.rejects(f.service.generate(id), e => publicNewsFailure(e).code === 'NEWS_QUOTA_LIMIT');
-  assert.equal(f.calls.filter(c => c.url.includes('api.openai.com')).length, 1);
-  assert.equal(f.calls.filter(c => c.url.includes('generativelanguage')).length, 2);
+  assert.equal(f.calls.filter(c => c.url.includes('api.openai.com') && JSON.parse(c.init.body).tools).length, 1);
+  assert.equal(f.calls.filter(c => c.url.includes('api.openai.com') && !JSON.parse(c.init.body).tools).length, 2);
   assert.equal((await f.service.searchUsage()).usedTotal, 1);
 });
 test('unverified URLs, duplicate documents, fake evidence and missing grounding stop before writing an approved article', async t => {
-  for (const options of [{ urls: ['https://localhost/private', 'https://www.asahi.com/secret'] }, { sameText: true }, { badQuote: true }, { noGrounding: true }]) {
+  for (const options of [{ urls: ['https://localhost/private', 'https://127.0.0.1/secret'] }, { sameText: true }, { badQuote: true }, { noGrounding: true }]) {
     const f = await fixture(t, options); const id = (await f.service.headlines()).items[0].id;
     await assert.rejects(f.service.generate(id));
     assert.equal(await f.service.get(id), null);
@@ -128,6 +135,17 @@ test('held articles are persisted without lyric input and not automatically rege
   const failed = await fixture(t, { aiFailure: true }); const topic = (await failed.service.headlines()).items[0];
   await assert.rejects(failed.service.generate(topic.id), /503/); assert.equal(failed.aiCalls(), 1);
 });
+test('one downloaded source supports article generation without claiming independent confirmation', async t => {
+  const f = await fixture(t, { urls: ['https://reissuerecords.net/2026/11/04/news/'], singleSource: true });
+  const id = (await f.service.headlines()).items[0].id;
+  const record = await f.service.generate(id);
+  assert.equal(record.status, 'ready'); assert.equal(record.sources.length, 1);
+  assert.equal(record.sources[0].name, 'reissuerecords.net');
+  assert.match(record.scope, /1資料/);
+  assert.equal(f.aiCalls(), 4);
+  assert.equal(JSON.parse(f.calls.find(c => c.url.includes('api.openai.com')).init.body).tools[0].filters, undefined);
+});
+
 test('unknown fact references and fabricated quotations are rejected', () => {
   assert.throws(() => validateArticle({ ...article, paragraphs: article.paragraphs.map(p => ({ ...p, factIds: ['fake'] })) }, facts));
   assert.throws(() => validateFacts({ facts, unresolved: [] }, [{ id: 'S1', text: 'not the source' }]));
@@ -155,7 +173,7 @@ test('source shortages are distinct from quota and connection failures', async t
   await assert.rejects(f.service.generate(id), error => {
     const problem = publicNewsFailure(error);
     assert.equal(problem.code, 'NEWS_SOURCES'); assert.equal(problem.status, 422);
-    assert.match(problem.message, /別の話題/); return true;
+    assert.match(problem.message, /別の情報源で再検索/); return true;
   });
   assert.equal(f.aiCalls(), 1);
   assert.equal(JSON.parse(await fs.readFile(path.join(f.directory, 'failures', id + '.json'), 'utf8')).phase, 'search');
@@ -195,4 +213,22 @@ test('HTTP routes only accept listed topic IDs, keep private storage inaccessibl
   assert.equal((await fetch(base + `/api/news/articles/${saved.id}`)).status, 200);
   const denied = await fetch(base + '/api/news', { headers: { Origin: 'https://example.com' } }); assert.equal(denied.status, 403);
   assert.ok(!JSON.stringify(saved).includes('test-private-key'));
+});
+
+test('short articles need one supported fact and one paragraph, but still require evidence', () => {
+  const compact = { ...article, paragraphs: [article.paragraphs[0]] };
+  assert.equal(validateArticle(compact, facts).paragraphs.length, 1);
+  const only = validateFacts({ facts: [facts[0]], unresolved: [] }, [{ id: 'S1', text: sourceTexts[0] }]);
+  assert.equal(only.facts.length, 1);
+  assert.throws(() => validateArticle({ ...compact, paragraphs: [{ text: '不正な根拠', factIds: ['missing'] }] }, facts), e => e.newsCode === 'NEWS_EVIDENCE');
+});
+
+test('OpenAI 503 is reported as temporary unavailability and is never retried automatically', async t => {
+  const f = await fixture(t, { articleFailure: true, articleStatus: 503 });
+  const id = (await f.service.headlines()).items[0].id;
+  await assert.rejects(f.service.generate(id), e => publicNewsFailure(e).code === 'NEWS_UNAVAILABLE');
+  assert.equal(f.aiCalls(), 2);
+  const diagnostic = JSON.parse(await fs.readFile(path.join(f.directory, 'failures', id + '.json'), 'utf8'));
+  assert.equal(diagnostic.phase, 'facts'); assert.equal(diagnostic.providerStatus, 503);
+  assert.match(publicNewsFailure({newsCode:'NEWS_UNAVAILABLE'}).message, /503/);
 });

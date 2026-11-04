@@ -37,10 +37,10 @@
     const budgetStatus = el('p', '', 'live-news-note');
     const refresh = button('一覧を更新', load);
     controls.append(refresh);
-    mount.append(heading, el('p', 'Yahoo!ニュースの公式RSSから選択。検索はOpenAI、記事の作成はGeminiを使用します。', 'live-news-note'), controls, status, budgetStatus, body);
+    mount.append(heading, el('p', 'Yahoo!ニュースの公式RSSから選択。検索・記事の作成はOpenAIを使用します。', 'live-news-note'), controls, status, budgetStatus, body);
     function showUsage(usage) {
       if (!usage) return;
-      budgetStatus.textContent = `OpenAI検索${usage.configured ? '' : '（APIキー未設定）'}：本日 ${usage.usedToday}/${usage.limits.daily}回 ／ 試験累計 ${usage.usedTotal}/${usage.limits.total}回。1話題につき1回、失敗・タイムアウトも加算します。日次は日本時間0時に更新します。`;
+      budgetStatus.textContent = `OpenAI検索${usage.configured ? '' : '（APIキー未設定）'}：開発中は回数上限なし。本日 ${usage.usedToday}回。失敗・タイムアウトも記録します。自動再検索は行いません。`;
     }
     function lock(on) {
       busy = on;
@@ -62,7 +62,7 @@
     }
     function renderList() {
       body.replaceChildren(); current = null;
-      const note = el('p', '検索にOpenAIを最大1回、記事作成にGeminiを最大3回使用します。保存済み検索は再利用します。Murekaは記事作成では使用しません。現在の根拠資料は消費者庁・統計局・文科省のHTMLに対応しています。', 'live-news-note');
+      const note = el('p', '1回の操作でOpenAIを検索に最大1回、記事作成に最大3回使用します。保存済み検索は再利用します。Murekaは記事作成では使用しません。話題ごとに公式発表・報道の公開HTML本文を探し、1件以上取得できれば作成します。', 'live-news-note');
       body.append(note);
       const list = el('div', undefined, 'live-news-topics');
       for (const topic of data.headlines.items) {
@@ -100,7 +100,7 @@
       if (!box) { status.textContent = message; return; }
       box.hidden = false; box.dataset.state = code ? 'error' : 'working';
       box.replaceChildren(el('p', message));
-      if (code === 'NEWS_QUOTA_LIMIT') box.append(link('Geminiの利用状況を確認 ↗', 'https://ai.dev/rate-limit'));
+      if (code === 'NEWS_QUOTA_LIMIT') box.append(link('OpenAIの利用状況を確認 ↗', 'https://ai.dev/rate-limit'));
       if (code === 'OPENAI_QUOTA_LIMIT') box.append(link('OpenAIの利用状況を確認 ↗', 'https://platform.openai.com/usage'));
       box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
@@ -108,17 +108,17 @@
       const messages = {
         OPENAI_AUTH: 'OpenAIのAPIキー・プロジェクトの利用権限をローカル設定で確認してください。',
         OPENAI_QUOTA_LIMIT: 'OpenAIの利用枠または残高を確認してください。自動で再試行しません。',
-        OPENAI_DAILY_LIMIT: '本日のOpenAI検索上限5回に達しました。日本時間の翌日まで新しい検索は行いません。',
-        OPENAI_TOTAL_LIMIT: '試験用のOpenAI検索上限20回に達しました。追加消費を防ぐため検索を停止しました。',
-        OPENAI_TOPIC_LIMIT: 'この話題のOpenAI検索は実行済みです。追加消費を防ぐため再検索しません。別の話題を選んでください。',
         OPENAI_BUDGET_INVALID: '検索回数の記録を確認できないため停止しました。ローカル設定・保存データを確認してください。',
-        OPENAI_CONNECTION: 'OpenAI検索との接続が完了しませんでした。消費の可能性があるため、この話題は再検索しません。',
+        OPENAI_CONNECTION: 'OpenAI検索との接続が完了しませんでした。失敗も回数に含めます。再検索はボタン操作時のみ行います。',
         OPENAI_PROVIDER: 'OpenAI検索を完了できませんでした。APIの利用条件・対応モデルを確認してください。',
-        NEWS_QUOTA_LIMIT: 'Geminiの利用上限に達しています。利用状況・APIキーのプロジェクト設定を確認してください。',
-        NEWS_AUTH: 'GeminiのAPIキーまたはプロジェクトの利用権限を確認してください。',
-        NEWS_SOURCES: 'この話題について、対応中の情報源から必要な資料を取得できませんでした。別の話題を選んでください。',
+        NEWS_QUOTA_LIMIT: 'OpenAIの利用上限に達しています。利用状況・APIキーのプロジェクト設定を確認してください。',
+        NEWS_AUTH: 'OpenAIのAPIキーまたはプロジェクトの利用権限を確認してください。',
+        NEWS_SOURCES: '検索先の本文を取得できませんでした。「別の情報源で再検索」から探し直せます。',
+        NEWS_FORMAT: '記事データの形式を確認できませんでした。音源は生成していません。',
+        NEWS_EVIDENCE: '取得本文で記事の根拠を確認できませんでした。音源は生成していません。',
         NEWS_SEARCH: 'この話題の根拠資料を検索で確認できませんでした。別の話題を選ぶか、時間をおいてもう一度お試しください。',
-        NEWS_PROVIDER: 'Geminiに接続できませんでした。時間をおいてもう一度お試しください。',
+        NEWS_PROVIDER: 'OpenAIに接続できませんでした。時間をおいてもう一度お試しください。',
+        NEWS_UNAVAILABLE: 'OpenAIが一時的に利用できません（503）。時間をおいてから再度操作してください。自動で再試行しません。',
         NEWS_NETWORK: 'サーバーに接続できません。サーバーの起動と接続を確認してください。',
         NEWS_SERVER_OLD: 'ニュース取得に対応したサーバーを再起動してください。',
         NEWS_BUSY: '別の記事を作成中です。完了後に操作してください。',
@@ -126,14 +126,14 @@
       };
       return messages[code] || '記事の作成を完了できませんでした。別の話題を選ぶか、時間をおいてもう一度お試しください。';
     }
-    async function open(id, generate, retry = false, feedback = null, action = null) {
+    async function open(id, generate, retry = false, feedback = null, action = null, refreshSearch = false) {
       if (busy || global.dopaNewsApp?.isGenerating) return;
       const token = ++version; lock(true);
       const label = action?.textContent;
       if (action) action.textContent = generate ? '作成中…' : '読み込み中…';
       showFeedback(feedback, generate ? 'この記事を作成しています。完了まで数分かかる場合があります。' : '保存した記事を読み込み中…');
       try {
-        const record = await request(generate ? '/api/news/generate' : `/api/news/articles/${id}`, generate ? { topicId: id, retry } : undefined);
+        const record = await request(generate ? '/api/news/generate' : `/api/news/articles/${id}`, generate ? { topicId: id, retry, refreshSearch } : undefined);
         if (version !== token) return;
         current = record;
         data.articles = [{ id: record.id, title: record.article.title, createdAt: record.createdAt, status: record.status }, ...data.articles.filter(a => a.id !== record.id)];
@@ -144,7 +144,10 @@
         }
         renderArticle(record);
         status.textContent = '記事ができました。';
-      } catch (e) { showFeedback(feedback, failureMessage(e.code), e.code || 'NEWS_GENERATION_FAILED'); }
+      } catch (e) {
+        showFeedback(feedback, failureMessage(e.code), e.code || 'NEWS_GENERATION_FAILED');
+        if (feedback && ['NEWS_SOURCES', 'NEWS_SEARCH'].includes(e.code)) feedback.append(button('別の情報源で再検索（OpenAIを使用）', event => open(id, true, retry, feedback, event.currentTarget, true)));
+      }
       finally {
         lock(false); if (action?.isConnected) action.textContent = label;
         try { const usage = await request('/api/news/search-usage'); if (token === version) showUsage(usage); } catch { /* Preserve the article's result message. */ }
@@ -180,7 +183,7 @@
           details.append(link(`${s.name}：根拠原文`, s.url), el('blockquote', e.quote));
         });
       });
-      record.sources.forEach(s => { const p = el('p', `${s.name} ／ 取得 ${date(s.fetchedAt)} `); p.append(link('資料', s.url), document.createTextNode(' ／ '), link('利用条件', s.terms)); details.append(p); });
+      record.sources.forEach(s => { const p = el('p', `${s.name} ／ 取得 ${date(s.fetchedAt)} `); p.append(link('資料', s.url), document.createTextNode(' ／ '), link(s.discovered ? '配信元サイト' : '利用条件', s.terms)); details.append(p); });
       if (record.unresolved.length) { details.append(el('h4', '未確定事項（歌詞の事実には使いません）')); record.unresolved.forEach(text => details.append(el('p', text))); }
       record.excluded.forEach(s => { const p = el('p', `未取得：${s.reason} `); p.append(link('対象URL', s.url)); details.append(p); });
       if (record.search.provider === 'openai' && record.search.sources?.length) {

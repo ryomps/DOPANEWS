@@ -40,54 +40,64 @@ test('missing key makes no request and consumes no budget; cached successful sea
   assert.deepEqual(await restart.search({ topic: topic(1), key: '' }), first);
   assert.equal(f.calls.length, 1); assert.equal((await restart.usage()).usedTotal, 1);
 });
-test('daily limit stops the sixth request before transmission and resets at midnight Japan time', async t => {
-  const f = await fixture(t);
-  for (let n = 1; n <= 5; n++) await f.service.search({ topic: topic(n), key: 'key' });
-  await assert.rejects(f.service.search({ topic: topic(6), key: 'key' }), e => e.newsCode === 'OPENAI_DAILY_LIMIT');
-  assert.equal(f.calls.length, 5); assert.equal((await f.service.usage()).usedToday, 5);
+test('development has no daily, lifetime or per-topic cap; usage persists across restarts', async t => {
+  const f = await fixture(t, () => Response.json({}, { status: 503 }));
+  for (let n = 1; n <= 25; n++) {
+    await assert.rejects(createOpenAISearch(f.options).search({ topic: topic(1), key: 'key' }), e => e.newsCode === 'OPENAI_PROVIDER');
+    assert.equal(f.calls.length, n); // Exactly one request per explicit operation.
+  }
+  assert.equal((await f.service.usage()).usedToday, 25);
+  assert.equal((await f.service.usage()).limits.daily, null);
+  assert.equal((await f.service.usage()).limits.perTopic, null);
   f.advance(1000);
   assert.equal((await f.service.usage()).usedToday, 0);
-  await f.service.search({ topic: topic(6), key: 'key' });
-  assert.equal(f.calls.length, 6); assert.equal((await f.service.usage()).usedTotal, 6);
+  assert.equal((await f.service.usage()).usedTotal, 25);
   assert.equal(dayKey(new Date('2026-10-29T15:00:00Z')), '2026-10-30');
 });
-test('trial lifetime limit persists across restarts and dates, while saved searches still open', async t => {
-  const f = await fixture(t);
-  for (let day = 0; day < 4; day++) {
-    for (let n = 1; n <= 5; n++) await f.service.search({ topic: topic(day * 5 + n), key: 'key' });
-    f.advance(24 * 60 * 60 * 1000);
-  }
-  const restart = createOpenAISearch(f.options);
-  await assert.rejects(restart.search({ topic: topic(21), key: 'key' }), e => e.newsCode === 'OPENAI_TOTAL_LIMIT');
-  await restart.search({ topic: topic(1), key: 'key' });
-  assert.equal(f.calls.length, 20); assert.equal((await restart.usage()).usedTotal, 20);
+
+test('legacy failed records count as one attempt; later success is reused', async t => {
+  let success = false;
+  const f = await fixture(t, () => success ? result() : Response.json({}, { status: 503 }));
+  await fs.mkdir(path.join(f.directory, 'searches'));
+  const file = path.join(f.directory, 'searches', topic(1).id + '.json');
+  await fs.writeFile(file, JSON.stringify({ status: 'failed', attempts: 3 }));
+  await assert.rejects(f.service.search({ topic: topic(1), key: 'key' }));
+  assert.equal(JSON.parse(await fs.readFile(file, 'utf8')).attempts, 4);
+  success = true;
+  const found = await f.service.search({ topic: topic(1), key: 'key' });
+  assert.deepEqual(await createOpenAISearch(f.options).search({ topic: topic(1), key: '' }), found);
+  assert.equal(f.calls.length, 2);
 });
-test('provider failures and uncertain network outcomes count once and cannot repeat for the same topic', async t => {
-  for (const network of [false, true]) {
-    const f = await fixture(t, async () => { if (network) throw new Error('private-openai'); return Response.json({ error: { message: 'private-openai' } }, { status: 429 }); });
-    await assert.rejects(f.service.search({ topic: topic(1), key: 'private-openai' }), e => e.newsCode === (network ? 'OPENAI_CONNECTION' : 'OPENAI_QUOTA_LIMIT'));
-    const restarted = createOpenAISearch(f.options);
-    await assert.rejects(restarted.search({ topic: topic(1), key: 'private-openai' }), e => e.newsCode === 'OPENAI_TOPIC_LIMIT');
-    assert.equal(f.calls.length, 1); assert.equal((await restarted.usage()).usedTotal, 1);
-    assert.ok(!(await fs.readFile(path.join(f.directory, 'searches', topic(1).id + '.json'), 'utf8')).includes('private-openai'));
-  }
+
+test('unrestricted discovery uses tool sources without a fixed domain filter', async t => {
+  const f = await fixture(t, () => Response.json({ status: 'completed', output: [{ type: 'web_search_call', status: 'completed', action: { type: 'search', sources: [{url:'https://reissuerecords.net/2026/11/04/news/'}, {url:'https://127.0.0.1/private'}, {url:'https://localhost/private'}] } }] }));
+  const service = createOpenAISearch({ ...f.options, allowedDomains: undefined });
+  const found = await service.search({ topic: topic(1), key: 'key' });
+  assert.equal(JSON.parse(f.calls[0].init.body).tools[0].filters, undefined);
+  assert.deepEqual(found.urls, ['https://reissuerecords.net/2026/11/04/news/']);
 });
-test('multiple servers cannot race past the remaining daily allowance', async t => {
-  const f = await fixture(t);
-  for (let n = 1; n <= 4; n++) await f.service.search({ topic: topic(n), key: 'key' });
-  const second = createOpenAISearch(f.options);
-  await Promise.allSettled([f.service.search({ topic: topic(5), key: 'key' }), second.search({ topic: topic(6), key: 'key' })]);
-  assert.equal(f.calls.length, 5); assert.equal((await second.usage()).usedToday, 5);
+
+test('in-flight and legacy uncertain reservations prevent duplicate topic requests', async t => {
+  let release;
+  const f = await fixture(t, () => new Promise(resolve => { release = () => resolve(result()); }));
+  const first = f.service.search({ topic: topic(1), key: 'key' });
+  while (!release) await new Promise(resolve => setTimeout(resolve, 5));
+  await assert.rejects(createOpenAISearch(f.options).search({ topic: topic(1), key: 'key' }), e => e.newsCode === 'NEWS_BUSY');
+  release(); await first;
+  const file = path.join(f.directory, 'searches', topic(2).id + '.json');
+  await fs.writeFile(file, JSON.stringify({ status: 'reserved' }));
+  await assert.rejects(f.service.search({ topic: topic(2), key: 'key' }), e => e.newsCode === 'NEWS_BUSY');
+  assert.equal(f.calls.length, 1);
 });
-test('missing tool evidence, incomplete results and excessive calls never become a valid cached result', async t => {
-  for (const body of [{ status: 'incomplete', output: [] }, { status: 'completed', output: [{ type: 'message', content: [] }] }, { status: 'completed', output: [{ type: 'web_search_call' }, { type: 'web_search_call' }] }]) {
-    const f = await fixture(t, async () => Response.json(body));
+
+test('invalid results consume one recorded attempt without automatic retries', async t => {
+  const f = await fixture(t, () => Response.json({ status: 'incomplete', output: [] }));
+  for (let n = 1; n <= 4; n++) {
     await assert.rejects(f.service.search({ topic: topic(1), key: 'key' }), e => e.newsCode === 'NEWS_SEARCH');
-    assert.equal((await f.service.usage()).usedTotal, 1);
-    await assert.rejects(f.service.search({ topic: topic(1), key: 'key' }), e => e.newsCode === 'OPENAI_TOPIC_LIMIT');
-    assert.equal(f.calls.length, 1);
+    assert.equal(f.calls.length, n);
   }
 });
+
 test('a corrupt budget or unreleased reservation lock fails closed without spending', async t => {
   const f = await fixture(t);
   await fs.writeFile(path.join(f.directory, 'openai-search-budget.json'), JSON.stringify({ days: {}, total: 0.5 }));
@@ -95,4 +105,17 @@ test('a corrupt budget or unreleased reservation lock fails closed without spend
   await fs.writeFile(path.join(f.directory, 'openai-search.lock'), 'reserved');
   await assert.rejects(f.service.search({ topic: topic(2), key: 'key' }), e => e.newsCode === 'NEWS_BUSY');
   assert.equal(f.calls.length, 0);
+});
+
+test('explicit research bypasses cache and excludes the previous inaccessible URLs', async t => {
+  let fresh = false;
+  const f = await fixture(t, () => fresh ? Response.json({ status: 'completed', output: [{ type: 'web_search_call', status: 'completed', action: { type: 'search', sources: [{url:'https://www.stat.go.jp/test.html'}, {url:'https://www.stat.go.jp/new.html'}] } }] }) : result());
+  await f.service.search({ topic: topic(1), key: 'key' });
+  await f.service.search({ topic: topic(1), key: 'key' });
+  assert.equal(f.calls.length, 1);
+  fresh = true;
+  const found = await f.service.search({ topic: topic(1), key: 'key', refresh: true });
+  assert.equal(f.calls.length, 2);
+  assert.deepEqual(found.urls, ['https://www.stat.go.jp/new.html']);
+  assert.deepEqual(JSON.parse(JSON.parse(f.calls[1].init.body).input).excludeUrls, ['https://www.stat.go.jp/test.html', 'https://www.mext.go.jp/test.html']);
 });

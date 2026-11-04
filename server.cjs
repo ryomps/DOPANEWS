@@ -79,8 +79,8 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
       }
       if (route === '/api/news/generate' && req.method === 'POST') {
         const input = await readBody(req);
-        if (!input || typeof input !== 'object' || Object.keys(input).some(k => !['topicId', 'retry'].includes(k)) || ('retry' in input && typeof input.retry !== 'boolean')) throw new Error('一覧から話題を選んでください。');
-        try { json(res, await news.generate(input.topicId, input.retry)); }
+        if (!input || typeof input !== 'object' || Object.keys(input).some(k => !['topicId', 'retry', 'refreshSearch'].includes(k)) || ('retry' in input && typeof input.retry !== 'boolean') || ('refreshSearch' in input && typeof input.refreshSearch !== 'boolean')) throw new Error('一覧から話題を選んでください。');
+        try { json(res, await news.generate(input.topicId, input.retry, input.refreshSearch)); }
         catch (error) { const problem = publicNewsFailure(error); json(res, { code: problem.code, error: problem.message }, problem.status); }
         return;
       }
