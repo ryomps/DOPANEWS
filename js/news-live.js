@@ -164,13 +164,7 @@
         const start = button('この記事でラップを生成する', async () => {
           const app = global.dopaNewsApp;
           if (!app || app.isGenerating || busy) return;
-          app.newsUrlInputEl.value = ''; app.lastFetchedUrl = '';
-          app.articleInputEl.value = record.articleText;
-          app.currentArticleText = record.articleText;
-          document.body.classList.remove('news-mode');
-          const returnBtn = document.getElementById('return-to-news'); returnBtn.hidden = false;
-          app.audioController._ensureAudioContext();
-          await app.handleFullBattleGeneration({ articleText: record.articleText });
+          await app.handleArticleBattleGeneration({ articleText: record.articleText, title: record.article.title });
         });
         article.append(el('p', 'Geminiで作詞し、Mureka 9で音源を生成します。', 'live-news-note'), start);
       }

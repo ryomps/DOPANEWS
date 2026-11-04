@@ -32,6 +32,10 @@
     }
 
     _cacheDom() {
+      this.articleGenerationPanelEl = document.getElementById('article-generation-panel');
+      this.articleGenerationTitleEl = document.getElementById('article-generation-title');
+      this.articleGenerationStatusEl = document.getElementById('article-generation-status');
+      this.articleGenerationRetryEl = document.getElementById('article-generation-retry');
       this.apiConfigStatusEl = document.getElementById('api-config-status');
       this.libraryListEl = document.getElementById('saved-battle-list');
       this.libraryStatusEl = document.getElementById('library-status');
@@ -167,7 +171,7 @@
           const meta = document.createElement('small');
           meta.textContent = `${new Date(item.createdAt).toLocaleString('ja-JP')} · ${item.audioUrl ? '音声保存済み' : '歌詞＋内蔵ビート'}`;
           const button = document.createElement('button');
-          button.type = 'button'; button.className = 'btn-sub-action'; button.textContent = '▶ このラップを聴く';
+          button.type = 'button'; button.className = 'btn-sub-action'; button.textContent = '▶ 歌詞画面を開いて再生';
           button.disabled = this.isGenerating;
           button.addEventListener('click', () => this._playSavedBattle(item));
           row.appendChild(title); row.appendChild(meta); row.appendChild(button);
@@ -199,12 +203,16 @@
     }
 
     async _playSavedBattle(item) {
-      if (this.isGenerating) return;
+      if (this.isGenerating || this.articleTransitionPending) return;
       this._beginGeneration();
       try {
         this.articleInputEl.value = item.articleText || '';
         this.currentArticleText = this.articleInputEl.value;
         this._applyBattleData(item.battleData);
+        document.body?.classList.remove('news-mode');
+        this.sidebarPanelEl?.classList.remove('drawer-open');
+        const back = document.getElementById('return-to-news');
+        if (back) back.hidden = false;
         this.currentSavedId = item.id; this.currentAudioUrl = item.audioUrl;
         this.currentSynthDuration = item.synthDuration || 45;
         this.currentMurekaTrack = item.murekaTrack;
@@ -216,12 +224,16 @@
         }
         this.stageView.syncTime(0, item.murekaTrack?.duration / 1000 || this.currentSynthDuration);
         this._setLog(`保存したラップ「${item.battleData.title}」を読み込みました。`);
+        this._setStepState(3);
         if (item.audioUrl) await this.audioController.loadAndPlayUrl(item.audioUrl);
         else this.audioController.startSynthBattle(this.currentSynthDuration);
       } finally { this._setGenerating(false); }
     }
 
     _bindEvents() {
+      this.articleGenerationRetryEl?.addEventListener('click', () => {
+        if (this.articleGenerationRequest && !this.isGenerating && !this.articleTransitionPending) this.handleArticleBattleGeneration(this.articleGenerationRequest);
+      });
       document.getElementById('news-open-studio')?.addEventListener('click', () => {
         if (this.isGenerating) return;
         this._stopCurrentBattle();
@@ -399,6 +411,37 @@
       return textFieldVal;
     }
 
+    async handleArticleBattleGeneration({ articleText, title }) {
+      if (this.isGenerating || this.articleTransitionPending) return;
+      this.articleTransitionPending = true;
+      this.articleGenerationRequest = { articleText, title };
+      const stage = document.getElementById('battle-stage');
+      this._stopCurrentBattle();
+      this.newsUrlInputEl.value = ''; this.lastFetchedUrl = '';
+      this.articleInputEl.value = articleText;
+      this.currentArticleText = articleText;
+      document.body?.classList.remove('news-mode');
+      const back = document.getElementById('return-to-news'); if (back) back.hidden = false;
+      stage?.classList.add('article-generation-pending');
+      if (this.articleGenerationPanelEl) this.articleGenerationPanelEl.hidden = false;
+      if (this.articleGenerationTitleEl) this.articleGenerationTitleEl.textContent = title;
+      if (this.articleGenerationRetryEl) this.articleGenerationRetryEl.hidden = true;
+      this._setLog('ラップの生成を準備しています…');
+      try {
+        this.audioController._ensureAudioContext();
+        const completed = await this.handleFullBattleGeneration({ articleText });
+        if (completed) {
+          stage?.classList.remove('article-generation-pending');
+          if (this.articleGenerationPanelEl) this.articleGenerationPanelEl.hidden = true;
+        }
+      } catch (error) {
+        this._setLog(`ラップを生成できませんでした：${error.message}`, true);
+      } finally {
+        this.articleTransitionPending = false;
+        if (this.articleGenerationRetryEl) this.articleGenerationRetryEl.hidden = Boolean(this.articleGenerationPanelEl?.hidden);
+      }
+    }
+
     async handleFullBattleGeneration(options = {}) {
       if (this.isGenerating) return;
 
@@ -422,6 +465,7 @@
         if (!battleData) return;
         this._applyBattleData(battleData);
         await this._generateApprovedBattle(battleData, config);
+        return true;
       } catch (err) {
         console.error(err);
         this._setLog(`❌ エラー: ${err.message}`, true);
@@ -640,6 +684,10 @@
     }
 
     _applyBattleData(battleData) {
+      if (!this.articleTransitionPending) {
+        document.getElementById('battle-stage')?.classList.remove('article-generation-pending');
+        if (this.articleGenerationPanelEl) this.articleGenerationPanelEl.hidden = true;
+      }
       this.currentBattleData = battleData;
       this.stageView.setBattleData(battleData);
       const syncButton = document.getElementById('btn-sync-vocal-start');
@@ -669,6 +717,10 @@
     }
 
     _setLog(message, isError = false) {
+      if (this.articleGenerationStatusEl) {
+        this.articleGenerationStatusEl.textContent = message;
+        this.articleGenerationStatusEl.classList.toggle('status-error', isError);
+      }
       if (!this.statusLogEl) return;
       this.statusLogEl.textContent = message;
       this.statusLogEl.classList.toggle('status-error', isError);

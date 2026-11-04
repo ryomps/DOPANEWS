@@ -47,7 +47,7 @@ function setup() {
     setInterval(fn) { intervals.set(++nextInterval, fn); return nextInterval; },
     clearInterval: id => intervals.delete(id), setTimeout: () => 0,
     localStorage: { getItem: () => '', setItem() {} },
-    document: { activeElement: card, getElementById: id => elements.get(id), createElement: () => element() },
+    document: { body: element('body'), activeElement: card, getElementById: id => elements.get(id), createElement: () => element() },
     addEventListener(event, fn) { if (event === 'DOMContentLoaded') ready = fn; }
   };
   context.window = context;
@@ -68,7 +68,7 @@ function setup() {
   ready();
   const app = context.dopaNewsApp;
   app.audioController._ensureAudioContext = () => {};
-  return { app, savedRecords, data: context.DOPANEWS, get: id => elements.get(id),
+  return { app, savedRecords, body: context.document.body, data: context.DOPANEWS, get: id => elements.get(id),
     tick(seconds) { now += seconds * 1000; for (const fn of [...intervals.values()]) fn(); } };
 }
 
@@ -256,7 +256,7 @@ test('Mureka waits for the completed response with timings instead of returning 
 
 
 test('saved battle restores article, timed script, audio and supports pause/resume without rewinding', async () => {
-  const { app, get, data, savedRecords } = setup();
+  const { app, get, data, savedRecords, body } = setup();
   const battle = JSON.parse(JSON.stringify(data.PRESET_BATTLE_DATA));
   battle.title = 'saved example'; battle.mureka_timeline = []; battle.mureka_sync = { status: 'unavailable' };
   app._applyBattleData(battle); app.articleInputEl.value = 'original article'; app.currentArticleText = 'original article';
@@ -267,7 +267,20 @@ test('saved battle restores article, timed script, audio and supports pause/resu
   assert.equal(savedRecords.length, 1, 'do not duplicate the same saved item');
   const saved = JSON.parse(JSON.stringify(savedRecords[0]));
   app.articleInputEl.value = 'different article';
+  body.classList.add('news-mode');
+  get('control-drawer').classList.add('drawer-open');
+  get('battle-stage').classList.add('article-generation-pending');
+  get('article-generation-panel').hidden = false;
+  get('return-to-news').hidden = true;
   await app._playSavedBattle(saved);
+  assert.equal(body.classList.contains('news-mode'), false);
+  assert.equal(get('control-drawer').classList.contains('drawer-open'), false);
+  assert.equal(get('return-to-news').hidden, false);
+  assert.equal(get('article-generation-panel').hidden, true);
+  assert.equal(get('battle-stage').classList.contains('article-generation-pending'), false);
+  assert.equal(get('stage-battle-title').textContent, 'saved example');
+  assert.equal(get('stage-kenta-stance').textContent, saved.battleData.kenta_stance);
+  assert.equal(app.stageView.battleData.verses[0].lyric, saved.battleData.verses[0].lyric);
   assert.equal(app.articleInputEl.value, 'original article');
   assert.equal(app.currentBattleData.title, 'saved example');
   const audio = get('battle-audio'); audio.currentTime = 12;
@@ -682,4 +695,41 @@ test('composed parts switch MC at exactly 20/40/60 seconds including lyric gaps 
   }
   app.stageView.syncTime(80, 80);
   assert.equal(get('battle-stage').attrs['data-active-mc'], 'NONE');
+});
+
+
+test('generated article handoff shows the selected title and consumer progress instead of the old preset', async () => {
+  const { app, data, get } = setup();
+  let release;
+  let received;
+  data.generateBattleScriptWithGemini = article => { received = article; return new Promise(resolve => { release = resolve; }); };
+  data.generateBattleTrackWithMureka = async () => ({ audioUrl: 'new.mp3' });
+  const articleText = 'マッシュルの記事本文と確認済みの根拠';
+  const pending = app.handleArticleBattleGeneration({ articleText, title: 'マッシュル実写映画化' });
+  while (!release) await Promise.resolve();
+  assert.equal(received, articleText);
+  assert.equal(get('article-generation-title').textContent, 'マッシュル実写映画化');
+  assert.equal(get('article-generation-panel').hidden, false);
+  assert.equal(get('battle-stage').classList.contains('article-generation-pending'), true);
+  assert.match(get('article-generation-status').textContent, /歌詞/);
+  const next = JSON.parse(JSON.stringify(data.PRESET_BATTLE_DATA)); next.title = 'マッシュルのラップ';
+  release(next); await pending;
+  assert.equal(get('article-generation-panel').hidden, true);
+  assert.equal(get('battle-stage').classList.contains('article-generation-pending'), false);
+  assert.equal(app.currentBattleData.title, 'マッシュルのラップ');
+});
+
+test('consumer generation errors and retry stay visible when configuration stops generation', async () => {
+  const { app, data, get } = setup();
+  data.getLocalConfig = async () => ({ geminiConfigured: false, murekaConfigured: true, reviewSupported: true });
+  let calls = 0;
+  data.generateBattleScriptWithGemini = async () => { calls++; };
+  await app.handleArticleBattleGeneration({ articleText: '選んだ記事', title: '選んだ記事タイトル' });
+  assert.equal(calls, 0);
+  assert.equal(get('article-generation-panel').hidden, false);
+  assert.equal(get('article-generation-retry').hidden, false);
+  assert.match(get('article-generation-status').textContent, /GeminiApiKey/);
+  assert.equal(get('battle-stage').classList.contains('article-generation-pending'), true);
+  app._applyBattleData(data.PRESET_BATTLE_DATA);
+  assert.equal(get('article-generation-panel').hidden, true);
 });

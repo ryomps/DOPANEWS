@@ -1,4 +1,9 @@
 /* Desktop authoring workspace; the right pane is the consumer phone preview. */
+.article-generation-panel { padding:20px 12px; overflow:auto; color:#e0eafb; }
+.article-generation-panel h2 { font-size:20px; line-height:1.6; overflow-wrap:anywhere; }
+.article-generation-panel p { line-height:1.8; white-space:pre-wrap; overflow-wrap:anywhere; }
+.article-generation-panel[hidden] { display:none; }
+.article-generation-pending > :not(.battle-mobile-header):not(.article-generation-panel) { display:none !important; }
 .dev-api-form { display:grid; gap:10px; margin-top:14px; }
 .dev-api-form label { font-size:12px; color:#bcc9dc; }
 .dev-api-form input { width:100%; min-width:0; }
