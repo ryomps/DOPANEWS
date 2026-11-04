@@ -21,6 +21,7 @@
       this.topicEl = document.getElementById('stage-topic-summary');
       this.timerEl = document.getElementById('stage-timer');
       this.progressFillEl = document.getElementById('stage-progress-fill');
+      this.progressTrackEl = document.getElementById('stage-progress-track');
       this.versePillsEl = document.getElementById('stage-verse-pills');
 
       this.cardKentaEl = document.getElementById('mc-card-kenta');
@@ -46,11 +47,16 @@
       this.currentLineIndex = -1;
 
       if (this.titleEl) this.titleEl.textContent = battleData.title;
+      if (this.progressFillEl) {
+        this.progressFillEl.style.width = '100%';
+        this.progressFillEl.style.clipPath = 'inset(0 100% 0 0)';
+      }
       if (this.topicEl) this.topicEl.textContent = battleData.topic_summary;
       if (this.kentaStanceEl) this.kentaStanceEl.textContent = battleData.kenta_stance;
       if (this.reinaStanceEl) this.reinaStanceEl.textContent = battleData.reina_stance;
 
       this._renderVersePills();
+      this._renderVerseTrack();
       if (battleData.verses.length > 0) {
         this.activateVerse(0, false);
       }
@@ -111,6 +117,47 @@
       }));
     }
 
+    _renderVerseTrack() {
+      if (!this.progressTrackEl || !this.battleData) return;
+      const duration = this.lastKnownDuration;
+      const verses = this.battleData.verses;
+      const raw = this.battleData.part_segments
+        || (this.battleData.mureka_sync ? (this.battleData.mureka_timeline || []).map(line => ({
+          start: line.start_sec, end: line.end_sec, verse_index: line.verse_index
+        })) : this.getVerseWindows(duration));
+      const parts = raw.map((part, index) => ({
+        start: Math.max(0, Math.min(duration, part.start)),
+        end: Math.max(0, Math.min(duration, part.end)),
+        speaker: verses[!this.battleData.part_segments && this.battleData.mureka_sync ? part.verse_index : index]?.speaker
+      })).filter(part => part.end > part.start);
+      const boundaries = [...new Set([0, duration, ...parts.flatMap(part => [part.start, part.end])])].sort((a,b) => a-b);
+      const stops = [];
+      let previousColor = null;
+      for (let i = 0; i < boundaries.length - 1; i++) {
+        const start = boundaries[i], end = boundaries[i+1];
+        const speakers = new Set(parts.filter(part => part.start <= start && part.end >= end).map(part => part.speaker));
+        const speaker = speakers.size === 1 ? [...speakers][0] : null;
+        const color = speaker === 'KENTA' ? '#4b94ff' : speaker === 'REINA' ? '#ff5067' : '#343e50';
+        const boundary = start / duration * 100;
+        if (previousColor && previousColor !== color) {
+          stops.pop();
+          stops.push(`${previousColor} calc(${boundary}% - 1px)`,
+            `#fff calc(${boundary}% - 1px)`, `#fff calc(${boundary}% + 1px)`,
+            `${color} calc(${boundary}% + 1px)`, `${color} ${end / duration * 100}%`);
+        } else {
+          stops.push(`${color} ${boundary}%`, `${color} ${end / duration * 100}%`);
+        }
+        previousColor = color;
+      }
+      // Repeated stops make crisp verse boundaries, without color blending.
+      const background = `linear-gradient(to right, ${stops.join(', ')})`;
+      if (this.verseTrackBackground !== background) {
+        this.progressTrackEl.style.background = background.replaceAll('#4b94ff', '#343e50').replaceAll('#ff5067', '#343e50');
+        if (this.progressFillEl) this.progressFillEl.style.background = background;
+        this.verseTrackBackground = background;
+      }
+    }
+
     _renderVersePills() {
       if (!this.versePillsEl || !this.battleData) return;
       this.versePillsEl.innerHTML = '';
@@ -138,13 +185,15 @@
       if (Number.isFinite(durationSec) && durationSec > 0) {
         this.lastKnownDuration = durationSec;
       }
+      this._renderVerseTrack();
 
       if (this.timerEl) {
         this.timerEl.textContent = `${this._formatTime(currentTimeSec)} / ${this._formatTime(this.lastKnownDuration)}`;
       }
       if (this.progressFillEl && this.lastKnownDuration > 0) {
         const pct = Math.min(100, Math.max(0, (currentTimeSec / this.lastKnownDuration) * 100));
-        this.progressFillEl.style.width = `${pct}%`;
+        this.progressFillEl.style.width = '100%';
+        this.progressFillEl.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
       }
 
       if (!this.battleData || !this.battleData.verses.length) return;
