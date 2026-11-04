@@ -207,5 +207,5 @@
 .news-tabs { overflow-x:auto; flex-wrap:nowrap; }
 .news-tabs button { flex:0 0 auto; white-space:nowrap; }
 
-.cutin-kenta .cutin-portrait { background-image:url('./images/mc-kenta.png'); background-size:cover; background-position:center 20%; }
-.cutin-reina .cutin-portrait { background-image:url('./images/mc-reina.png'); background-size:cover; background-position:center 20%; }
+.cutin-kenta .cutin-portrait { height:84%; bottom:6%; background-image:url('./images/mc-kenta.png'); background-size:contain; background-position:center bottom; }
+.cutin-reina .cutin-portrait { height:84%; bottom:6%; background-image:url('./images/mc-reina.png'); background-size:contain; background-position:center bottom; }

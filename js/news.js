@@ -490,7 +490,7 @@
       if (D.newsFeedStatus) {
         const status = document.createElement('p'); status.className = 'news-feed-status';
         status.textContent = D.newsFeedStatus;
-        content.querySelector('.news-grid').before(status);
+        content.append(status);
       }
     }
     let genreScrollFrame = 0;
@@ -551,18 +551,10 @@
       }
       const tab = e.target.closest('[data-category]');
       if (tab) {
-        if (category === 'トップ' && location.hash !== '#search' && tab.closest('.news-tabs')) {
-          const target = Array.from(content.querySelectorAll('[data-section-genre]')).find(heading => heading.dataset.sectionGenre === tab.dataset.category);
-          if (tab.dataset.category === 'トップ') { screen.scrollTo({top:0, behavior:'smooth'}); return; }
-          if (target) {
-            const tabsHeight = content.querySelector('.news-tabs').getBoundingClientRect().height;
-            screen.scrollTo({top:screen.scrollTop + target.getBoundingClientRect().top - screen.getBoundingClientRect().top - tabsHeight - 8, behavior:'smooth'});
-            return;
-          }
-        }
         const wasMenuTab = Boolean(tab.closest('.news-tabs'));
         category = tab.dataset.category;
         list();
+        listScroll = 0; screen.scrollTop = 0;
         if (wasMenuTab) {
           const tabs = content.querySelector('.news-tabs');
           const active = tabs.querySelector('[aria-pressed="true"]');
