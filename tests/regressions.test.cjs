@@ -268,12 +268,16 @@ test('saved battle restores article, timed script, audio and supports pause/resu
   const saved = JSON.parse(JSON.stringify(savedRecords[0]));
   app.articleInputEl.value = 'different article';
   body.classList.add('news-mode');
+  body.classList.add('library-mode');
+  get('library-screen').hidden = false;
   get('control-drawer').classList.add('drawer-open');
   get('battle-stage').classList.add('article-generation-pending');
   get('article-generation-panel').hidden = false;
   get('return-to-news').hidden = true;
   await app._playSavedBattle(saved);
   assert.equal(body.classList.contains('news-mode'), false);
+  assert.equal(body.classList.contains('library-mode'), false);
+  assert.equal(get('library-screen').hidden, true);
   assert.equal(get('control-drawer').classList.contains('drawer-open'), false);
   assert.equal(get('return-to-news').hidden, false);
   assert.equal(get('article-generation-panel').hidden, true);

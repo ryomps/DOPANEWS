@@ -209,7 +209,14 @@
         this.articleInputEl.value = item.articleText || '';
         this.currentArticleText = this.articleInputEl.value;
         this._applyBattleData(DOPANEWS.normalizeBattleData(item.battleData));
-        document.body?.classList.remove('news-mode');
+        if (DOPANEWS.libraryNavigation?.openBattle) {
+          DOPANEWS.libraryNavigation.openBattle();
+        } else {
+          document.body?.classList.remove('news-mode');
+          document.body?.classList.remove('library-mode');
+          const library = document.getElementById('library-screen');
+          if (library) library.hidden = true;
+        }
         this.sidebarPanelEl?.classList.remove('drawer-open');
         const back = document.getElementById('return-to-news');
         if (back) back.hidden = false;
