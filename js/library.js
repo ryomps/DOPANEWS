@@ -9,7 +9,67 @@
     const newsNav = document.querySelector('.app-nav-news');
     const libraryNav = document.querySelector('.app-nav-library');
     const genres = ['テクノロジー','政治','経済','スポーツ','自然','エンタメ','恋愛','その他'];
-    let entries = [], filter = null, version = 0, fromLibrary = false;
+    let entries = [], filter = 'すべて', version = 0, fromLibrary = false;
+    const newsScreen = document.getElementById('news-screen');
+    let lastNews = { hash: '', scrollTop: 0 }, pendingNewsRestore = false;
+    function rememberNews(hash = location.hash) {
+      if (document.body.classList.contains('library-mode') || fromLibrary || hash === '#library') return;
+      const inBattle = !document.body.classList.contains('news-mode');
+      lastNews = { hash, scrollTop: newsScreen.scrollTop, inBattle };
+      if (inBattle) {
+        const fields = ['currentBattleData','currentArticleText','currentSavedId','currentAudioUrl','currentAudioWavBase64','currentSynthDuration','currentMurekaTrack','currentReviews'];
+        lastNews.battle = {
+          fields: Object.fromEntries(fields.map(key => [key, app[key]])),
+          time: app.audioController.getCurrentTime(),
+          synth: app.audioController.usingSynthFallback,
+          duration: app.audioController.synthDuration,
+          displayDuration: app.stageView.lastKnownDuration,
+          source: app.audioEl.getAttribute('src'),
+          introOffset: app.stageView.manualIntroOffsetSec,
+          lyricScroll: app.stageView.lyricBoxEl.scrollTop,
+          centerScroll: document.querySelector('.stage-center').scrollTop
+        };
+      }
+    }
+    function restoreBattle() {
+      const battle = lastNews.battle;
+      let waitingForMetadata = false;
+      // Library browsing only pauses audio; avoid loading it again unless another battle replaced it.
+      if (app.currentBattleData !== battle.fields.currentBattleData || app.audioEl.getAttribute('src') !== battle.source || app.audioController.usingSynthFallback !== battle.synth) {
+        app._stopCurrentBattle();
+        Object.assign(app, battle.fields);
+        app.articleInputEl.value = app.currentArticleText || '';
+        app._applyBattleData(app.currentBattleData);
+        app.audioController.usingSynthFallback = battle.synth;
+        if (battle.synth) {
+          app.audioController.synthDuration = battle.duration;
+          app.audioController.synthPausedAt = battle.time;
+        } else if (battle.source) {
+          waitingForMetadata = true;
+          app.audioEl.addEventListener('loadedmetadata', () => {
+            if (app.currentBattleData === battle.fields.currentBattleData && app.audioEl.getAttribute('src') === battle.source) app.audioController.seekTo(battle.time);
+          }, { once: true });
+          app.audioEl.src = battle.source;
+          app.audioEl.load();
+        }
+      }
+      app.stageView.manualIntroOffsetSec = battle.introOffset;
+      if (!waitingForMetadata) app.audioController.seekTo(battle.time);
+      app.stageView.syncTime(battle.time, battle.displayDuration);
+      app.stageView.setPlaybackState(false);
+      document.body.classList.remove('news-mode');
+      document.getElementById('return-to-news').hidden = false;
+    }
+    function restoreNewsScroll() {
+      pendingNewsRestore = false;
+      if (lastNews.inBattle) restoreBattle();
+      requestAnimationFrame(() => {
+        if (lastNews.inBattle) {
+          app.stageView.lyricBoxEl.scrollTop = lastNews.battle.lyricScroll;
+          document.querySelector('.stage-center').scrollTop = lastNews.battle.centerScroll;
+        } else newsScreen.scrollTop = lastNews.scrollTop;
+      });
+    }
     const node = (tag, text, className) => {
       const el = document.createElement(tag);
       if (text !== undefined) el.textContent = text;
@@ -32,9 +92,9 @@
     }
     function render() {
       cards.replaceChildren();
-      const shown = entries.filter(entry => entry.category === filter);
+      const shown = entries.filter(entry => filter === 'すべて' || entry.category === filter);
       feedback.textContent = `${filter} · ${shown.length}件のバトル`;
-      if (!shown.length) { empty(`${filter}のバトルはまだありません`); return; }
+      if (!shown.length) { empty(filter === 'すべて' ? 'バトルはまだありません' : `${filter}のバトルはまだありません`); return; }
       shown.forEach(entry => {
         const data = entry.battleData;
         const card = node('article', undefined, 'library-card');
@@ -98,32 +158,42 @@
         entry.category = genres.includes(category) && category !== 'その他' ? category : inferred;
       });
       entries.sort((a,b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
-      if (!filter) filter = genres.find(genre => entries.some(entry => entry.category === genre)) || genres[0];
       renderGenres();
       render();
-      if (failed) feedback.textContent = '保存音声を読み込めませんでした。サーバーを確認して「更新」を押してください。投票はこのブラウザーの保存分を表示しています。';
+      if (failed) feedback.textContent = '保存音声を読み込めませんでした。サーバーを確認して、フッターのLibraryを押し直してください。';
     }
     function goNews() {
       if (app.isGenerating) return;
+      const switchingTab = document.body.classList.contains('library-mode') || fromLibrary || location.hash === '#library';
+      const returningFromBattle = !document.body.classList.contains('news-mode');
       version++; fromLibrary = false;
       app.audioController.pause(); app.judgeModal.close();
       screen.hidden = true;
       document.body.classList.remove('library-mode'); document.body.classList.add('news-mode');
       selection(false); document.getElementById('return-to-news').hidden = true;
-      location.hash = '';
+      if (switchingTab) {
+        pendingNewsRestore = true;
+        if (location.hash === lastNews.hash) restoreNewsScroll();
+        else location.hash = lastNews.hash;
+      } else if (returningFromBattle) {
+        document.getElementById('return-to-news').click();
+      } else {
+        D.newsNavigation?.back();
+      }
     }
     newsNav.addEventListener('click', goNews);
     libraryNav.addEventListener('click', () => {
       if (app.isGenerating) return;
+      rememberNews();
       if (location.hash === '#library') showLibrary(); else location.hash = 'library';
     });
-    document.getElementById('library-refresh').addEventListener('click', showLibrary);
     function renderGenres() {
       const nav = document.getElementById('library-genres');
       const scroll = nav.scrollLeft;
       nav.replaceChildren();
-      genres.forEach(genre => {
+      ['すべて', ...genres].forEach(genre => {
         const button = node('button', genre); button.type = 'button';
+        button.style.setProperty('--genre-color', genre === 'すべて' ? '#edf2fa' : D.newsGenreColors?.[genre] || '#94a3b8');
         button.setAttribute('aria-pressed', String(filter === genre));
         button.addEventListener('click', () => {
           filter = genre;
@@ -137,9 +207,15 @@
     document.getElementById('return-to-news').addEventListener('click', () => {
       if (fromLibrary && !app.isGenerating) showLibrary();
     });
-    global.addEventListener('hashchange', () => {
-      if (location.hash === '#library') showLibrary();
-      else { version++; screen.hidden = true; document.body.classList.remove('library-mode'); selection(false); }
+    global.addEventListener('hashchange', event => {
+      if (location.hash === '#library') {
+        if (event.oldURL) rememberNews(new URL(event.oldURL).hash);
+        showLibrary();
+      } else {
+        const leavingLibrary = document.body.classList.contains('library-mode');
+        version++; screen.hidden = true; document.body.classList.remove('library-mode'); selection(false);
+        if (pendingNewsRestore || (leavingLibrary && location.hash === lastNews.hash)) restoreNewsScroll();
+      }
     });
     document.getElementById('dev-show-battle')?.addEventListener('click', () => { screen.hidden = true; document.body.classList.remove('library-mode'); });
     document.getElementById('dev-show-news')?.addEventListener('click', goNews);

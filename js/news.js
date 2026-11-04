@@ -307,6 +307,7 @@
   D.newsRepository = { async list() { return articles; } };
   D.getNewsCategory = text => articles.find(article => String(text || '').includes(article.title))?.category || 'その他';
   const genreColors = {"トップ":"#ef4444","テクノロジー":"#3b82f6","政治":"#a78bfa","経済":"#eab308","スポーツ":"#f97316","自然":"#22c55e","エンタメ":"#06b6d4","恋愛":"#f472b6"};
+  D.newsGenreColors = genreColors;
   const genreStyle = genre => '--genre-color:'+genreColors[genre];
   function artwork(a) {
     a = { ...a, color: '#07101d', accent: genreColors[a.category] || '#2767ce' };
@@ -404,11 +405,23 @@
       const card = e.target.closest('[data-article]');
       if (card) { listScroll = screen.scrollTop; location.hash = 'news/'+card.dataset.article; }
     });
+    let renderedNewsHash = null;
     function route() {
       if (finishCutin) finishCutin(false);
+      if (location.hash === '#library') return;
+      if (renderedNewsHash === location.hash) return;
+      renderedNewsHash = location.hash;
       const a = items.find(a => '#news/'+a.id === location.hash);
       if (a) detail(a); else { list(); screen.scrollTop = listScroll; }
     }
+    D.newsNavigation = {
+      back() {
+        if (selected) { location.hash = ''; return; }
+        if (D.liveNewsNavigation?.back()) return;
+        category = 'トップ'; categoryScroll = 0; listScroll = 0;
+        list(); screen.scrollTop = 0;
+      }
+    };
     global.addEventListener('hashchange', route);
     back.addEventListener('click', () => { location.hash = ''; });
     document.getElementById('news-start-battle').addEventListener('click', async () => {

@@ -43,3 +43,10 @@
 .library-filters::-webkit-scrollbar { display:none; }
 .library-filters button { flex:0 0 auto; white-space:nowrap; }
 .library-genre-label { display:inline-block; color:#a7c4ed; font-size:9px; margin-right:8px; }
+
+/* Match NEWS genre chips, without extra title copy or a manual refresh action. */
+.library-heading h1 { margin:0; }
+.library-filters { gap:5px; margin:16px -16px 10px; padding:0 16px 8px; overscroll-behavior-x:contain; scroll-padding-inline:16px; }
+.library-filters button { min-height:32px; padding:5px 11px; line-height:1.4; border-color:color-mix(in srgb,var(--genre-color) 40%,transparent); }
+.library-filters button:hover { border-color:var(--genre-color); }
+.library-filters button[aria-pressed="true"] { background:var(--genre-color); border-color:var(--genre-color); color:#07101d; }

@@ -203,8 +203,17 @@
       body.append(article);
       document.getElementById('news-screen').scrollTop = 0;
     }
+    D.liveNewsNavigation = {
+      back() {
+        if (!current || mount.hidden) return false;
+        renderList(); status.textContent = '話題を選んでください。';
+        document.getElementById('news-screen').scrollTop = 0;
+        return true;
+      }
+    };
     // Fixed articles retain their own detail routing. Avoid showing two articles at once.
     function route() {
+      if (location.hash === '#library') return;
       const fixed = location.hash.startsWith('#news/');
       mount.hidden = fixed; curated.hidden = false;
       if (articleBattleBar) articleBattleBar.hidden = fixed;
