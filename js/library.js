@@ -84,6 +84,16 @@
       newsNav.setAttribute('aria-current', active ? 'false' : 'page');
       libraryNav.setAttribute('aria-current', active ? 'page' : 'false');
     }
+    // All saved-track entry points share the same screen and return destination.
+    function openBattle() {
+      if (document.body.classList.contains('library-mode') || location.hash === '#library') fromLibrary = true;
+      version++; // Invalidate a library refresh that may still be in flight.
+      screen.hidden = true;
+      document.body.classList.remove('library-mode', 'news-mode');
+      document.getElementById('return-to-news').hidden = false;
+      selection(fromLibrary);
+    }
+    D.libraryNavigation = { openBattle };
     function empty(message) {
       const panel = node('div', undefined, 'library-empty');
       panel.append(node('span', '◇', 'library-empty-icon'), node('h2', message), node('p', 'ニュースからバトルを作って、あなたの意見を残してみよう。'));
@@ -119,11 +129,7 @@
           const play = node('button', entry.audioUrl ? '▶ 聴き返す' : '▶ デモを聴く'); play.type = 'button';
           play.addEventListener('click', async () => {
             if (app.isGenerating) return;
-            play.disabled = true; fromLibrary = true;
-            screen.hidden = true;
-            document.body.classList.remove('library-mode', 'news-mode');
-            document.getElementById('return-to-news').hidden = false;
-            selection(true);
+            play.disabled = true;
             try { await app._playSavedBattle(entry); }
             catch { await showLibrary(); feedback.textContent = '再生できませんでした。もう一度お試しください。'; }
             finally { play.disabled = false; }
