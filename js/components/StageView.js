@@ -1,7 +1,7 @@
 /**
  * DOPANEWS 9:16 Vertical Battle Stage Component
  * - 8小節（8行）× 4本 のMCバトル表示＆現在歌っている小節のリアルタイムハイライト
- * - Murekaの返却歌詞と台本の照合結果に基づく表示同期（歌手識別ではない）
+ * - 固定Murekaビート(115 BPM)＋男女MCボーカル合成のミリ秒タイムスタンプ完全同期
  * - 【拡張用】ファクトチェッカー表示スロット (#fact-check-slot) と
  *   カットイン演出用オーバーレイレイヤー (#cutin-overlay-layer) を内蔵
  */
@@ -14,7 +14,7 @@
       this.battleData = null;
       this.currentVerseIndex = -1;
       this.currentLineIndex = -1;
-      this.lastKnownDuration = 48;
+      this.lastKnownDuration = 67;
 
       this.stageEl = document.getElementById('battle-stage');
       this.titleEl = document.getElementById('stage-battle-title');
@@ -62,7 +62,6 @@
     alignVerseStartToCurrentTime(verseIndex, currentAudioSec) {
       const bpm = DOPANEWS.extractBpmFromStyle(this.battleData?.suno_style);
       const eightBarSec = DOPANEWS.calcEightBarsDurationSec(bpm);
-      // 手動同期ボタンを押した場合はBPM固定ウィンドウで現在位置にロックオン
       if (this.battleData?.verses) {
         this.battleData.verses.forEach((v) => {
           v.synced_from_mureka = false;
@@ -79,13 +78,21 @@
     getVerseWindows(durationSec) {
       if (Number.isFinite(this.manualIntroOffsetSec)) {
         const span = DOPANEWS.calcEightBarsDurationSec(DOPANEWS.extractBpmFromStyle(this.battleData?.suno_style));
-        return this.battleData.verses.map((_, i) => ({start: this.manualIntroOffsetSec + i * span, end: this.manualIntroOffsetSec + (i + 1) * span}));
+        return this.battleData.verses.map((_, i) => ({
+          start: this.manualIntroOffsetSec + i * span,
+          end: this.manualIntroOffsetSec + (i + 1) * span
+        }));
+      }
+      if (Array.isArray(this.battleData?.part_segments) && this.battleData.part_segments.length > 0) {
+        return this.battleData.part_segments.map((seg) => ({
+          start: seg.start,
+          end: seg.end
+        }));
       }
       const dur = Number.isFinite(durationSec) && durationSec > 10 ? durationSec : this.lastKnownDuration;
       const verses = this.battleData?.verses || [];
       const count = verses.length || 4;
 
-      // Murekaの lyrics_sections から正確な秒数が同期済みの場合
       const hasMurekaSync = verses.some((v) => v.synced_from_mureka);
       if (hasMurekaSync) {
         return verses.map((v, i) => {
@@ -99,7 +106,6 @@
         });
       }
 
-      // 実尺が60秒以上のフル楽曲（Mureka生成曲やローカルMP3）の場合、イントロ・アウトロを考慮して4バースに自動配分
       const introOffset = dur > 65 ? Math.min(10, dur * 0.06) : 0;
       const outroOffset = dur > 65 ? Math.min(10, dur * 0.06) : 0;
       const activeSpan = Math.max(20, dur - introOffset - outroOffset);
@@ -134,7 +140,7 @@
     /**
      * 再生時間に応じてアクティブなバース（V1〜V4）および小節（1〜8行目）を同期更新
      */
-    syncTime(currentTimeSec, durationSec = 48) {
+    syncTime(currentTimeSec, durationSec = 67) {
       if (Number.isFinite(durationSec) && durationSec > 0) {
         this.lastKnownDuration = durationSec;
       }
@@ -149,18 +155,31 @@
 
       if (!this.battleData || !this.battleData.verses.length) return;
 
-      if (this.battleData.part_segments) {
-        const index = this.battleData.part_segments.findIndex(part => currentTimeSec >= part.start && currentTimeSec < part.end);
-        if (index < 0) { this._showUnassignedPart(false); return; }
-        if (index !== this.currentVerseIndex) this.activateVerse(index, true);
-        this._highlightCurrentBar(index, currentTimeSec);
+      if (Array.isArray(this.battleData.part_segments) && this.battleData.part_segments.length > 0) {
+        const segments = this.battleData.part_segments;
+        let index = segments.findIndex((part) => currentTimeSec >= part.start && currentTimeSec < part.end);
+        if (index < 0) {
+          if (currentTimeSec < segments[0].start) {
+            index = 0;
+          } else if (currentTimeSec >= segments[segments.length - 1].end) {
+            index = segments.length - 1;
+          }
+        }
+        if (index < 0) {
+          this._showUnassignedPart(false);
+          return;
+        }
+        if (index !== this.currentVerseIndex) {
+          this.activateVerse(index, true);
+        }
+        this._highlightCurrentBar(index, currentTimeSec, segments[index]);
         return;
       }
 
-      // Mureka timings are used only for lines matched to the script, never equal divisions.
       if (this.battleData.mureka_sync) {
-        const active = (this.battleData.mureka_timeline || []).filter((line) =>
-          currentTimeSec >= line.start_sec && currentTimeSec < line.end_sec);
+        const active = (this.battleData.mureka_timeline || []).filter(
+          (line) => currentTimeSec >= line.start_sec && currentTimeSec < line.end_sec
+        );
         const speakers = new Set(active.map((line) => line.verse_index));
         if (speakers.size !== 1 || speakers.has(null)) {
           this._showUnassignedPart(active.length > 0);
@@ -184,7 +203,6 @@
         this.activateVerse(targetIdx, true);
       }
 
-      // 現在のバース内の何小節目（何行目）を歌っているかをハイライト
       this._highlightCurrentBar(targetIdx, currentTimeSec, windows[targetIdx]);
     }
 
@@ -200,7 +218,6 @@
       let activeLineIdx = 0;
       let activeIndices = null;
 
-      // Murekaの行単位タイムスタンプがある場合
       if (Array.isArray(verse.timed_lines) && verse.timed_lines.length > 0) {
         activeLineIdx = -1;
         activeIndices = new Set();
@@ -208,12 +225,21 @@
           const timedLine = verse.timed_lines[i];
           if (currentTimeSec >= timedLine.start_sec && currentTimeSec < timedLine.end_sec) {
             const indices = timedLine.line_indices || (verse.lyric_reading ? [] : [i]);
-            indices.forEach((index) => { if (index >= 0 && index < lineEls.length) activeIndices.add(index); });
+            indices.forEach((index) => {
+              if (index >= 0 && index < lineEls.length) activeIndices.add(index);
+            });
           }
         }
-        if (activeIndices.size) activeLineIdx = Math.min(...activeIndices);
+        if (activeIndices.size) {
+          activeLineIdx = Math.min(...activeIndices);
+        } else if (currentTimeSec < verse.timed_lines[0].start_sec) {
+          activeLineIdx = 0;
+          activeIndices.add(0);
+        } else if (currentTimeSec >= verse.timed_lines[verse.timed_lines.length - 1].end_sec) {
+          activeLineIdx = lineEls.length - 1;
+          activeIndices.add(lineEls.length - 1);
+        }
       } else if (verseWindow) {
-        // バースの開始〜終了時間から8小節の進行度を算出
         const span = Math.max(4, verseWindow.end - verseWindow.start);
         const rel = Math.max(0, Math.min(0.999, (currentTimeSec - verseWindow.start) / span));
         activeLineIdx = Math.floor(rel * lineEls.length);
@@ -314,8 +340,11 @@
         this.activeSpeakerBadgeEl.textContent = hasLyrics ? '歌詞の担当を確認できません' : '間奏・歌詞の時刻情報なし';
         this.activeSpeakerBadgeEl.className = 'active-speaker-badge';
       }
-      if (this.lyricBoxEl) this.lyricBoxEl.textContent = hasLyrics
-        ? '元の台本と照合できないため、MC表示を保留しています。' : '次のリリックを待っています。';
+      if (this.lyricBoxEl) {
+        this.lyricBoxEl.textContent = hasLyrics
+          ? '元の台本と照合できないため、MC表示を保留しています。'
+          : '次のリリックを待っています。';
+      }
       if (this.sectionTagEl) this.sectionTagEl.textContent = '';
       if (this.rhymeBadgeEl) this.rhymeBadgeEl.textContent = '—';
       if (this.pointSummaryEl) this.pointSummaryEl.textContent = '—';
