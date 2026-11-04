@@ -28,3 +28,7 @@
 .live-news-error { color:#ffa4b6; }
 .news-header-inner > div { margin-left:auto; position:relative; z-index:1; }
 .news-header-inner #news-open-studio { max-width:88px; padding:7px 8px !important; font-size:10px !important; }
+
+/* Keep article actions above the phone reader and below its battle cut-in. */
+.news-battle-bar { z-index:60; }
+.live-generated-article { padding-bottom:calc(100px + env(safe-area-inset-bottom)); }

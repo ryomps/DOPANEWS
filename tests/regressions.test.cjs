@@ -6,7 +6,7 @@ const vm = require('node:vm');
 const root = path.join(__dirname, '..');
 
 // Run the real application components with browser media/DOM boundaries simulated.
-function setup() {
+function setup(storage = new Map()) {
   const elements = new Map();
   let ready;
   let now = 0;
@@ -46,7 +46,7 @@ function setup() {
     console, URL, Uint8Array, performance: { now: () => now }, requestAnimationFrame: () => 0,
     setInterval(fn) { intervals.set(++nextInterval, fn); return nextInterval; },
     clearInterval: id => intervals.delete(id), setTimeout: () => 0,
-    localStorage: { getItem: () => '', setItem() {} },
+    localStorage: { getItem: key => storage.get(key) || '', setItem(key, value) { storage.set(key, value); } },
     document: { activeElement: card, getElementById: id => elements.get(id), createElement: () => element() },
     addEventListener(event, fn) { if (event === 'DOMContentLoaded') ready = fn; }
   };
@@ -682,4 +682,32 @@ test('composed parts switch MC at exactly 20/40/60 seconds including lyric gaps 
   }
   app.stageView.syncTime(80, 80);
   assert.equal(get('battle-stage').attrs['data-active-mc'], 'NONE');
+});
+
+test('Library votes survive a reload and updating a vote does not duplicate a battle', () => {
+  const storage = new Map();
+  const first = setup(storage);
+  first.app.judgeModal.open(first.app.currentBattleData);
+  first.get('btn-vote-kenta').emit('click');
+  assert.equal(first.data.readBattleVotes()[0].choice, 'KENTA');
+  const reloaded = setup(storage);
+  reloaded.app.judgeModal.open(reloaded.app.currentBattleData);
+  assert.equal(reloaded.get('btn-vote-kenta').getAttribute('aria-pressed'), 'true');
+  reloaded.get('btn-vote-reina').emit('click');
+  assert.equal(reloaded.data.readBattleVotes().length, 1);
+  assert.equal(reloaded.data.readBattleVotes()[0].choice, 'REINA');
+  assert.equal(reloaded.data.readBattleVotes()[0].battleData.title, reloaded.app.currentBattleData.title);
+});
+
+test('Library keeps distinct scripts separate while music timing changes retain the vote', () => {
+  const { app, data, get } = setup();
+  app.judgeModal.open(app.currentBattleData); get('btn-vote-kenta').emit('click');
+  const battle = JSON.parse(JSON.stringify(app.currentBattleData));
+  battle.suno_style = 'Another beat'; battle.verses[0].start_time_sec = 7;
+  app.judgeModal.open(battle);
+  assert.equal(get('btn-vote-kenta').getAttribute('aria-pressed'), 'true');
+  battle.verses[0].lyric = '別の歌詞';
+  app.judgeModal.open(battle); get('btn-reflect-undecided').emit('click');
+  assert.equal(data.readBattleVotes().length, 2);
+  assert.equal(data.readBattleVotes()[0].choice, 'UNDECIDED');
 });

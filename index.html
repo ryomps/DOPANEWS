@@ -13,6 +13,8 @@
   <link rel="stylesheet" href="./css/mobile-news.css" />
   <link rel="stylesheet" href="./css/dev-workspace.css" />
   <link rel="stylesheet" href="./css/news-live.css" />
+  <link rel="stylesheet" href="./css/app-footer.css" />
+  <link rel="stylesheet" href="./css/library.css" />
 </head>
 <body class="news-mode">
   <section id="news-screen" class="news-screen" aria-label="ニュース">
@@ -24,7 +26,7 @@
     <main id="news-content" class="news-content"></main>
   </section>
 
-    <footer id="news-battle-bar" class="news-battle-bar" hidden><div><span>このニュースを、ふたつの視点で。</span><button id="news-start-battle" type="button">MCバトル開始 <span aria-hidden="true">→</span></button><small>資料に基づく創作台本＋デモビートで再生</small></div></footer>
+    <footer id="news-battle-bar" class="news-battle-bar" hidden><div><span>このニュースを、ふたつの視点で。</span><button id="news-start-battle" type="button">MCバトル</button><small>資料に基づく創作台本＋デモビートで再生</small></div></footer>
 
   <button id="btn-toggle-drawer" class="mobile-drawer-btn" type="button">⚙️ 設定・記事入力</button>
 
@@ -216,10 +218,11 @@
         <!-- ステージ上部：バトルタイトル＆再生タイマー -->
         <header class="stage-top">
           <div class="stage-top-meta">
-            <span class="live-pill"><span class="live-dot"></span>ON AIR BATTLE</span>
+            <span class="live-pill" hidden><span class="live-dot"></span>ON AIR BATTLE</span>
             <div style="display: flex; align-items: center; gap: 6px;">
               <button
                 id="btn-sync-vocal-start"
+                hidden
                 type="button"
                 class="btn-vocal-sync"
                 title="前奏（イントロ）が終わって歌い始めた瞬間に押すと、そこから96BPM（8小節＝20秒）で画面をピタッと同期します！"
@@ -284,7 +287,7 @@
         <!-- ステージ下部：オーディオスペクトラム風ビジュアライザー＆再生コントロール -->
         <footer class="stage-bottom">
           <div class="battle-seek-row">
-            <div class="stage-progress-track"><div id="stage-progress-fill" class="stage-progress-fill"></div></div>
+            <div id="stage-progress-track" class="stage-progress-track"><div id="stage-progress-fill" class="stage-progress-fill"></div></div>
             <input id="battle-seek" type="range" min="0" max="48" value="0" step="0.1" aria-label="再生位置" />
           </div>
           <div id="stage-verse-pills" class="verse-pills-row" aria-label="バースを選択"></div>
@@ -336,6 +339,20 @@
     </main>
   </div>
 
+  <section id="library-screen" class="news-screen library-screen" aria-label="ライブラリ" hidden>
+    <header class="news-header"><div class="news-header-inner"><a class="news-brand" href="#" aria-label="DOPANEWS トップ">DOPA<span>NEWS</span></a></div></header>
+    <main class="library-content">
+      <div class="library-heading"><div><span class="library-eyebrow">YOUR BATTLES, YOUR THOUGHTS.</span><h1 tabindex="-1">Library</h1></div><button id="library-refresh" type="button" aria-label="ライブラリを更新">↻</button></div>
+      <p class="library-intro">聴いたバトルと、あのときの自分の意見。</p>
+      <nav id="library-genres" class="library-filters" aria-label="バトルのジャンル"></nav>
+      <p id="library-feedback" role="status" aria-live="polite"></p>
+      <div id="library-cards" class="library-cards"></div>
+    </main>
+  </section>
+  <nav class="app-bottom-nav" aria-label="アプリメニュー">
+    <button class="app-nav-item app-nav-news" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h3v4H8zM14 11h2m-2 4h2M8 18h8"/></svg><span>NEWS</span></button>
+    <button class="app-nav-item app-nav-library" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h11a2 2 0 0 1 2 2v16l-6.5-4L7 21V3zM4 5v15M11 7h5M11 10h5"/></svg><span>Library</span></button>
+  </nav>
   <script src="./js/bootstrap.js"></script>
 </body>
 </html>

@@ -1,13 +1,36 @@
-/** Reflect on the two viewpoints after listening. State lasts for this page session. */
+/** Reflect on the two viewpoints after listening; retain votes for Library. */
 (function (global) {
   const DOPANEWS = (global.DOPANEWS = global.DOPANEWS || {});
+  const VOTES_KEY = 'dopanews_library_votes_v1';
+  let sessionVotes = [];
+  function battleKey(data) {
+    return JSON.stringify({
+      title: data?.title, topic_summary: data?.topic_summary,
+      kenta_stance: data?.kenta_stance, reina_stance: data?.reina_stance,
+      verses: (data?.verses || []).map(v => ({ speaker: v.speaker, lyric: v.lyric, point_summary: v.point_summary }))
+    });
+  }
+  function readVotes() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(VOTES_KEY) || 'null');
+      if (Array.isArray(stored)) sessionVotes = stored.filter(v => typeof v.key === 'string' && v.battleData?.title && ['KENTA','REINA','UNDECIDED'].includes(v.choice));
+    } catch { /* Session votes still work when storage is unavailable. */ }
+    return sessionVotes;
+  }
+  function saveVote(data, choice) {
+    const key = battleKey(data);
+    sessionVotes = [{ key, battleData: data, choice, votedAt: new Date().toISOString() }, ...readVotes().filter(v => v.key !== key)];
+    try { localStorage.setItem(VOTES_KEY, JSON.stringify(sessionVotes)); } catch { /* Keep the vote for this session. */ }
+  }
+  DOPANEWS.battleReflectionKey = battleKey;
+  DOPANEWS.readBattleVotes = readVotes;
 
   class JudgeModal {
     constructor({ onReplay, onChoose }) {
       this.onChoose = onChoose || (() => {});
       this.onReplay = onReplay || (() => {});
       this.battleData = null;
-      this.reflections = new Map();
+      this.reflections = new Map(readVotes().map(v => [v.key, { choice: v.choice }]));
       this.overlayEl = document.getElementById('judge-modal-overlay');
       this.cardEl = this.overlayEl.querySelector('.judge-modal-card');
       this.titleEl = document.getElementById('judge-battle-title');
@@ -21,6 +44,7 @@
       Object.entries(this.buttons).forEach(([choice, button]) => {
         button.addEventListener('click', () => {
           this.reflections.get(this.battleKey).choice = choice;
+          saveVote(this.battleData, choice);
           this._renderSelection();
           this.close();
           this.onChoose(choice);
@@ -52,17 +76,7 @@
       if (this.overlayEl.classList.contains('hidden')) this.previousFocus = document.activeElement;
       this.battleData = battleData;
       // Identify the script, excluding mutable music style and synchronization metadata.
-      this.battleKey = JSON.stringify({
-        title: battleData?.title,
-        topic_summary: battleData?.topic_summary,
-        kenta_stance: battleData?.kenta_stance,
-        reina_stance: battleData?.reina_stance,
-        verses: (battleData?.verses || []).map((verse) => ({
-          speaker: verse.speaker,
-          lyric: verse.lyric,
-          point_summary: verse.point_summary
-        }))
-      });
+      this.battleKey = battleKey(battleData);
       if (!this.reflections.has(this.battleKey)) {
         this.reflections.set(this.battleKey, { choice: null });
       }

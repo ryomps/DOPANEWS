@@ -640,6 +640,7 @@
     }
 
     _applyBattleData(battleData) {
+      if (!battleData.category) battleData.category = DOPANEWS.getNewsCategory?.(this.currentArticleText) || 'その他';
       this.currentBattleData = battleData;
       this.stageView.setBattleData(battleData);
       const syncButton = document.getElementById('btn-sync-vocal-start');

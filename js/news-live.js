@@ -30,6 +30,7 @@
     const mount = document.getElementById('news-live-panel');
     const curated = document.getElementById('news-content');
     let data, busy = false, current = null, version = 0;
+    let articleBattleBar = null;
     const heading = el('h2', 'いまの話題から、ニュースを作る');
     const status = el('p', '見出しを取得中…', 'live-news-status'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
     const controls = el('div', undefined, 'live-news-actions');
@@ -61,6 +62,7 @@
       finally { lock(false); }
     }
     function renderList() {
+      articleBattleBar?.remove(); articleBattleBar = null;
       body.replaceChildren(); current = null;
       const note = el('p', '検索にOpenAIを最大1回、記事作成にGeminiを最大3回使用します。保存済み検索は再利用します。Murekaは記事作成では使用しません。現在の根拠資料は消費者庁・統計局・文科省のHTMLに対応しています。', 'live-news-note');
       body.append(note);
@@ -151,6 +153,7 @@
       }
     }
     function renderArticle(record) {
+      articleBattleBar?.remove(); articleBattleBar = null;
       body.replaceChildren();
       const a = record.article;
       body.append(button('〈 話題一覧に戻る', () => { renderList(); status.textContent = '話題を選んでください。'; }));
@@ -158,7 +161,7 @@
       article.append(el('h1', a.title), el('p', a.summary), el('p', `DOPANEWSが資料をもとに編集・加工 ／ 作成 ${date(record.createdAt)}`, 'live-news-note'), el('p', record.scope, 'live-news-note'));
       a.paragraphs.forEach(p => { const section = el('p', p.text); section.append(el('small', ` 根拠：${p.factIds.join('・')}`)); article.append(section); });
       if (record.status === 'ready') {
-        const start = button('この記事でラップを生成する', async () => {
+        const start = button('MCバトル', async () => {
           const app = global.dopaNewsApp;
           if (!app || app.isGenerating || busy) return;
           app.newsUrlInputEl.value = ''; app.lastFetchedUrl = '';
@@ -169,7 +172,11 @@
           app.audioController._ensureAudioContext();
           await app.handleFullBattleGeneration({ articleText: record.articleText });
         });
-        article.append(el('p', 'Geminiで作詞し、Mureka 9で音源を生成します。', 'live-news-note'), start);
+        articleBattleBar = el('footer', undefined, 'news-battle-bar live-article-battle-bar');
+        const barContent = el('div');
+        barContent.append(start);
+        articleBattleBar.append(barContent);
+        document.body.append(articleBattleBar);
       }
       const details = el('details'); details.append(el('summary', '事実一覧・根拠資料を確認する'));
       record.facts.forEach(f => {
@@ -197,7 +204,11 @@
       document.getElementById('news-screen').scrollTop = 0;
     }
     // Fixed articles retain their own detail routing. Avoid showing two articles at once.
-    function route() { const fixed = location.hash.startsWith('#news/'); mount.hidden = fixed; curated.hidden = false; }
+    function route() {
+      const fixed = location.hash.startsWith('#news/');
+      mount.hidden = fixed; curated.hidden = false;
+      if (articleBattleBar) articleBattleBar.hidden = fixed;
+    }
     global.addEventListener('hashchange', route); route(); load();
   });
 })(window);

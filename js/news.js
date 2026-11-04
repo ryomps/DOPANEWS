@@ -305,6 +305,7 @@
   }
 ];
   D.newsRepository = { async list() { return articles; } };
+  D.getNewsCategory = text => articles.find(article => String(text || '').includes(article.title))?.category || 'その他';
   const genreColors = {"トップ":"#ef4444","テクノロジー":"#3b82f6","政治":"#a78bfa","経済":"#eab308","スポーツ":"#f97316","自然":"#22c55e","エンタメ":"#06b6d4","恋愛":"#f472b6"};
   const genreStyle = genre => '--genre-color:'+genreColors[genre];
   function artwork(a) {
