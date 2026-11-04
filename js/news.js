@@ -8,7 +8,7 @@
     "title": "学校で生成AI、どう使う？ 文科省ガイドラインが示す活用と注意点",
     "summary": "文科省の2024年12月の指針を読み解く。学びの支援と、自分で判断する力を両立できるか。",
     "date": "2024/12/26",
-    "tag": "AIと教育",
+    "tags": ["AI","教育"],
     "color": "#e8eaf6",
     "accent": "#535da4",
     "art": "ai",
@@ -41,7 +41,7 @@
     "title": "2025年の消費者物価は3.2％上昇。家計の支援と、所得を増やす対策を考える",
     "summary": "2026年1月公表の2025年平均結果をもとに、物価と暮らしを考える。短期の支援と継続的な所得向上はどう両立する？",
     "date": "2026/01/23",
-    "tag": "物価と暮らし",
+    "tags": ["物価","暮らし"],
     "color": "#e2eee9",
     "accent": "#226b57",
     "art": "work",
@@ -70,11 +70,11 @@
   },
   {
     "id": "food",
-    "category": "自然",
+    "category": "経済",
     "title": "2023年度の食品ロスは464万トン。家庭の工夫と、売り方の改善を考える",
     "summary": "事業系231万トン、家庭系233万トン。食べ物のムダを減らすには、どこから変える？",
     "date": "2025/06/27",
-    "tag": "食品ロス",
+    "tags": ["食品ロス"],
     "art": "food",
     "stances": [
       "家庭で買う量と使い切る工夫を見直そう",
@@ -108,7 +108,7 @@
     "summary": "2023年10月に施行されたルールを読み解く。広告を見分けられる表示と、発信のしやすさを考える。",
     "date": "2023/10/01",
     "dateLabel": "制度施行",
-    "tag": "SNSと広告",
+    "tags": ["SNS","広告"],
     "art": "ads",
     "stances": [
       "広告だと見分けられる表示を重視しよう",
@@ -141,7 +141,7 @@
     "title": "65歳以上が29.3％。人口構成から、世代を支える仕組みを考える",
     "summary": "2024年10月時点の人口推計をもとに、若い世代への投資と生活を支えるサービスを考える。",
     "date": "2025/04/14",
-    "tag": "人口と社会",
+    "tags": ["人口","社会"],
     "art": "people",
     "stances": [
       "若い世代の学びと生活への投資を重視しよう",
@@ -175,7 +175,7 @@
     "summary": "2025年12月のガイドラインから、活動の機会・移動・費用を考える。",
     "date": "2025/12",
     "dateLabel": "資料年月",
-    "tag": "部活動の地域展開",
+    "tags": ["部活動","地域展開"],
     "art": "sport",
     "stances": [
       "活動を広げる前に、移動や参加費の壁をなくそう",
@@ -208,7 +208,7 @@
     "title": "運動したい人66.6％、週1回以上は52.5％。その差をどう埋める？",
     "summary": "2024年度の調査から、日常の小さな一歩と参加しやすい環境を考える。",
     "date": "2025/03/11",
-    "tag": "スポーツのある生活",
+    "tags": ["スポーツ","生活"],
     "art": "sport",
     "stances": [
       "続けられる小さな運動を日常で見つけよう",
@@ -242,7 +242,7 @@
     "summary": "こども家庭庁の方針をもとに、希望する人への支援と、多様な選択の尊重を考える。",
     "date": "2026/10/29",
     "dateLabel": "資料確認",
-    "tag": "結婚とライフデザイン",
+    "tags": ["結婚","ライフデザイン"],
     "art": "love",
     "stances": [
       "結婚に限らない多様な生き方を尊重しよう",
@@ -276,7 +276,7 @@
     "summary": "公的会議の最終報告から、出会いの機会・安全性・本人の選択を考える。",
     "date": "2026/10/29",
     "dateLabel": "資料確認",
-    "tag": "出会いとアプリ",
+    "tags": ["出会い","アプリ"],
     "art": "love",
     "stances": [
       "出会いを広げる前に、安心して選べる条件を",
@@ -306,7 +306,7 @@
 ];
   D.newsRepository = { async list() { return articles; } };
   D.getNewsCategory = text => articles.find(article => String(text || '').includes(article.title))?.category || 'その他';
-  const genreColors = {"トップ":"#ef4444","テクノロジー":"#3b82f6","政治":"#a78bfa","経済":"#eab308","スポーツ":"#f97316","自然":"#22c55e","エンタメ":"#06b6d4","恋愛":"#f472b6"};
+  const genreColors = {"トップ":"#ef4444","テクノロジー":"#3b82f6","政治":"#a78bfa","経済":"#eab308","スポーツ":"#f97316","自然":"#22c55e","エンタメ":"#06b6d4","恋愛":"#f472b6","その他":"#94a3b8"};
   D.newsGenreColors = genreColors;
   const genreStyle = genre => '--genre-color:'+genreColors[genre];
   function artwork(a) {
@@ -325,6 +325,7 @@
     const scene = scenes[a.art].replaceAll('fill="white"', 'fill="#b9c9df"').replaceAll('#c7cdee', '#293e65').replaceAll('#d4baa0', '#28334a').replaceAll('#6e5746', '#93a5bd').replaceAll('#adcdbe', '#1b3542');
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400"><defs><radialGradient id="glow"><stop stop-color="'+a.accent+'" stop-opacity=".2"/><stop offset="1" stop-color="'+a.color+'" stop-opacity="0"/></radialGradient></defs><rect width="640" height="400" fill="'+a.color+'"/><ellipse cx="250" cy="160" rx="400" ry="280" fill="url(#glow)"/>'+scene+'</svg>');
   }
+  D.newsArtwork = artwork;
   const escape = s => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   global.addEventListener('DOMContentLoaded', async () => {
     const items = await D.newsRepository.list();
@@ -371,26 +372,194 @@
       });
     }
     let category = 'トップ', selected = null, listScroll = 0, articleScroll = 0, categoryScroll = 0;
+    let searchQuery = '';
+    const selectedSearchTags = new Set();
+    const searchButton = document.getElementById('news-open-search');
+    searchButton.addEventListener('click', () => {
+      D.liveNewsNavigation?.back();
+      category = 'トップ'; categoryScroll = 0;
+      location.hash = 'search';
+    });
     const meta = a => '<span class="news-category" style="'+genreStyle(a.category)+'">'+a.category+'</span><span>'+escape(a.dateLabel||'資料公表')+' '+a.date+'</span>';
     function list() {
       const previousTabs = content.querySelector('.news-tabs');
       if (previousTabs) categoryScroll = previousTabs.scrollLeft;
-      selected = null; back.hidden = true; bar.hidden = true;
-      const filtered = items.filter(a => category === 'トップ' || a.category === category);
-      content.innerHTML = '<nav class="news-tabs" aria-label="ニュースのカテゴリー">'+['トップ','テクノロジー','政治','経済','スポーツ','自然','エンタメ','恋愛'].map(c=>'<button type="button" style="'+genreStyle(c)+'" data-category="'+c+'" aria-pressed="'+(category===c)+'" class="'+(category===c?'active':'')+'">'+c+'</button>').join('')+'</nav>'+(category === 'トップ' ? '<div class="news-section-label"><h2>注目ニュース</h2><span>編集部セレクト</span></div>' : '')+''+(filtered.length?'':'<div class="news-category-empty"><h3>'+escape(category)+'の記事を準備中です</h3><p>根拠資料と利用条件を確認できた記事から追加します。</p><button type="button" data-category="トップ">トップの記事を見る →</button></div>')+'<div class="news-grid">'+filtered.map((a,i)=>'<button type="button" class="news-card '+(i===0?'news-featured':'')+'" style="'+genreStyle(a.category)+'" data-article="'+a.id+'"><img src="'+artwork(a)+'" alt="'+a.caption+'"/><div class="news-card-copy"><div class="news-meta">'+meta(a)+'</div><h3>'+a.title+'</h3><p>'+a.summary+'</p><div class="news-card-bottom"><span>#'+a.tag+'</span><span>記事を読む ↗</span></div></div></button>').join('')+'</div><p class="news-sample-note">公的資料をもとに編集した解説です。表示日はラベルに応じて資料公表・制度施行・資料確認の日付を示します。速報・自動取得ニュースではありません。</p><p class="news-bottom-note">ひとつのニュースに、ひとつじゃない見方を。<br><b>DOPA<span>NEWS</span></b></p>';
+      const searching = location.hash === '#search';
+      const effectiveQuery = searching ? [searchQuery, ...selectedSearchTags].filter(Boolean).join(' ') : '';
+      selected = null; back.hidden = !searching; bar.hidden = true;
+      searchButton.hidden = searching;
+      const filtered = items.filter(a => (category === 'トップ' || a.category === category) && D.matchesNewsSearch(a, effectiveQuery));
+      content.innerHTML = '<nav class="news-tabs" aria-label="ニュースのカテゴリー">'+['トップ','テクノロジー','政治','経済','スポーツ','自然','エンタメ','恋愛','その他'].map(c=>'<button type="button" style="'+genreStyle(c)+'" data-category="'+c+'" aria-pressed="'+(category===c)+'" class="'+(category===c?'active':'')+'">'+c+'</button>').join('')+'</nav>'+(category === 'トップ' ? '<div class="news-section-label"><h2>注目ニュース</h2><span>編集部セレクト</span></div>' : '')+''+(filtered.length?'':'<div class="news-category-empty"><h3>'+escape(category)+'の記事を準備中です</h3><p>根拠資料と利用条件を確認できた記事から追加します。</p><button type="button" data-category="トップ">トップの記事を見る →</button></div>')+'<div class="news-grid">'+filtered.map((a,i)=>'<button type="button" class="news-card '+(i===0?'news-featured':'')+'" style="'+genreStyle(a.category)+'" data-article="'+a.id+'"><img src="'+artwork(a)+'" alt="'+a.caption+'"/><div class="news-card-copy"><div class="news-meta">'+meta(a)+'</div><h3>'+a.title+'</h3><p>'+a.summary+'</p><div class="news-card-bottom"><span>'+D.getNewsTags(a).map(tag=>'#'+escape(tag)).join(' ')+'</span><span>記事を読む ↗</span></div></div></button>').join('')+'</div><p class="news-sample-note">配信元と記事の種類は各カードに表示しています。初回の「記事を作成」にはOpenAIを使用します。</p><p class="news-bottom-note">ひとつのニュースに、ひとつじゃない見方を。<br><b>DOPA<span>NEWS</span></b></p>';
       content.querySelector('.news-tabs').scrollLeft = categoryScroll;
+      if (searching) content.querySelector('[data-category="トップ"]').textContent = 'すべて';
+      if (searching) {
+      const title = document.createElement('h1'); title.className = 'news-search-title'; title.textContent = 'ニュースを検索'; content.prepend(title);
+      const form = document.createElement('form'); form.className = 'news-search'; form.setAttribute('role', 'search');
+      form.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input type="search" name="query" aria-label="ニュースを検索" placeholder="気になるニュースを検索" autocomplete="off" maxlength="120"/><button type="submit">検索</button>';
+      form.elements.query.value = searchQuery;
+      const searchField = document.createElement('div'); searchField.className = 'news-search-field';
+      form.elements.query.before(searchField);
+      selectedSearchTags.forEach(tag => {
+        const chip = document.createElement('span'); chip.className = 'news-search-chip';
+        const article = items.find(article => D.getNewsTags(article).includes(tag));
+        chip.setAttribute('style', genreStyle(article?.category || 'テクノロジー'));
+        const label = document.createElement('span'); label.textContent = '#' + tag;
+        const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'news-search-chip-remove';
+        remove.textContent = '×'; remove.setAttribute('aria-label', '#' + tag + 'を削除');
+        remove.addEventListener('click', () => {
+          searchQuery = form.elements.query.value.trim().slice(0, 120);
+          selectedSearchTags.delete(tag); list(); content.querySelector('.news-search input').focus({preventScroll:true});
+        });
+        chip.append(label, remove); searchField.append(chip);
+      });
+      searchField.append(form.elements.query);
+      if (selectedSearchTags.size) form.elements.query.placeholder = 'キーワードを追加';
+      const clearInput = document.createElement('button');
+      clearInput.type = 'button'; clearInput.className = 'news-search-clear';
+      clearInput.setAttribute('aria-label', '検索条件を全消去'); clearInput.textContent = '×';
+      clearInput.hidden = !form.elements.query.value && !selectedSearchTags.size;
+      searchField.after(clearInput);
+      form.elements.query.addEventListener('input', () => { clearInput.hidden = !form.elements.query.value && !selectedSearchTags.size; });
+      clearInput.addEventListener('click', () => {
+        searchQuery = ''; selectedSearchTags.clear(); list(); content.querySelector('.news-search input').focus({preventScroll:true});
+      });
+      title.after(form);
+      const tags = document.createElement('nav');
+      tags.className = 'news-search-tags'; tags.setAttribute('aria-label', 'ハッシュタグで検索');
+      const seenTags = new Set();
+      items.forEach(article => D.getNewsTags(article).forEach(tag => {
+        if (seenTags.has(tag)) return;
+        seenTags.add(tag);
+        const button = document.createElement('button'); button.type = 'button';
+        button.dataset.searchTag = tag; button.textContent = '#' + tag;
+        button.setAttribute('style', genreStyle(article.category));
+        button.setAttribute('aria-pressed', String(selectedSearchTags.has(tag)));
+        tags.append(button);
+      }));
+      form.after(tags);
+      if (!effectiveQuery) {
+        content.querySelector('.news-grid').hidden = true;
+        content.querySelector('.news-category-empty')?.remove();
+
+      }
+      }
+      const liveCount = D.appendLiveNewsCards?.(content.querySelector('.news-grid'), category, effectiveQuery) || 0;
+      if (!searching && category === 'トップ') {
+        const grid = content.querySelector('.news-grid');
+        const rows = Array.from(grid.children);
+        rows.forEach(row => {
+          if (row.dataset.article) row.dataset.genre = items.find(article => article.id === row.dataset.article)?.category || 'その他';
+        });
+        const picks = rows.filter(row => row.dataset.topPick === 'true').slice(0, 3);
+        if (!picks.length) picks.push(...rows.slice(0, 3));
+        grid.replaceChildren(...picks);
+        const leadCard = picks[0]?.matches('.news-card') ? picks[0] : picks[0]?.querySelector('.news-card');
+        leadCard?.classList.add('news-pick-featured');
+        content.querySelector('.news-section-label span').textContent = 'ピックアップ';
+        ['テクノロジー','政治','経済','スポーツ','自然','エンタメ','恋愛','その他'].forEach(genre => {
+          const genreRows = rows.filter(row => row.dataset.genre === genre && !picks.includes(row));
+          if (!genreRows.length) return;
+          const heading = document.createElement('div'); heading.className = 'news-section-label';
+          heading.dataset.sectionGenre = genre;
+          heading.setAttribute('style', genreStyle(genre));
+          const title = document.createElement('h2'); title.textContent = genre; heading.append(title);
+          grid.append(heading, ...genreRows);
+        });
+        syncTopGenre();
+      }
+      if (liveCount) content.querySelector('.news-category-empty')?.remove();
+      if (searching && effectiveQuery) {
+        content.querySelector('.news-category-empty')?.remove();
+        const heading = content.querySelector('.news-section-label h2'); if (heading) heading.textContent = '検索結果';
+        const result = document.createElement('p'); result.className = 'news-search-results'; result.setAttribute('role', 'status');
+        const labels = [searchQuery, ...Array.from(selectedSearchTags, tag => '#' + tag)].filter(Boolean).join(' ');
+        result.textContent = `「${labels}」 ${filtered.length + liveCount}件${category !== 'トップ' ? ' · ' + category : ''}`;
+        content.querySelector('.news-grid').before(result);
+        const clear = document.createElement('button'); clear.type = 'button'; clear.dataset.clearSearch = ''; clear.textContent = '解除'; result.append(clear);
+        if (!filtered.length && !liveCount) {
+          const empty = document.createElement('p'); empty.className = 'news-search-empty';
+          empty.textContent = '一致するニュースがありません。短いキーワードに変えるか、別のジャンルで探してみてください。';
+          content.querySelector('.news-grid').append(empty);
+        }
+      }
+      if (searching) {
+        content.querySelector('.news-section-label')?.remove();
+        content.querySelector('.news-sample-note')?.remove();
+        content.querySelector('.news-bottom-note')?.remove();
+      }
+      if (D.newsFeedStatus) {
+        const status = document.createElement('p'); status.className = 'news-feed-status';
+        status.textContent = D.newsFeedStatus;
+        content.querySelector('.news-grid').before(status);
+      }
     }
+    let genreScrollFrame = 0;
+    function syncTopGenre() {
+      if (category !== 'トップ' || selected || location.hash === '#search') return;
+      const tabs = content.querySelector('.news-tabs');
+      if (!tabs) return;
+      const threshold = tabs.getBoundingClientRect().bottom + 35;
+      let current = 'トップ';
+      content.querySelectorAll('[data-section-genre]').forEach(heading => {
+        if (heading.getBoundingClientRect().top <= threshold) current = heading.dataset.sectionGenre;
+      });
+      tabs.querySelectorAll('[data-category]').forEach(button => {
+        const active = button.dataset.category === current;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+        if (active) {
+          const bounds = button.getBoundingClientRect(), area = tabs.getBoundingClientRect();
+          if (bounds.left < area.left || bounds.right > area.right) tabs.scrollLeft += bounds.left - area.left - (area.width - bounds.width) / 2;
+        }
+      });
+    }
+    screen.addEventListener('scroll', () => {
+      if (genreScrollFrame) return;
+      genreScrollFrame = requestAnimationFrame(() => { genreScrollFrame = 0; syncTopGenre(); });
+    }, {passive:true});
     function sourceMarkup(a) {
       return '<section class="news-source-notes"><h2>出典・利用条件</h2>'+a.sources.map(src=>'<p><a href="'+escape(src.url)+'" target="_blank" rel="noopener noreferrer">'+escape(src.name)+'</a><br>資料・制度の日付：'+escape(src.date)+'<br>'+escape(src.scope)+'</p><p><a href="'+escape(src.terms)+'" target="_blank" rel="noopener noreferrer">出典サイトの利用規約</a></p>').join('')+'<p>上記資料をもとにDOPANEWSが編集・加工。本文は本アプリの解説、イラストは自作、MCの意見と歌詞は創作です。資料・規約確認日：2026年10月29日。</p></section>';
     }
     function detail(a) {
-      selected = a; back.hidden = false; bar.hidden = false;
+      selected = a; back.hidden = false; bar.hidden = false; searchButton.hidden = false;
       content.innerHTML = '<article class="news-article" style="'+genreStyle(a.category)+'"><div class="news-meta"><span class="news-category">'+a.category+'</span><span>公的資料に基づく解説</span><span>約2分で読めます</span></div><h1 tabindex="-1">'+a.title+'</h1><div class="news-byline"><span>DOPANEWS 編集部</span><time datetime="'+a.date.replaceAll('/','-')+'">'+escape(a.dateLabel||'資料公表')+'：'+a.date+'</time></div><figure><img src="'+artwork(a)+'" alt="'+a.caption+'"/><figcaption>'+a.caption+'</figcaption></figure><p class="news-disclaimer">公的資料の説明・数値をもとにDOPANEWSが編集・加工した解説です。MCの意見・歌詞は創作であり、出典機関の発言や推奨を表しません。</p><div class="news-article-body">'+a.paragraphs.map(p=>'<p>'+escape(p)+'</p>').join('')+'</div>'+sourceMarkup(a)+'<aside class="news-perspectives"><span class="news-eyebrow">TWO SIDES, ONE TOPIC</span><h2>資料を踏まえて、あなたはどう考える？</h2><p><b>KENTA</b>'+a.stances[0]+'</p><p><b>REINA</b>'+a.stances[1]+'</p></aside><p class="news-end">ここまで読んだら、次はふたつの視点を聴いてみよう。</p></article>';
       screen.scrollTop = 0; content.querySelector('h1').focus({preventScroll:true});
     }
+    content.addEventListener('submit', event => {
+      if (!event.target.matches('.news-search')) return;
+      event.preventDefault();
+      searchQuery = event.target.elements.query.value.trim().slice(0, 120);
+      listScroll = 0; list(); screen.scrollTop = 0;
+    });
+    content.addEventListener('search', event => {
+      if (event.target.name === 'query' && !event.target.value) { searchQuery = ''; list(); }
+    }, true);
     content.addEventListener('click', e => {
+      const searchTag = e.target.closest('[data-search-tag]');
+      if (searchTag) {
+        const tag = searchTag.dataset.searchTag;
+        if (selectedSearchTags.has(tag)) selectedSearchTags.delete(tag); else selectedSearchTags.add(tag);
+        searchQuery = content.querySelector('.news-search input').value.trim().slice(0, 120);
+        category = 'トップ';
+        listScroll = 0; list(); screen.scrollTop = 0;
+        const activeTag = Array.from(content.querySelectorAll('[data-search-tag]')).find(button => button.dataset.searchTag === tag);
+        activeTag?.focus({preventScroll:true});
+        return;
+      }
+      if (e.target.closest('[data-clear-search]')) {
+        searchQuery = ''; selectedSearchTags.clear(); list(); content.querySelector('.news-search input').focus(); return;
+      }
       const tab = e.target.closest('[data-category]');
       if (tab) {
+        if (category === 'トップ' && location.hash !== '#search' && tab.closest('.news-tabs')) {
+          const target = Array.from(content.querySelectorAll('[data-section-genre]')).find(heading => heading.dataset.sectionGenre === tab.dataset.category);
+          if (tab.dataset.category === 'トップ') { screen.scrollTo({top:0, behavior:'smooth'}); return; }
+          if (target) {
+            const tabsHeight = content.querySelector('.news-tabs').getBoundingClientRect().height;
+            screen.scrollTo({top:screen.scrollTop + target.getBoundingClientRect().top - screen.getBoundingClientRect().top - tabsHeight - 8, behavior:'smooth'});
+            return;
+          }
+        }
         const wasMenuTab = Boolean(tab.closest('.news-tabs'));
         category = tab.dataset.category;
         list();
@@ -413,17 +582,24 @@
       renderedNewsHash = location.hash;
       const a = items.find(a => '#news/'+a.id === location.hash);
       if (a) detail(a); else { list(); screen.scrollTop = listScroll; }
+      if (location.hash === '#search') content.querySelector('.news-search input')?.focus({preventScroll:true});
     }
     D.newsNavigation = {
+      refresh() {
+        if (selected || location.hash === '#library') return;
+        const scroll = screen.scrollTop;
+        list(); screen.scrollTop = scroll;
+      },
       back() {
-        if (selected) { location.hash = ''; return; }
+        if (selected || location.hash === '#search') { searchQuery = ''; selectedSearchTags.clear(); location.hash = ''; return; }
         if (D.liveNewsNavigation?.back()) return;
-        category = 'トップ'; categoryScroll = 0; listScroll = 0;
+        category = 'トップ'; categoryScroll = 0; listScroll = 0; searchQuery = '';
+        selectedSearchTags.clear();
         list(); screen.scrollTop = 0;
       }
     };
     global.addEventListener('hashchange', route);
-    back.addEventListener('click', () => { location.hash = ''; });
+    back.addEventListener('click', () => { if (location.hash === '#search') searchQuery = ''; location.hash = ''; });
     document.getElementById('news-start-battle').addEventListener('click', async () => {
       const app = global.dopaNewsApp;
       if (!selected || app.isGenerating || enteringBattle) return;

@@ -10,7 +10,14 @@
     const libraryNav = document.querySelector('.app-nav-library');
     const genres = ['テクノロジー','政治','経済','スポーツ','自然','エンタメ','恋愛','その他'];
     let entries = [], filter = 'すべて', version = 0, fromLibrary = false;
+    let newsArticles = [];
     const newsScreen = document.getElementById('news-screen');
+    // Keep headers outside the scrolling regions so scrollbars start below them.
+    [newsScreen, screen].forEach(container => {
+      const header = container.querySelector('.news-header');
+      header.classList.add('consumer-fixed-header', container === screen ? 'library-fixed-header' : 'news-fixed-header');
+      document.body.append(header);
+    });
     let lastNews = { hash: '', scrollTop: 0 }, pendingNewsRestore = false;
     function rememberNews(hash = location.hash) {
       if (document.body.classList.contains('library-mode') || fromLibrary || hash === '#library') return;
@@ -99,7 +106,10 @@
         const data = entry.battleData;
         const card = node('article', undefined, 'library-card');
         const top = node('div', undefined, 'library-card-heading');
-        const picture = node('img'); picture.src = './css/images/mc-faceoff.png'; picture.alt = ''; picture.loading = 'lazy';
+        const original = newsArticles.find(article => data.title.includes(article.title) || String(entry.articleText || '').includes(article.title));
+        const picture = node('img');
+        picture.src = D.newsArtwork(original || { category: entry.category, art: entry.category === '経済' ? 'energy' : entry.category === 'テクノロジー' ? 'ai' : 'people' });
+        picture.alt = original?.caption || 'ニュース記事のイメージイラスト'; picture.loading = 'lazy';
         const heading = node('div');
         heading.append(node('span', entry.category, 'library-genre-label'), node('time', formatDate(entry.createdAt || entry.vote?.votedAt)), node('h2', data.title));
         top.append(picture, heading); card.append(top);
@@ -115,8 +125,8 @@
         card.append(vote);
         const bottom = node('div', undefined, 'library-card-actions');
         bottom.append(node('span', entry.saved ? (entry.audioUrl ? '音声保存済み' : '歌詞＋デモビート') : '音声は未保存'));
-        if (entry.saved) {
-          const play = node('button', entry.audioUrl ? '▶ 聴き返す' : '▶ デモを聴く'); play.type = 'button';
+        if (data.verses?.length) {
+          const play = node('button', 'MCバトル'); play.type = 'button';
           play.addEventListener('click', async () => {
             if (app.isGenerating) return;
             play.disabled = true; fromLibrary = true;
@@ -142,6 +152,7 @@
       document.getElementById('return-to-news').hidden = true;
       feedback.textContent = '保存したバトルを読み込んでいます…'; cards.replaceChildren();
       const votes = D.readBattleVotes();
+      newsArticles = await D.newsRepository.list();
       let saved = [], failed = false;
       try { saved = (await D.listSavedBattles()).items || []; }
       catch { failed = true; }

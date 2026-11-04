@@ -208,7 +208,7 @@
       try {
         this.articleInputEl.value = item.articleText || '';
         this.currentArticleText = this.articleInputEl.value;
-        this._applyBattleData(item.battleData);
+        this._applyBattleData(DOPANEWS.normalizeBattleData(item.battleData));
         document.body?.classList.remove('news-mode');
         this.sidebarPanelEl?.classList.remove('drawer-open');
         const back = document.getElementById('return-to-news');

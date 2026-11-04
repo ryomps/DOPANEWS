@@ -31,14 +31,17 @@
     const curated = document.getElementById('news-content');
     let data, busy = false, current = null, version = 0;
     let articleBattleBar = null;
-    const heading = el('h2', 'いまの話題から、ニュースを作る');
+
     const status = el('p', '見出しを取得中…', 'live-news-status'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
     const controls = el('div', undefined, 'live-news-actions');
     const body = el('div');
     const budgetStatus = el('p', '', 'live-news-note');
     const refresh = button('一覧を更新', load);
     controls.append(refresh);
-    mount.append(heading, el('p', 'Yahoo!ニュースの公式RSSから選択。検索・記事の作成はOpenAIを使用します。', 'live-news-note'), controls, status, budgetStatus, body);
+    mount.append(status, body);
+    const developer = el('section', undefined, 'panel-section');
+    developer.append(el('h2', 'ニュース取得', 'section-title'), controls, budgetStatus);
+    document.getElementById('control-drawer').append(developer);
     function showUsage(usage) {
       if (!usage) return;
       budgetStatus.textContent = `OpenAI検索${usage.configured ? '' : '（APIキー未設定）'}：開発中は回数上限なし。本日 ${usage.usedToday}回。失敗・タイムアウトも記録します。自動再検索は行いません。`;
@@ -47,6 +50,8 @@
       busy = on;
       mount.setAttribute('aria-busy', String(on));
       mount.querySelectorAll('button').forEach(b => { b.disabled = on; });
+      curated.querySelectorAll('.live-feed-card').forEach(b => { b.disabled = on; });
+      refresh.disabled = on;
     }
     async function load() {
       if (busy) return;
@@ -59,39 +64,70 @@
         const h = data.headlines;
         status.textContent = `${h.items.length}件 ／ 取得：${date(h.fetchedAt)}${h.stale ? ' ／ 更新失敗：保存済みの見出しです' : ''}${h.errors.length && !h.stale ? ' ／ 一部カテゴリを取得できませんでした' : ''}`;
       } catch (e) { status.textContent = e.message; }
-      finally { lock(false); }
+      finally {
+        lock(false);
+        D.newsFeedStatus = status.textContent;
+        D.newsNavigation?.refresh();
+      }
     }
+    function topicGenre(topic) {
+      const title = topic?.title || topic?.article?.title || '';
+      if (/選挙|開票|当選|落選|上院|下院|大統領|首相|総理|政権|国会|閣僚|衆院|参院|知事|市長|外交|防衛|停戦|トランプ|民主|共和/.test(title)) return '政治';
+      if (/野球|サッカー|スポーツ|五輪|オリンピック|選手|球団|監督|優勝|決勝|大谷|プロ野球|FA行使|相撲|テニス|ゴルフ|W杯|リーグ|巨人|中日|阪神|開幕戦/.test(title)) return 'スポーツ';
+      if (/動物|野生|生物|生態|水族館|動物園|ラッコ|パンダ|ペンギン|イルカ|クジラ|ウナギ|天気|天候|気象|気温|猛暑|寒波|台風|大雨|豪雨|降雪|積雪|梅雨|桜の開花/.test(title)) return '自然';
+      if (/芸能|俳優|女優|歌手|アイドル|映画|ドラマ|アニメ|漫画|ライブ|紅白|お笑い|タレント|声優/.test(title)) return 'エンタメ';
+      if (/結婚|離婚|婚活|恋愛|交際|出会い|夫婦/.test(title)) return '恋愛';
+      if (topic?.feed === 'business') return '経済';
+      if (/株価|日経平均|円安|円高|物価|賃金|企業|決算|銀行|経済|景気|税|食品ロス|値上げ|自販機/.test(title)) return '経済';
+      if (topic?.feed === 'science') return 'テクノロジー';
+      if (/生成AI|人工知能|AI|IT|半導体|ロボット|アプリ|SNS|ネット|宇宙|研究|技術|システム/.test(title)) return 'テクノロジー';
+      return 'その他';
+    }
+    D.appendLiveNewsCards = (list, category, searchQuery = '') => {
+      if (!data) return 0;
+      const topics = data.headlines.items.map(topic => ({ ...topic, saved: data.articles.find(a => a.id === topic.id) }));
+      const ids = new Set(topics.map(t => t.id));
+      data.articles.filter(a => !ids.has(a.id)).forEach(saved => topics.push({ ...saved, saved, provider: 'DOPANEWS', publishedAt: saved.createdAt }));
+      // Editorial top picks stay first, independently of their content genre.
+      topics.sort((a, b) => Number(b.feed === 'top-picks') - Number(a.feed === 'top-picks'));
+      const filtered = topics.filter(topic => (category === 'トップ' || topicGenre(topic) === category)
+        && D.matchesNewsSearch({ ...topic, category: topicGenre(topic) }, searchQuery));
+      const anchor = list.firstChild;
+      filtered.forEach(topic => {
+        const genre = topicGenre(topic);
+        const color = D.newsGenreColors[genre] || '#94a3b8';
+        const row = el('div', undefined, 'live-feed-item');
+        row.dataset.genre = genre;
+        if (topic.feed === 'top-picks') row.dataset.topPick = 'true';
+        const feedback = feedbackBox();
+        const action = button('', () => open(topic.id, !topic.saved, false, feedback, action));
+        action.className = 'news-card live-feed-card';
+        action.title = topic.saved ? '保存した記事を開く' : '初回はOpenAIを使用して記事を作成します';
+        action.style.setProperty('--genre-color', color);
+        action.disabled = busy;
+        const image = el('img');
+        image.src = D.newsArtwork({ category: genre, art: genre === '経済' ? 'energy' : genre === 'テクノロジー' ? 'ai' : 'people' });
+        image.alt = 'ジャンルのイメージイラスト'; image.loading = 'lazy';
+        const copy = el('div', undefined, 'news-card-copy');
+        const meta = el('div', undefined, 'news-meta');
+        const badge = el('span', genre === 'トップ' ? '話題' : genre, 'news-category');
+        meta.append(badge);
+        if (topic.feed === 'top-picks') meta.append(el('span', '注目', 'news-pick-label'));
+        meta.append(el('span', date(topic.publishedAt)));
+        const bottom = el('div', undefined, 'news-card-bottom');
+        bottom.append(el('span', topic.provider || 'DOPANEWS'), el('span', topic.saved?.status === 'ready' ? '保存済み記事' : '記事を作成', 'live-card-action'));
+        copy.append(meta, el('h3', topic.title), bottom);
+        action.append(image, copy); row.append(action, feedback);
+        list.insertBefore(row, anchor);
+      });
+      return filtered.length;
+    };
     function renderList() {
       articleBattleBar?.remove(); articleBattleBar = null;
       body.replaceChildren(); current = null;
-      const note = el('p', '1回の操作でOpenAIを検索に最大1回、記事作成に最大3回使用します。保存済み検索は再利用します。Murekaは記事作成では使用しません。話題ごとに公式発表・報道の公開HTML本文を探し、1件以上取得できれば作成します。', 'live-news-note');
-      body.append(note);
-      const list = el('div', undefined, 'live-news-topics');
-      for (const topic of data.headlines.items) {
-        const row = el('article', undefined, 'live-news-topic');
-        row.append(el('h3', topic.title), el('p', `${topic.provider} ／ 公開 ${date(topic.publishedAt)}`, 'live-news-note'), link('配信元で読む ↗', topic.url));
-        const saved = data.articles.find(a => a.id === topic.id);
-        const feedback = feedbackBox();
-        const action = button(saved ? '保存した原稿を見る' : '根拠を調べて記事を作る', () => open(topic.id, !saved, false, feedback, action));
-        row.append(action, feedback);
-        list.append(row);
-      }
-      if (!data.headlines.items.length) list.append(el('p', '見出しを取得できません。一覧を更新して再確認できます。'));
-      body.append(list);
-      if (data.articles.length) {
-        body.append(el('h3', 'このPCに保存したニュース'));
-        const saved = el('div', undefined, 'live-news-topics');
-        data.articles.forEach(a => {
-          const row = el('div', undefined, 'live-news-saved');
-          const feedback = feedbackBox();
-          const action = button(a.status === 'ready' ? a.title : '作成を完了できなかった記事', () => open(a.id, false, false, feedback, action));
-          row.append(action, feedback); saved.append(row);
-        });
-        body.append(saved);
-      }
-      const directory = el('details'); directory.append(el('summary', '情報源の対応状況（指定の8サイト）'));
-      data.sources.forEach(s => { const p = el('p'); p.append(link(s.name, s.url), el('span', `：${s.description}`)); directory.append(p); });
-      body.append(directory);
+      mount.hidden = true; curated.hidden = false;
+      if (!location.hash.startsWith('#news/')) document.getElementById('news-back').hidden = true;
+      D.newsNavigation?.refresh();
     }
     function feedbackBox() {
       const box = el('div', undefined, 'live-news-feedback'); box.hidden = true;
@@ -131,19 +167,20 @@
     async function open(id, generate, retry = false, feedback = null, action = null, refreshSearch = false) {
       if (busy || global.dopaNewsApp?.isGenerating) return;
       const token = ++version; lock(true);
-      const label = action?.textContent;
-      if (action) action.textContent = generate ? '作成中…' : '読み込み中…';
+      const labelTarget = action?.querySelector('.live-card-action') || action;
+      const label = labelTarget?.textContent;
+      if (labelTarget) labelTarget.textContent = generate ? '作成中…' : '読み込み中…';
       showFeedback(feedback, generate ? 'この記事を作成しています。完了まで数分かかる場合があります。' : '保存した記事を読み込み中…');
       try {
         const record = await request(generate ? '/api/news/generate' : `/api/news/articles/${id}`, generate ? { topicId: id, retry, refreshSearch } : undefined);
         if (version !== token) return;
-        current = record;
         data.articles = [{ id: record.id, title: record.article.title, createdAt: record.createdAt, status: record.status }, ...data.articles.filter(a => a.id !== record.id)];
         if (record.status !== 'ready') {
           showFeedback(feedback, '必要な情報がそろわず、この記事の作成を完了できませんでした。別の話題を選ぶか、作り直してください。', 'NEWS_GENERATION_FAILED');
           if (feedback) feedback.append(button('記事を作り直す', event => open(id, true, true, feedback, event.currentTarget)));
           return;
         }
+        current = record;
         renderArticle(record);
         status.textContent = '記事ができました。';
       } catch (e) {
@@ -151,17 +188,29 @@
         if (feedback && ['NEWS_SOURCES', 'NEWS_SEARCH'].includes(e.code)) feedback.append(button('別の情報源で再検索（OpenAIを使用）', event => open(id, true, retry, feedback, event.currentTarget, true)));
       }
       finally {
-        lock(false); if (action?.isConnected) action.textContent = label;
+        lock(false); if (labelTarget?.isConnected) labelTarget.textContent = label;
         try { const usage = await request('/api/news/search-usage'); if (token === version) showUsage(usage); } catch { /* Preserve the article's result message. */ }
       }
     }
     function renderArticle(record) {
       articleBattleBar?.remove(); articleBattleBar = null;
       body.replaceChildren();
+      mount.hidden = false; curated.hidden = true;
+      document.getElementById('news-back').hidden = false;
       const a = record.article;
-      body.append(button('〈 話題一覧に戻る', () => { renderList(); status.textContent = '話題を選んでください。'; }));
-      const article = el('article', undefined, 'live-generated-article');
-      article.append(el('h1', a.title), el('p', a.summary), el('p', `DOPANEWSが資料をもとに編集・加工 ／ 作成 ${date(record.createdAt)}`, 'live-news-note'), el('p', record.scope, 'live-news-note'));
+
+      const genre = topicGenre(data.headlines.items.find(topic => topic.id === record.id));
+      const article = el('article', undefined, 'news-article live-generated-article');
+      article.style.setProperty('--genre-color', D.newsGenreColors[genre] || '#94a3b8');
+      const meta = el('div', undefined, 'news-meta');
+      meta.append(el('span', genre === 'トップ' ? '話題' : genre, 'news-category'), el('span', '資料に基づく解説'));
+      const byline = el('div', undefined, 'news-byline');
+      byline.append(el('span', 'DOPANEWS 編集部'), el('time', date(record.createdAt)));
+      const figure = el('figure');
+      const image = el('img'); image.src = D.newsArtwork({ category: genre, art: genre === '経済' ? 'energy' : genre === 'テクノロジー' ? 'ai' : 'people' });
+      image.alt = '本アプリ制作のジャンル別イメージイラスト';
+      figure.append(image, el('figcaption', '本アプリ制作のイメージイラスト'));
+      article.append(meta, el('h1', a.title), byline, figure, el('p', a.summary), el('p', record.scope, 'live-news-note'));
       a.paragraphs.forEach(p => { const section = el('p', p.text); section.append(el('small', ` 根拠：${p.factIds.join('・')}`)); article.append(section); });
       if (record.status === 'ready') {
         const start = button('MCバトル', async () => {
@@ -211,10 +260,15 @@
     // Fixed articles retain their own detail routing. Avoid showing two articles at once.
     function route() {
       if (location.hash === '#library') return;
-      const fixed = location.hash.startsWith('#news/');
-      mount.hidden = fixed; curated.hidden = false;
+      const fixed = location.hash.startsWith('#news/') || location.hash === '#search';
+      mount.hidden = fixed || !current; curated.hidden = !fixed && Boolean(current);
       if (articleBattleBar) articleBattleBar.hidden = fixed;
     }
+    document.getElementById('news-back').addEventListener('click', event => {
+      if (!current || mount.hidden) return;
+      event.stopImmediatePropagation();
+      renderList(); document.getElementById('news-screen').scrollTop = 0;
+    }, true);
     global.addEventListener('hashchange', route); route(); load();
   });
 })(window);

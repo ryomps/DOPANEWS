@@ -32,3 +32,58 @@
 /* Keep article actions above the phone reader and below its battle cut-in. */
 .news-battle-bar { z-index:60; }
 .live-generated-article { padding-bottom:calc(100px + env(safe-area-inset-bottom)); }
+
+/* Both sources share the existing dense feed and category navigation. */
+.live-feed-item { min-width:0; }
+.news-grid .live-feed-card { width:100%; }
+.news-grid .news-card.news-pick-featured { display:flex; flex-direction:column; align-items:stretch; gap:8px; padding:0 0 12px; }
+.news-grid .news-card.news-pick-featured img { width:100%; height:auto; aspect-ratio:16 / 9; object-fit:cover; border-radius:7px; }
+.news-grid .news-card.news-pick-featured .news-card-copy { width:100%; padding:0 4px; box-sizing:border-box; }
+.news-grid .news-card.news-pick-featured h3 { font-size:17px; line-height:1.5; margin:5px 0; }
+.news-grid .live-feed-card .news-card-bottom > span:last-child { display:inline; font-size:9px; color:#97adc9; }
+.news-grid .live-feed-card:disabled { opacity:.6; cursor:wait; }
+.live-feed-item .live-news-feedback { margin:4px 0 10px; font-size:11px; line-height:1.7; padding:10px; }
+.live-feed-item .live-news-feedback button { padding:8px 10px; border:1px solid #4e8299; border-radius:6px; color:#e5edf7; background:#12273d; cursor:pointer; font:inherit; }
+.news-feed-status { color:#73849b; font-size:9px; line-height:1.6; margin:0 0 7px; }
+.live-news { border:0; padding:12px 16px; }
+.live-news > .live-news-status { display:none; }
+.live-generated-article h1 { font-size:25px; line-height:1.55; margin:14px 0; }
+.live-generated-article > p { font-size:16px; line-height:1.95; margin:0 0 24px; }
+.live-generated-article > p.live-news-note { color:#929fb3; font-size:11px; }
+.live-generated-article .news-meta { margin-top:0; }
+.live-generated-article .news-byline { margin-bottom:16px; }
+.live-generated-article .news-byline time { font-size:11px; }
+.live-generated-article .news-category { background:var(--genre-color); color:#07101d; }
+.live-generated-article figure { margin-bottom:18px; }
+
+/* Compact keyword search shared by the unified news feed. */
+.news-search { display:flex; align-items:center; gap:8px; margin:10px 0; padding:5px 6px 5px 11px; border:1px solid #31425a; border-radius:9px; background:#0c1420; }
+.news-search svg { width:18px; height:18px; flex:0 0 18px; fill:none; stroke:#8a9ebc; stroke-width:1.7; stroke-linecap:round; }
+.news-search input { flex:1; min-width:0; width:100%; border:0; padding:6px 0; background:transparent; color:#edf3ff; font:inherit; font-size:12px; outline:none; }
+.news-search input::placeholder { color:#7386a1; }
+.news-search:focus-within { border-color:#7aabf8; box-shadow:0 0 0 2px #3b82f617; }
+.news-search button { flex:0 0 auto; min-height:32px; padding:5px 12px; border:0; border-radius:6px; background:#203a60; color:#eaf2ff; font:inherit; font-size:11px; cursor:pointer; }
+.news-search input::-webkit-search-cancel-button { -webkit-appearance:none; }
+.news-search .news-search-clear { display:grid; place-items:center; width:32px; height:32px; min-height:32px; padding:0; border-radius:50%; background:transparent; color:#c9d8ed; font-size:22px; line-height:1; }
+.news-search .news-search-clear:hover { background:#ffffff12; color:#fff; }
+.news-search .news-search-clear[hidden] { display:none; }
+.news-search-field { display:flex; align-items:center; gap:7px; flex:1; min-width:0; overflow-x:auto; padding:8px 2px; scrollbar-width:none; }
+.news-search-field::-webkit-scrollbar { display:none; }
+.news-search-field input { flex:1 0 90px; width:90px; }
+.news-search-chip { position:relative; flex:0 0 auto; white-space:nowrap; border:1px solid var(--genre-color, #3b82f6); border-radius:99px; padding:4px 13px 4px 8px; color:var(--genre-color, #8ab4ff); background:color-mix(in srgb, var(--genre-color, #3b82f6) 15%, #080c13); font-size:10px; line-height:1.4; }
+.news-search .news-search-chip-remove { position:absolute; top:-5px; right:-4px; display:grid; place-items:center; width:14px; height:14px; min-height:14px; padding:0; border:1px solid #526079; border-radius:50%; background:#172131; color:#edf3ff; font-size:11px; line-height:1; }
+.news-search .news-search-chip-remove:hover { background:#35445a; }
+.news-search-results { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:11px; color:#b4c5de; margin:8px 0 10px; overflow-wrap:anywhere; }
+.news-search-results button { border:1px solid #ffffff24; border-radius:99px; background:transparent; color:#9eb6d7; font:inherit; font-size:10px; padding:4px 10px; cursor:pointer; flex-shrink:0; }
+.news-search-empty { padding:25px 12px; border:1px dashed #2a3c56; border-radius:8px; color:#91a5c2; font-size:12px; line-height:1.9; }
+.news-search button:focus-visible, .news-search-results button:focus-visible { outline:2px solid #91b8ff; outline-offset:2px; }
+#news-open-search { margin-left:auto; flex-shrink:0; width:34px; height:34px; display:grid; place-items:center; padding:7px; border:0; border-radius:50%; background:transparent; color:#e7efff; cursor:pointer; }
+#news-open-search[hidden] { display:none; }
+#news-open-search:hover { background:#ffffff12; }
+#news-open-search svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; }
+#news-open-search:focus-visible { outline:2px solid #91b8ff; }
+.news-search-title { font-size:20px; margin:8px 0 12px; }
+.news-search-tags { display:flex; flex-wrap:wrap; gap:5px; margin:0 0 12px; }
+.news-search-tags button { max-width:100%; padding:4px 8px; border:1px solid color-mix(in srgb, var(--genre-color, #3b82f6) 45%, transparent); border-radius:99px; background:color-mix(in srgb, var(--genre-color, #3b82f6) 10%, #080c13); color:var(--genre-color, #8ab4ff); font:inherit; font-size:10px; line-height:1.4; overflow-wrap:anywhere; cursor:pointer; }
+.news-search-tags button:hover, .news-search-tags button[aria-pressed="true"] { background:color-mix(in srgb, var(--genre-color, #3b82f6) 25%, #080c13); border-color:var(--genre-color, #8ab4ff); }
+.news-search-tags button:focus-visible { outline:2px solid #edf3ff; outline-offset:2px; }
