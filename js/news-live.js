@@ -1,6 +1,34 @@
 /* Live headlines and source-backed local news. No paid requests on page load. */
 (function (global) {
   const D = global.DOPANEWS;
+  const imageRequests = new Map();
+  const imageQueue = []; let activeImages = 0;
+  function pumpImages() {
+    while (activeImages < 3 && imageQueue.length) {
+      const job = imageQueue.shift(); activeImages++;
+      request('/api/news/images/' + job.id).catch(() => ({imageUrl:null})).then(job.resolve).finally(() => { activeImages--; pumpImages(); });
+    }
+  }
+  function sourceImage(image, id, onLoaded) {
+    const fallback = image.src;
+    image.referrerPolicy = 'no-referrer';
+    const load = () => {
+      if (!imageRequests.has(id)) imageRequests.set(id, new Promise(resolve => { imageQueue.push({id,resolve}); pumpImages(); }));
+      imageRequests.get(id).then(result => {
+        let url; try { url = new URL(result.imageUrl); } catch { return; }
+        if (url.protocol !== 'https:' || !/(^|\.)(yimg\.jp|yimg\.com|yahoo\.co\.jp)$/.test(url.hostname)) return;
+        image.onerror = () => { image.onerror = null; image.src = fallback; };
+        image.onload = () => { image.onload = null; image.alt = '配信元記事の画像'; onLoaded?.(); };
+        image.src = url.href;
+      });
+    };
+    if (!('IntersectionObserver' in global)) { load(); return; }
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) { observer.disconnect(); load(); }
+      else if (!image.isConnected) observer.disconnect();
+    }, {rootMargin:'150px'});
+    observer.observe(image);
+  }
   async function request(url, body) {
     let response;
     try { response = await fetch(url, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
@@ -108,6 +136,7 @@
         const image = el('img');
         image.src = D.newsArtwork({ category: genre, art: genre === '経済' ? 'energy' : genre === 'テクノロジー' ? 'ai' : 'people' });
         image.alt = 'ジャンルのイメージイラスト'; image.loading = 'lazy';
+        sourceImage(image, topic.id);
         const copy = el('div', undefined, 'news-card-copy');
         const meta = el('div', undefined, 'news-meta');
         const badge = el('span', genre === 'トップ' ? '話題' : genre, 'news-category');
@@ -211,6 +240,11 @@
       const image = el('img'); image.src = D.newsArtwork({ category: genre, art: genre === '経済' ? 'energy' : genre === 'テクノロジー' ? 'ai' : 'people' });
       image.alt = '本アプリ制作のジャンル別イメージイラスト';
       figure.append(image, el('figcaption', '本アプリ制作のイメージイラスト'));
+      sourceImage(image, record.id, () => {
+        const caption = figure.querySelector('figcaption'); caption.replaceChildren();
+        const topic = data.headlines.items.find(item => item.id === record.id);
+        caption.append(link('画像：配信元記事（Yahoo!ニュース）', topic?.url || record.topic?.url || 'https://news.yahoo.co.jp/'));
+      });
       article.append(meta, el('h1', a.title), byline, figure, el('p', a.summary), el('p', record.scope, 'live-news-note'));
       a.paragraphs.forEach(p => { const section = el('p', p.text); section.append(el('small', ` 根拠：${p.factIds.join('・')}`)); article.append(section); });
       if (record.status === 'ready') {

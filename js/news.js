@@ -4,6 +4,7 @@
   const articles = [
   {
     "id": "ai",
+    "imageUrl": "./css/images/news-ai.png",
     "category": "テクノロジー",
     "title": "学校で生成AI、どう使う？ 文科省ガイドラインが示す活用と注意点",
     "summary": "文科省の2024年12月の指針を読み解く。学びの支援と、自分で判断する力を両立できるか。",
@@ -37,6 +38,7 @@
   },
   {
     "id": "work",
+    "imageUrl": "./css/images/news-work.png",
     "category": "経済",
     "title": "2025年の消費者物価は3.2％上昇。家計の支援と、所得を増やす対策を考える",
     "summary": "2026年1月公表の2025年平均結果をもとに、物価と暮らしを考える。短期の支援と継続的な所得向上はどう両立する？",
@@ -70,6 +72,7 @@
   },
   {
     "id": "food",
+    "imageUrl": "./css/images/news-food.png",
     "category": "経済",
     "title": "2023年度の食品ロスは464万トン。家庭の工夫と、売り方の改善を考える",
     "summary": "事業系231万トン、家庭系233万トン。食べ物のムダを減らすには、どこから変える？",
@@ -103,6 +106,7 @@
   },
   {
     "id": "ads",
+    "imageUrl": "./css/images/news-ads.png",
     "category": "テクノロジー",
     "title": "SNSのおすすめ、それは広告？ ステマ規制から考える情報の見分け方",
     "summary": "2023年10月に施行されたルールを読み解く。広告を見分けられる表示と、発信のしやすさを考える。",
@@ -137,6 +141,7 @@
   },
   {
     "id": "population",
+    "imageUrl": "./css/images/news-population.png",
     "category": "政治",
     "title": "65歳以上が29.3％。人口構成から、世代を支える仕組みを考える",
     "summary": "2024年10月時点の人口推計をもとに、若い世代への投資と生活を支えるサービスを考える。",
@@ -170,6 +175,7 @@
   },
   {
     "id": "club",
+    "imageUrl": "./css/images/news-club.png",
     "category": "スポーツ",
     "title": "部活動を地域で支える。選べる活動と、参加の負担をどう両立する？",
     "summary": "2025年12月のガイドラインから、活動の機会・移動・費用を考える。",
@@ -204,6 +210,7 @@
   },
   {
     "id": "sport-survey",
+    "imageUrl": "./css/images/news-sport-survey.png",
     "category": "スポーツ",
     "title": "運動したい人66.6％、週1回以上は52.5％。その差をどう埋める？",
     "summary": "2024年度の調査から、日常の小さな一歩と参加しやすい環境を考える。",
@@ -237,6 +244,7 @@
   },
   {
     "id": "lifedesign",
+    "imageUrl": "./css/images/news-lifedesign.png",
     "category": "恋愛",
     "title": "結婚したい気持ちも、別の生き方も。希望を支える社会って？",
     "summary": "こども家庭庁の方針をもとに、希望する人への支援と、多様な選択の尊重を考える。",
@@ -271,6 +279,7 @@
   },
   {
     "id": "matching",
+    "imageUrl": "./css/images/news-matching.png",
     "category": "恋愛",
     "title": "出会いの選択肢としてのアプリ。便利さと、安心をどう両立する？",
     "summary": "公的会議の最終報告から、出会いの機会・安全性・本人の選択を考える。",
@@ -311,6 +320,7 @@
   D.newsGenreColors = genreColors;
   const genreStyle = genre => '--genre-color:'+genreColors[genre];
   function artwork(a) {
+    if (a.imageUrl && /^\.\/css\/images\/[a-z0-9-]+\.png$/.test(a.imageUrl)) return a.imageUrl;
     a = { ...a, color: '#07101d', accent: genreColors[a.category] || '#2767ce' };
     const scenes = {
       sport: '<circle cx="320" cy="200" r="120" fill="'+a.accent+'"/><g fill="none" stroke="#07101d" stroke-width="8"><circle cx="320" cy="200" r="95"/><path d="M200 200h240M320 80v240M235 115q145 85 0 170M405 115q-145 85 0 170"/></g>',
@@ -546,7 +556,7 @@
       const disclaimer = a.kind === 'report' ? '報道をもとにDOPANEWSが論点を整理しています。MCの意見・歌詞は創作であり、取材相手の発言ではありません。' : '公的資料の説明・数値をもとにDOPANEWSが編集・加工した解説です。MCの意見・歌詞は創作であり、出典機関の発言や推奨を表しません。';
       bar.querySelector('small').textContent = a.battleKey ? 'ふたつの視点から、このニュースを考える' : '資料に基づく歌詞と内蔵ビートで再生';
       selected = a; back.hidden = false; bar.hidden = false; searchButton.hidden = false;
-      content.innerHTML = '<article class="news-article" style="'+genreStyle(a.category)+'"><div class="news-meta"><span class="news-category">'+a.category+'</span><span>'+articleKind+'</span><span>約2分で読めます</span></div><h1 tabindex="-1">'+a.title+'</h1><div class="news-byline"><span>DOPANEWS 編集部</span><time datetime="'+a.date.replaceAll('/','-')+'">'+escape(a.dateLabel||'資料公表')+'：'+a.date+'</time></div><figure><img src="'+artwork(a)+'" alt="'+a.caption+'"/><figcaption>'+a.caption+'</figcaption></figure><p class="news-disclaimer">'+disclaimer+'</p><div class="news-article-body">'+a.paragraphs.map(p=>'<p>'+escape(p)+'</p>').join('')+'</div>'+sourceMarkup(a)+'<aside class="news-perspectives"><span class="news-eyebrow">TWO SIDES, ONE TOPIC</span><h2>資料を踏まえて、あなたはどう考える？</h2><p><b>KENTA</b>'+a.stances[0]+'</p><p><b>REINA</b>'+a.stances[1]+'</p></aside><p class="news-end">ここまで読んだら、次はふたつの視点を聴いてみよう。</p></article>';
+      content.innerHTML = '<article class="news-article" style="'+genreStyle(a.category)+'"><div class="news-meta"><span class="news-category">'+a.category+'</span><span>'+articleKind+'</span><span>約2分で読めます</span></div><h1 tabindex="-1">'+a.title+'</h1><div class="news-byline"><span>DOPANEWS 編集部</span><time datetime="'+a.date.replaceAll('/','-')+'">'+escape(a.dateLabel||'資料公表')+'：'+a.date+'</time></div><figure><img src="'+artwork(a)+'" alt="'+a.caption+'"/></figure><p class="news-disclaimer">'+disclaimer+'</p><div class="news-article-body">'+a.paragraphs.map(p=>'<p>'+escape(p)+'</p>').join('')+'</div>'+sourceMarkup(a)+'<aside class="news-perspectives"><span class="news-eyebrow">ふたつの視点</span><h2>資料を踏まえて、あなたはどう考える？</h2><p><b>MIC A</b>'+a.stances[0]+'</p><p><b>MIC B</b>'+a.stances[1]+'</p></aside><p class="news-end">ここまで読んだら、次はふたつの視点を聴いてみよう。</p></article>';
       screen.scrollTop = 0; content.querySelector('h1').focus({preventScroll:true});
     }
     content.addEventListener('submit', event => {
