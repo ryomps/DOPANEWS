@@ -1,4 +1,11 @@
 /* Live battle: topic / changing stage / lyrics / transport. */
+.live-battle-player .stage-mirror-ball { position:absolute; top:-3px; left:50%; width:54px; height:58px; transform:translateX(-50%); z-index:4; pointer-events:none; }
+.stage-mirror-ball img { position:relative; width:100%; height:100%; object-fit:contain; transform-origin:50% 0; animation:mirror-ball-sway 4s ease-in-out infinite; animation-play-state:paused; filter:drop-shadow(0 2px 6px #b9cbff60); }
+.stage-mirror-ball::before { content:''; position:absolute; inset:18% -35% -15%; background:radial-gradient(ellipse,#dce9ff45,transparent 68%); animation:mirror-ball-shimmer 3s ease-in-out infinite; animation-play-state:paused; }
+.live-battle-player[data-playing="true"] .stage-mirror-ball img, .live-battle-player[data-playing="true"] .stage-mirror-ball::before { animation-play-state:running; }
+@keyframes mirror-ball-sway { 0%,100% { transform:rotate(-5deg); } 50% { transform:rotate(5deg); } }
+@keyframes mirror-ball-shimmer { 0%,100% { opacity:.45; } 50% { opacity:1; } }
+@media(prefers-reduced-motion:reduce) { .stage-mirror-ball img,.stage-mirror-ball::before { animation:none; } }
 .live-battle-player { width: min(100%,500px); padding: 16px; gap: 0; }
 .live-battle-player .stage-top { gap: 5px; }
 .live-battle-player .stage-topic-label { order: 0; color: #929aa8; font-size: 9px; letter-spacing: 1.6px; font-weight: 700; }
@@ -141,16 +148,16 @@
 .live-battle-player .mc-identity { left:0; right:0; bottom:0; height:52px; padding:6px 8px; background:#060b13; }
 .live-battle-player .mc-name { font-size:13px; }
 .live-battle-player .mc-stance,.live-battle-player .mc-dim .mc-stance { font-size:8px; line-height:1.35; margin-top:3px; }
-.live-battle-player .mc-crowd { display:flex; bottom:52px; height:49px; padding-top:12px; box-sizing:border-box; overflow:hidden; z-index:3; opacity:0; transition:opacity .25s; }
+.live-battle-player .mc-crowd { display:flex; bottom:14px; height:80px; padding-top:0; box-sizing:border-box; overflow:visible; z-index:3; opacity:0; transition:opacity .25s; }
 .live-battle-player .mc-active .mc-crowd { opacity:1; }
 .live-battle-player .mc-crowd::before { inset:-10px 0 0; background:linear-gradient(0deg,#5f9cff70,transparent); filter:blur(3px); }
 .live-battle-player .mc-reina .mc-crowd::before { background:linear-gradient(0deg,#ff617770,transparent); }
-.live-battle-player .mc-crowd i { height:35px; flex-basis:10%; margin:0 -1.4%; mask-size:100% 165%; mask-position:center top; background:#03050a; filter:drop-shadow(0 -1px 0 #a9c8ff8a); }
+.live-battle-player .mc-crowd i { height:78px; flex-basis:18%; margin:0 -5.4%; mask-size:contain; mask-position:center bottom; background:#03050a; filter:drop-shadow(0 -1px 0 #a9c8ff8a); }
 .live-battle-player .mc-crowd i:nth-child(5n) { animation-delay:-.37s; animation-duration:.68s; }
 .live-battle-player .mc-crowd i:nth-child(7n) { animation-delay:-.51s; animation-duration:.77s; }
 .live-battle-player .mc-reina .mc-crowd i { filter:drop-shadow(0 -1px 0 #ffb3be8a); }
-.live-battle-player .mc-crowd i:nth-child(2n) { height:29px; mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 100'%3E%3Ccircle cx='31' cy='23' r='10'/%3E%3Cpath d='M22 36L10 16 12 3 5 1 1 19 16 49 20 64 12 96 22 99 32 72 43 99 53 95 43 63 47 46 62 29 56 19 49 23 53 29 39 37z'/%3E%3C/svg%3E"); }
-.live-battle-player .mc-crowd i:nth-child(3n) { height:37px; mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 100'%3E%3Ccircle cx='32' cy='25' r='10'/%3E%3Cpath d='M22 38L9 25 8 10 1 9 1 30 18 51 22 66 10 95 20 99 32 75 44 99 54 95 42 66 45 49 60 26 62 4 55 2 52 23 40 38z'/%3E%3C/svg%3E"); }
+.live-battle-player .mc-crowd i:nth-child(2n) { height:70px; mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 100'%3E%3Ccircle cx='31' cy='23' r='10'/%3E%3Cpath d='M22 36L10 16 12 3 5 1 1 19 16 49 20 64 12 96 22 99 32 72 43 99 53 95 43 63 47 46 62 29 56 19 49 23 53 29 39 37z'/%3E%3C/svg%3E"); }
+.live-battle-player .mc-crowd i:nth-child(3n) { height:84px; mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 100'%3E%3Ccircle cx='32' cy='25' r='10'/%3E%3Cpath d='M22 38L9 25 8 10 1 9 1 30 18 51 22 66 10 95 20 99 32 75 44 99 54 95 42 66 45 49 60 26 62 4 55 2 52 23 40 38z'/%3E%3C/svg%3E"); }
 .live-battle-player .vs-emblem,.live-battle-player[data-active-mc="KENTA"] .vs-emblem,.live-battle-player[data-active-mc="REINA"] .vs-emblem { top:calc((100% - 52px)/2); }
 @media(max-height:740px) { .live-battle-player .mc-versus-arena { height:185px; } }
 
@@ -244,6 +251,28 @@
 .live-battle-player .spectrum-canvas { height:8px; margin:0; }
 
 /* Discrete speaker-colored verse segments; the thumb marks playback position. */
-.live-battle-player .battle-seek-row .stage-progress-track { height:4px; }
+.live-battle-player .battle-seek-row .stage-progress-track { height:4px; width:calc(100% - 10px); margin-inline:5px; flex:0 0 calc(100% - 10px); }
+.live-battle-player .battle-seek-row > input { padding:0; border:0; box-sizing:border-box; }
+.live-battle-player .battle-seek-row > input::-webkit-slider-runnable-track { height:4px; }
+.live-battle-player .battle-seek-row > input::-webkit-slider-thumb { margin-top:-3px; }
+.live-battle-player .battle-seek-row > input::-moz-range-track { height:4px; }
 .live-battle-player .battle-seek-row .stage-progress-fill { background:#ffffff22; }
-.live-battle-player .battle-seek-row .stage-progress-fill { width:100%; clip-path:inset(0 100% 0 0); transition:clip-path .1s linear; }
+.live-battle-player .battle-seek-row .stage-progress-fill { width:100%; clip-path:inset(0 100% 0 0); transition:none; }
+
+/* Live-stage lighting, behind the performers and translucent lyric panels. */
+.battle-stage.live-battle-player { background:radial-gradient(ellipse at 8% 10%,#4a96ff45,transparent 38%),radial-gradient(ellipse at 92% 12%,#ff427749,transparent 38%),radial-gradient(ellipse at 50% 70%,#7a3faa24,transparent 55%),#080b13; }
+.live-battle-player .mc-versus-arena { background:radial-gradient(ellipse at 15% 0,#cbe8ffd9 0,transparent 15%),radial-gradient(ellipse at 85% 0,#ffd4e1d9 0,transparent 15%),conic-gradient(from 150deg at 15% 0,transparent,#6cafff59 12deg,transparent 35deg),conic-gradient(from 175deg at 85% 0,transparent,#ff5f8d59 15deg,transparent 38deg),linear-gradient(#171b30,#0b1021 78%,#493653); }
+.live-battle-player .mc-fighter-card.mc-kenta, .live-battle-player .mc-fighter-card.mc-reina { background:transparent; }
+.live-battle-player .mc-versus-arena::before { content:''; position:absolute; inset:8px 0 auto; height:10px; border-block:1px solid #c4bed655; background:repeating-linear-gradient(45deg,transparent 0 16px,#c4bed655 17px 19px,transparent 20px 34px); pointer-events:none; z-index:0; }
+.live-battle-player .punchline-card { background:#0a0f1dcc; border-color:#8780bd55; box-shadow:0 0 18px #714cbf15; }
+
+/* Seven crowd gestures, with independent timing, scale and silhouettes. */
+.live-battle-player .mc-crowd i:nth-child(7n + 1) { mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%20100%22%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2225%22%20r%3D%229%22%2F%3E%3Cpath%20d%3D%22M23%2037Q32%2033%2041%2037L43%2065%2038%2069H26L21%2065Z%22%2F%3E%3Cpath%20d%3D%22M24%2040%20L15%2024%20L17%205%20M40%2040%20L48%2028%20L47%2017%20M27%2064L20%2095%20M37%2064L46%2095%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%228%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); height:78px; animation-duration:0.67s; animation-delay:-0.11s; }
+.live-battle-player .mc-crowd i:nth-child(7n + 2) { mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%20100%22%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2225%22%20r%3D%229%22%2F%3E%3Cpath%20d%3D%22M23%2037Q32%2033%2041%2037L43%2065%2038%2069H26L21%2065Z%22%2F%3E%3Cpath%20d%3D%22M24%2040%20L12%2034%20L7%2016%20M40%2040%20L45%2060%20M27%2064L20%2095%20M37%2064L46%2095%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%228%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); height:70px; animation-duration:0.81s; animation-delay:-0.38s; }
+.live-battle-player .mc-crowd i:nth-child(7n + 3) { mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%20100%22%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2225%22%20r%3D%229%22%2F%3E%3Cpath%20d%3D%22M23%2037Q32%2033%2041%2037L43%2065%2038%2069H26L21%2065Z%22%2F%3E%3Cpath%20d%3D%22M24%2040%20L20%2022%20L29%209%20M40%2040%20L44%2022%20L35%209%20M27%2064L20%2095%20M37%2064L46%2095%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%228%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); height:82px; animation-duration:0.72s; animation-delay:-0.57s; }
+.live-battle-player .mc-crowd i:nth-child(7n + 4) { mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%20100%22%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2225%22%20r%3D%229%22%2F%3E%3Cpath%20d%3D%22M23%2037Q32%2033%2041%2037L43%2065%2038%2069H26L21%2065Z%22%2F%3E%3Cpath%20d%3D%22M24%2040%20L10%2023%20L4%209%20M40%2040%20L53%2022%20L60%207%20M27%2064L20%2095%20M37%2064L46%2095%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%228%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); height:86px; animation-duration:0.61s; animation-delay:-0.24s; }
+.live-battle-player .mc-crowd i:nth-child(7n + 5) { mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%20100%22%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2225%22%20r%3D%229%22%2F%3E%3Cpath%20d%3D%22M23%2037Q32%2033%2041%2037L43%2065%2038%2069H26L21%2065Z%22%2F%3E%3Cpath%20d%3D%22M24%2040%20L13%2048%20L7%2036%20M40%2040%20L47%2023%20L42%207%20M27%2064L20%2095%20M37%2064L46%2095%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%228%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); height:75px; animation-duration:0.89s; animation-delay:-0.68s; }
+.live-battle-player .mc-crowd i:nth-child(7n + 6) { mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%20100%22%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2225%22%20r%3D%229%22%2F%3E%3Cpath%20d%3D%22M23%2037Q32%2033%2041%2037L43%2065%2038%2069H26L21%2065Z%22%2F%3E%3Cpath%20d%3D%22M24%2040%20L10%2038%20L5%2028%20M40%2040%20L53%2038%20L59%2028%20M27%2064L20%2095%20M37%2064L46%2095%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%228%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); height:68px; animation-duration:0.76s; animation-delay:-0.07s; }
+.live-battle-player .mc-crowd i:nth-child(7n + 7) { mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%20100%22%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2225%22%20r%3D%229%22%2F%3E%3Cpath%20d%3D%22M23%2037Q32%2033%2041%2037L43%2065%2038%2069H26L21%2065Z%22%2F%3E%3Cpath%20d%3D%22M24%2040%20L15%2022%20L20%2012%20M40%2040%20L49%2022%20L44%2012%20M27%2064L20%2095%20M37%2064L46%2095%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%228%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); height:80px; animation-duration:0.7s; animation-delay:-0.46s; }
+.live-battle-player .mc-crowd i:nth-child(even) { scale:-1 1; }
+.live-battle-player .mc-crowd i:nth-child(5n) { translate:0 4px; }

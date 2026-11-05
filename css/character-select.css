@@ -34,6 +34,90 @@
 .judge-face-reina { border-color:#ff657a; }
 .live-battle-player .judge-face-icon .judge-character-icon { position:absolute; left:-65%; top:-17%; display:block; width:230%; height:auto; max-width:none; margin:0; border:0; border-radius:0; background:transparent; object-fit:contain; }
 @media(max-height:740px) { .judge-face-icon { width:38px; height:38px; margin-bottom:5px; } }
+
+/* Character-led voting: large portraits above the unchanged opinions. */
+.live-battle-player .judge-modal-card { width:100%; gap:5px; padding:8px 10px 10px; overflow-y:auto; }
+.live-battle-player .judge-close-button { min-height:22px; padding:0; }
+.live-battle-player .judge-topic-title { font-size:16px; line-height:1.3; margin:0; }
+.live-battle-player .judge-headline { font-size:12px; line-height:1.3; margin:0 0 2px; }
+.live-battle-player .judge-cards-grid { align-items:stretch; flex-shrink:0; }
+.live-battle-player .judge-choice-card:not(.reflection-neutral) { padding:0 0 8px; overflow:hidden; border-radius:9px; }
+.live-battle-player .judge-choice-card > div { width:100%; }
+.live-battle-player .judge-face-icon { display:block; position:relative; width:100%; height:clamp(180px,38cqh,280px); margin:0 0 6px; border:0; border-radius:0; overflow:hidden; background:radial-gradient(ellipse at 50% 90%,#438eff3b,transparent 75%); }
+.live-battle-player .judge-face-reina { background:radial-gradient(ellipse at 50% 90%,#ff50673b,transparent 75%); }
+.live-battle-player .judge-face-icon .judge-character-icon { position:absolute; inset:0; width:100%; height:100%; margin:0; border:0; border-radius:0; object-fit:cover; object-position:center 10%; }
+.live-battle-player .judge-stance-text { padding:0 9px; margin:0 0 8px; text-align:left; font-size:12px; line-height:1.5; }
+.live-battle-player .judge-tap-cta { margin:0 8px; }
+.live-battle-player .reflection-neutral { min-height:38px; }
+@container battle-vote (max-height:500px) {
+  .live-battle-player .judge-face-icon { height:165px; }
+  .live-battle-player .judge-stance-text { font-size:11px; }
+}
+
+.live-battle-player .judge-modal-overlay:not(.hidden) .judge-character-kenta { animation:judge-enter-left .85s cubic-bezier(.16,1,.3,1) .08s both; }
+.live-battle-player .judge-modal-overlay:not(.hidden) .judge-character-reina { animation:judge-enter-right .85s cubic-bezier(.16,1,.3,1) .16s both; }
+@keyframes judge-enter-left {
+  from { transform:translateX(-150%) rotate(-8deg) scale(.85); opacity:0; }
+  to { transform:translateX(0); opacity:1; }
+}
+@keyframes judge-enter-right {
+  from { transform:translateX(150%) rotate(8deg) scale(.85); opacity:0; }
+  to { transform:translateX(0); opacity:1; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .live-battle-player .judge-modal-overlay:not(.hidden) .judge-character-icon { animation:none; }
+}
+
+/* Portraits stand free; only the opinion/name area has a voting frame. */
+.live-battle-player .judge-choice-card:not(.reflection-neutral) { border:0; border-radius:0; background:transparent; box-shadow:none; padding:0; overflow:visible; }
+.live-battle-player .judge-choice-card:not(.reflection-neutral):hover { background:transparent; box-shadow:none; transform:none; }
+.live-battle-player .judge-face-icon, .live-battle-player .judge-face-reina { background:transparent; margin:0; }
+.live-battle-player .judge-vote-caption { position:relative; z-index:2; margin-top:-30px; padding:9px 7px 7px; border:1px solid #568fe0; border-radius:7px; background:#0c1c36a6; backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+.live-battle-player .judge-choice-reina .judge-vote-caption { background:#36101ba6; border-color:#e06073; }
+.live-battle-player .judge-vote-caption .judge-stance-text { padding:0; margin:0 0 7px; }
+.live-battle-player .judge-vote-caption .judge-tap-cta { margin:0; background:#438eff40; color:#eaf2ff; }
+.live-battle-player .judge-choice-reina .judge-tap-cta { background:#ff506740; color:#ffeaf0; }
+.live-battle-player .judge-choice-card:hover .judge-vote-caption { border-color:#fff; }
+
+/* A small live venue behind the voting characters. */
+.live-battle-player .judge-modal-card { position:relative; isolation:isolate; background:#090b12; border-color:#ffffff35; box-shadow:0 12px 60px #000b; }
+.live-battle-player .judge-modal-card::before { content:''; position:absolute; inset:0; z-index:-2; pointer-events:none; background:radial-gradient(ellipse at 18% 12%,#d5e7ffb3 0, #7cb0ff30 3%,transparent 13%),radial-gradient(ellipse at 82% 12%,#ffe5e9b3 0,#ff6e8f30 3%,transparent 13%),conic-gradient(from 153deg at 18% 12%,transparent 0deg,#5597ed25 8deg,#b4d5ff20 18deg,transparent 33deg),conic-gradient(from 175deg at 82% 12%,transparent 0deg,#ff779320 12deg,#e54b7225 23deg,transparent 34deg),linear-gradient(90deg,#03040ad9,transparent 18%,transparent 82%,#03040ad9),linear-gradient(#161b28,#0a0c14 68%,#202333 69%,#090b11); }
+.live-battle-player .judge-modal-card::after { content:''; position:absolute; z-index:-1; left:0; right:0; top:11%; height:15px; pointer-events:none; border-block:2px solid #7c899e55; background:repeating-linear-gradient(45deg,transparent 0 15px,#7c899e55 16px 18px,transparent 19px 30px),repeating-linear-gradient(-45deg,transparent 0 15px,#7c899e44 16px 18px,transparent 19px 30px); box-shadow:0 4px 24px #a1bbff15; opacity:.6; }
+.live-battle-player .judge-topic-title, .live-battle-player .judge-headline { text-shadow:0 2px 8px #000; }
+.live-battle-player .judge-face-icon::after { content:''; position:absolute; bottom:0; left:12%; right:12%; height:12px; border-radius:50%; background:#0007; filter:blur(5px); pointer-events:none; z-index:-1; }
+.live-battle-player .judge-modal-card { padding-top:10px; }
+.live-battle-player .judge-close-button { position:absolute; top:8px; right:10px; min-height:24px; padding:2px 0; font-size:10px; z-index:3; }
+.live-battle-player .judge-topic-title { padding-right:52px; margin:0; }
+.live-battle-player .judge-modal-card { border-color:#b7a0ff70; box-shadow:0 0 24px #7456c233,0 16px 60px #000b; }
+.live-battle-player .judge-modal-card::before { background:radial-gradient(ellipse at 14% 15%,#eff7ff 0,#a8d5ffbb 1%,#579dff40 5%,transparent 19%),radial-gradient(ellipse at 86% 15%,#fff0f3 0,#ffb1c4bb 1%,#ff477b40 5%,transparent 19%),radial-gradient(ellipse at 50% 10%,#e6d2ff90,transparent 25%),conic-gradient(from 145deg at 14% 15%,transparent 0deg,#267dff20 4deg,#85bdff70 13deg,#398eff20 25deg,transparent 39deg),conic-gradient(from 176deg at 86% 15%,transparent 0deg,#ff27604d 7deg,#ff9dbb66 18deg,#f82d6d20 30deg,transparent 40deg),radial-gradient(ellipse at 22% 72%,#246dff66,transparent 35%),radial-gradient(ellipse at 78% 72%,#f02c6955,transparent 35%),linear-gradient(0deg,#080b16 2%,#36244b 20%,#0b1020 52%,#121321); }
+.live-battle-player .judge-modal-card::after { height:20px; border-color:#bac5e099; background:radial-gradient(circle at 12% 50%,#a9d2ff 0 3px,transparent 5px),radial-gradient(circle at 38% 50%,#d7b4ff 0 3px,transparent 5px),radial-gradient(circle at 62% 50%,#ffafcb 0 3px,transparent 5px),radial-gradient(circle at 88% 50%,#ffd4df 0 3px,transparent 5px),repeating-linear-gradient(45deg,transparent 0 15px,#a4aec866 16px 18px,transparent 19px 30px),repeating-linear-gradient(-45deg,transparent 0 15px,#a4aec855 16px 18px,transparent 19px 30px); box-shadow:0 0 22px #a373ff55,0 35px 80px #8d49e933; opacity:.9; }
+.live-battle-player .judge-vote-caption { box-shadow:0 0 15px #277dff25,inset 0 1px #bcd9ff30; }
+.live-battle-player .judge-choice-reina .judge-vote-caption { box-shadow:0 0 15px #ff386125,inset 0 1px #ffd3df30; }
+.live-battle-player .judge-mirror-ball { position:relative; align-self:center; flex:0 0 50px; width:48px; height:50px; margin:-4px 0 -5px; pointer-events:none; }
+.judge-mirror-ball img { display:block; width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 0 8px #dec4ff88); transform-origin:50% 0; animation:mirror-ball-sway 4s ease-in-out infinite; }
+.judge-dialog-layout { display:flex; flex-direction:column; gap:5px; width:100%; max-height:100%; min-height:0; }
+.live-battle-player .judge-dialog-layout > .judge-close-button { position:static; align-self:flex-start; flex-shrink:0; margin:0; padding:3px 2px; min-height:28px; font-size:11px; }
+.live-battle-player .judge-dialog-layout .judge-modal-card { min-height:0; max-height:none; }
+.live-battle-player .judge-topic-title { padding-right:0; }
+/* One-screen voting: portraits use only the space left after the controls. */
+.live-battle-player .judge-dialog-layout { height:100%; max-height:100%; overflow:hidden; }
+.live-battle-player .judge-dialog-layout .judge-modal-card { flex:1 1 0; min-height:0; max-height:100%; overflow:hidden; }
+.live-battle-player .judge-topic-title, .live-battle-player .judge-headline, .live-battle-player .judge-footer-btns { flex-shrink:0; }
+.live-battle-player .judge-cards-grid { flex:1 1 0; min-height:0; grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:minmax(0,1fr) auto; gap:7px; }
+.live-battle-player .judge-choice-card:not(.reflection-neutral) { min-height:0; height:100%; }
+.live-battle-player .judge-choice-card > div { display:flex; flex-direction:column; flex:1; min-height:0; height:100%; }
+.live-battle-player .judge-face-icon { flex:1 1 0; height:auto; min-height:0; }
+.live-battle-player .judge-vote-caption { flex:0 0 auto; margin-top:-16px; }
+.live-battle-player .reflection-neutral { grid-column:1 / -1; min-height:34px; }
+.live-battle-player .judge-mirror-ball { position:absolute; top:82px; left:50%; transform:translateX(-50%); width:40px; height:42px; margin:0; z-index:1; }
+@container battle-vote (max-height:500px) {
+  .live-battle-player .judge-dialog-layout .judge-modal-card { padding:7px 8px; gap:4px; }
+  .live-battle-player .judge-topic-title { font-size:14px; }
+  .live-battle-player .judge-vote-caption { padding:6px; }
+  .live-battle-player .judge-vote-caption .judge-stance-text { font-size:10px; line-height:1.35; margin-bottom:4px; }
+  .live-battle-player .judge-tap-cta { padding:5px 3px; }
+}
+@media(prefers-reduced-motion:reduce) { .judge-mirror-ball img { animation:none; } }
 .cutin-kenta .cutin-portrait { background-image:var(--mc-kenta-image,url('./images/mc-kenta-illustration.png')); }
 .cutin-reina .cutin-portrait { background-image:var(--mc-reina-image,url('./images/mc-reina-illustration.png')); }
 .cutin-kenta .cutin-portrait, .cutin-reina .cutin-portrait { height:90%; bottom:4%; background-size:auto 185%; background-position:center 12%; }

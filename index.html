@@ -259,6 +259,7 @@
         <section class="stage-center">
           <!-- 男女MC対決アバター -->
           <div class="mc-versus-arena">
+            <div class="stage-mirror-ball" aria-hidden="true"><img src="./css/images/stage-mirror-ball.png" alt="" /></div>
             <div id="mc-card-kenta" class="mc-fighter-card mc-kenta mc-active">
               <img class="mc-stage-portrait" src="./css/images/mc-kenta-illustration.png" alt="MC KENTAのポートレート" />
               <span class="mc-speaking-label">ON MIC</span>
@@ -324,25 +325,25 @@
         </footer>
   <!-- ラップを聴いた後、自分の考えを振り返る -->
   <div id="judge-modal-overlay" class="judge-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="judge-battle-title">
-    <div class="judge-modal-card" tabindex="-1">
+    <div class="judge-dialog-layout">
       <button id="btn-close-judge" type="button" class="judge-close-button">× 閉じる</button>
+    <div class="judge-modal-card" tabindex="-1">
       <h2 id="judge-battle-title" class="judge-topic-title"></h2>
       <p id="reflection-heading" class="judge-headline">あなたはどっち派？</p>
+      <div class="judge-mirror-ball" aria-hidden="true"><img src="./css/images/stage-mirror-ball.png" alt="" /></div>
 
       <div class="judge-cards-grid" role="group" aria-label="今の自分に近い意見">
         <button id="btn-vote-kenta" type="button" class="judge-choice-card judge-choice-kenta" aria-pressed="false">
           <div>
             <span class="judge-face-icon judge-face-kenta"><img class="judge-character-icon judge-character-kenta" src="./css/images/mc-kenta-illustration.png" alt="KENTA" width="64" height="64" /></span>
-            <p id="judge-kenta-stance" class="judge-stance-text"></p>
+            <div class="judge-vote-caption"><p id="judge-kenta-stance" class="judge-stance-text"></p><span class="judge-tap-cta">KENTA</span></div>
           </div>
-          <span class="judge-tap-cta">KENTA</span>
         </button>
         <button id="btn-vote-reina" type="button" class="judge-choice-card judge-choice-reina" aria-pressed="false">
           <div>
             <span class="judge-face-icon judge-face-reina"><img class="judge-character-icon judge-character-reina" src="./css/images/mc-reina-illustration.png" alt="REINA" width="64" height="64" /></span>
-            <p id="judge-reina-stance" class="judge-stance-text"></p>
+            <div class="judge-vote-caption"><p id="judge-reina-stance" class="judge-stance-text"></p><span class="judge-tap-cta">REINA</span></div>
           </div>
-          <span class="judge-tap-cta">REINA</span>
         </button>
         <button id="btn-reflect-undecided" type="button" class="judge-choice-card reflection-neutral" aria-pressed="false">どちらともいえない</button>
       </div>
@@ -351,6 +352,7 @@
         <button id="btn-replay-battle" type="button" class="btn-sub-action"><svg class="replay-arrow" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8M21 3v5h-5"/></svg> もう一度聞く</button>
 
       </div>
+    </div>
     </div>
   </div>
 

@@ -58,7 +58,7 @@
       this.overlayEl.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') this.close();
         if (event.key !== 'Tab') return;
-        const focusable = [...this.cardEl.querySelectorAll('button, textarea')]
+        const focusable = [...this.overlayEl.querySelectorAll('button, textarea')]
           .filter((element) => element.getClientRects().length > 0);
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
