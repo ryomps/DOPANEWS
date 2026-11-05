@@ -345,10 +345,12 @@
         overlay.setAttribute('aria-label', 'MCバトル 対立するふたつの立場');
         const portrait = reina => '<div class="cutin-portrait '+(reina?'portrait-reina':'portrait-kenta')+'" aria-hidden="true"></div>';
         const stanceHtml = index => escape(article.stances[index]);
-        overlay.innerHTML = '<div class="cutin-topic"><span>NEWS MC BATTLE</span><h2>'+escape(article.title)+'</h2></div><div class="cutin-matchup"><div class="cutin-side cutin-kenta"><div class="cutin-stance"><span>立場 A / MC KENTA</span><h3>'+stanceHtml(0)+'</h3></div>'+portrait(false)+'</div><div class="cutin-side cutin-reina"><div class="cutin-stance"><span>立場 B / MC REINA</span><h3>'+stanceHtml(1)+'</h3></div>'+portrait(true)+'</div><button type="button" class="cutin-vs" aria-label="VSを押してMCバトル開始"><span class="cutin-vs-letters">VS</span><span class="cutin-vs-hint">タップしてスタジオへ進む</span></button></div>';
+        overlay.innerHTML = '<div class="cutin-topic"><span>今回の議題</span><h2>'+escape(article.title)+'</h2></div><div class="cutin-matchup"><div class="cutin-side cutin-kenta"><div class="cutin-stance"><span>MIC A / MC '+escape(D.getMcName?.('KENTA') || 'KENTA')+'</span><h3>'+stanceHtml(0)+'</h3></div>'+portrait(false)+'</div><div class="cutin-side cutin-reina"><div class="cutin-stance"><span>MIC B / MC '+escape(D.getMcName?.('REINA') || 'REINA')+'</span><h3>'+stanceHtml(1)+'</h3></div>'+portrait(true)+'</div><button type="button" class="cutin-vs" aria-label="VSを押してMCバトル開始"><span class="cutin-vs-letters">VS</span></button></div>';
         document.body.appendChild(overlay);
         screen.inert = true;
         const startButton = overlay.querySelector('button');
+        overlay.querySelector('.cutin-kenta .cutin-portrait').style.backgroundImage = document.documentElement.style.getPropertyValue('--mc-kenta-image');
+        overlay.querySelector('.cutin-reina .cutin-portrait').style.backgroundImage = document.documentElement.style.getPropertyValue('--mc-reina-image');
         startButton.focus({preventScroll:true});
 
         const onKey = event => { if (event.key === 'Escape') { finish(false); document.getElementById('news-start-battle').focus({preventScroll:true}); } };
@@ -375,6 +377,14 @@
     let searchQuery = '';
     const selectedSearchTags = new Set();
     const searchButton = document.getElementById('news-open-search');
+    const newsHeader = searchButton.closest('.news-header');
+    newsHeader.addEventListener('click', event => {
+      const tab = event.target.closest('[data-category]');
+      if (!tab) return;
+      category = tab.dataset.category; listScroll = 0;
+      list(); screen.scrollTop = 0;
+      newsHeader.querySelector('[aria-pressed="true"]')?.focus({preventScroll:true});
+    });
     searchButton.addEventListener('click', () => {
       D.liveNewsNavigation?.back();
       category = 'トップ'; categoryScroll = 0;
@@ -382,14 +392,16 @@
     });
     const meta = a => '<span class="news-category" style="'+genreStyle(a.category)+'">'+a.category+'</span><span>'+escape(a.dateLabel||'資料公表')+' '+a.date+'</span>';
     function list() {
-      const previousTabs = content.querySelector('.news-tabs');
+      const previousTabs = newsHeader.querySelector('.news-tabs') || content.querySelector('.news-tabs');
       if (previousTabs) categoryScroll = previousTabs.scrollLeft;
+      newsHeader.querySelector('.news-tabs')?.remove();
       const searching = location.hash === '#search';
+      screen.dataset.view = searching ? 'search' : 'list';
       const effectiveQuery = searching ? [searchQuery, ...selectedSearchTags].filter(Boolean).join(' ') : '';
       selected = null; back.hidden = !searching; bar.hidden = true;
       searchButton.hidden = searching;
       const filtered = items.filter(a => (category === 'トップ' || a.category === category) && D.matchesNewsSearch(a, effectiveQuery));
-      content.innerHTML = '<nav class="news-tabs" aria-label="ニュースのカテゴリー">'+['トップ','テクノロジー','政治','経済','スポーツ','自然','エンタメ','恋愛','その他'].map(c=>'<button type="button" style="'+genreStyle(c)+'" data-category="'+c+'" aria-pressed="'+(category===c)+'" class="'+(category===c?'active':'')+'">'+c+'</button>').join('')+'</nav>'+(category === 'トップ' ? '<div class="news-section-label"><h2>注目ニュース</h2><span>編集部セレクト</span></div>' : '')+''+(filtered.length?'':'<div class="news-category-empty"><h3>'+escape(category)+'の記事を準備中です</h3><p>根拠資料と利用条件を確認できた記事から追加します。</p><button type="button" data-category="トップ">トップの記事を見る →</button></div>')+'<div class="news-grid">'+filtered.map((a,i)=>'<button type="button" class="news-card '+(i===0?'news-featured':'')+'" style="'+genreStyle(a.category)+'" data-article="'+a.id+'"><img src="'+artwork(a)+'" alt="'+a.caption+'"/><div class="news-card-copy"><div class="news-meta">'+meta(a)+'</div><h3>'+a.title+'</h3><p>'+a.summary+'</p><div class="news-card-bottom"><span>'+D.getNewsTags(a).map(tag=>'#'+escape(tag)).join(' ')+'</span><span>記事を読む ↗</span></div></div></button>').join('')+'</div><p class="news-sample-note">配信元と記事の種類は各カードに表示しています。初回の「記事を作成」にはOpenAIを使用します。</p><p class="news-bottom-note">ひとつのニュースに、ひとつじゃない見方を。<br><b>DOPA<span>NEWS</span></b></p>';
+      content.innerHTML = '<nav class="news-tabs" aria-label="ニュースのカテゴリー">'+['トップ','テクノロジー','政治','経済','スポーツ','自然','エンタメ','恋愛','その他'].map(c=>'<button type="button" style="'+genreStyle(c)+'" data-category="'+c+'" aria-pressed="'+(category===c)+'" class="'+(category===c?'active':'')+'">'+c+'</button>').join('')+'</nav>'+(category === 'トップ' ? '<div class="news-section-label"><h2>注目ニュース</h2><span>編集部セレクト</span></div>' : '')+''+(filtered.length?'':'<div class="news-category-empty"><h3>'+escape(category)+'の記事を準備中です</h3><p>根拠資料と利用条件を確認できた記事から追加します。</p><button type="button" data-category="トップ">トップの記事を見る →</button></div>')+'<div class="news-grid">'+filtered.map((a,i)=>'<button type="button" class="news-card '+(i===0?'news-featured':'')+'" style="'+genreStyle(a.category)+'" data-article="'+a.id+'"><img src="'+artwork(a)+'" alt="'+a.caption+'"/><div class="news-card-copy"><div class="news-meta">'+meta(a)+'</div><h3>'+a.title+'</h3><p>'+a.summary+'</p><div class="news-card-bottom"><span>'+D.getNewsTags(a).map(tag=>'#'+escape(tag)).join(' ')+'</span><span>記事を読む ↗</span></div></div></button>').join('')+'</div><p class="news-sample-note">配信元と記事の種類は各カードに表示しています。初回の「記事を作成」にはOpenAIを使用します。</p>';
       content.querySelector('.news-tabs').scrollLeft = categoryScroll;
       if (searching) content.querySelector('[data-category="トップ"]').textContent = 'すべて';
       if (searching) {
@@ -492,11 +504,16 @@
         status.textContent = D.newsFeedStatus;
         content.append(status);
       }
+      if (!searching) {
+        const tabs = content.querySelector('.news-tabs');
+        newsHeader.append(tabs); tabs.scrollLeft = categoryScroll;
+        syncTopGenre();
+      }
     }
     let genreScrollFrame = 0;
     function syncTopGenre() {
       if (category !== 'トップ' || selected || location.hash === '#search') return;
-      const tabs = content.querySelector('.news-tabs');
+      const tabs = newsHeader.querySelector('.news-tabs') || content.querySelector('.news-tabs');
       if (!tabs) return;
       const threshold = tabs.getBoundingClientRect().bottom + 35;
       let current = 'トップ';
@@ -521,6 +538,8 @@
       return '<section class="news-source-notes"><h2>出典・利用条件</h2>'+a.sources.map(src=>'<p><a href="'+escape(src.url)+'" target="_blank" rel="noopener noreferrer">'+escape(src.name)+'</a><br>資料・制度の日付：'+escape(src.date)+'<br>'+escape(src.scope)+'</p><p><a href="'+escape(src.terms)+'" target="_blank" rel="noopener noreferrer">出典サイトの利用規約</a></p>').join('')+'<p>上記資料をもとにDOPANEWSが編集・加工。本文は本アプリの解説、イラストは自作、MCの意見と歌詞は創作です。資料・規約確認日：2026年10月29日。</p></section>';
     }
     function detail(a) {
+      screen.dataset.view = 'article';
+      newsHeader.querySelector('.news-tabs')?.remove();
       selected = a; back.hidden = false; bar.hidden = false; searchButton.hidden = false;
       content.innerHTML = '<article class="news-article" style="'+genreStyle(a.category)+'"><div class="news-meta"><span class="news-category">'+a.category+'</span><span>公的資料に基づく解説</span><span>約2分で読めます</span></div><h1 tabindex="-1">'+a.title+'</h1><div class="news-byline"><span>DOPANEWS 編集部</span><time datetime="'+a.date.replaceAll('/','-')+'">'+escape(a.dateLabel||'資料公表')+'：'+a.date+'</time></div><figure><img src="'+artwork(a)+'" alt="'+a.caption+'"/><figcaption>'+a.caption+'</figcaption></figure><p class="news-disclaimer">公的資料の説明・数値をもとにDOPANEWSが編集・加工した解説です。MCの意見・歌詞は創作であり、出典機関の発言や推奨を表しません。</p><div class="news-article-body">'+a.paragraphs.map(p=>'<p>'+escape(p)+'</p>').join('')+'</div>'+sourceMarkup(a)+'<aside class="news-perspectives"><span class="news-eyebrow">TWO SIDES, ONE TOPIC</span><h2>資料を踏まえて、あなたはどう考える？</h2><p><b>KENTA</b>'+a.stances[0]+'</p><p><b>REINA</b>'+a.stances[1]+'</p></aside><p class="news-end">ここまで読んだら、次はふたつの視点を聴いてみよう。</p></article>';
       screen.scrollTop = 0; content.querySelector('h1').focus({preventScroll:true});
@@ -598,6 +617,7 @@
       enteringBattle = true;
       articleScroll = screen.scrollTop;
       const a = selected;
+      if (!await D.showCharacterSelect({title:a.title})) { enteringBattle = false; return; }
       app.audioController._ensureAudioContext();
       const proceed = await showBattleCutin(a);
       enteringBattle = false;

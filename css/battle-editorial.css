@@ -66,7 +66,7 @@
 .news-article figcaption { color: #9299a6; margin: 8px 10px; }
 .news-disclaimer { border-color: #353f51; color: #8992a1; }
 .news-article-body p { color: #d3d5db; }
-.news-perspectives { position: relative; overflow: hidden; background: linear-gradient(90deg,#050910f5,#050910dd),url('./images/mc-faceoff.png') center/cover; border: 1px solid #ffffff24; box-shadow: none; border-radius: 8px; }
+.news-perspectives { position: relative; overflow: hidden; background: linear-gradient(90deg,#08152a,#230e19); border: 1px solid #ffffff24; box-shadow: none; border-radius: 8px; }
 .news-eyebrow { color: #9ba4b5; font-family: Impact,'Arial Narrow',sans-serif; letter-spacing: 1.8px; }
 .news-perspectives b { color: #82b4ff; text-shadow: none; }
 .news-perspectives p:last-child b { color: #ff898d; text-shadow: none; }
@@ -88,7 +88,7 @@
 .cutin-stance > span { color: #91baff; }
 .cutin-reina .cutin-stance > span { color: #ff979a; }
 .cutin-stance h3 { color: #fff; }
-.cutin-portrait { width: 39%; right: 2%; height: 100%; background-image: url('./images/mc-faceoff.png'); background-repeat: no-repeat; background-size: auto 150%; background-position: 0 20%; mask-image: linear-gradient(90deg,transparent,#000 20%); }
+.cutin-portrait { width: 39%; right: 2%; height: 100%; background-image:none; background-repeat: no-repeat; background-size: auto 150%; background-position: 0 20%; mask-image: linear-gradient(90deg,transparent,#000 20%); }
 .cutin-reina .cutin-portrait { left: 2%; background-position: 100% 20%; mask-image: linear-gradient(270deg,transparent,#000 20%); }
 .cutin-vs { color: #fff; font-family: Impact,'Arial Narrow',sans-serif; -webkit-text-stroke: 1px #fff; text-shadow: 4px 5px 0 #020408; }
 .cutin-vs-letters { font-style: italic; }
@@ -126,7 +126,7 @@
 .verse-pill { border-radius: 999px; background: #0c1117; font-size: 9px; }
 .verse-pill.pill-kenta.active { background: #2256c1; box-shadow: none; border-color: #5286ed; }
 .verse-pill.pill-reina.active { background: #a02a34; color: #fff; box-shadow: none; border-color: #ea5960; }
-.mc-versus-arena { position: relative; border: 1px solid #ffffff1c; border-radius: 7px; overflow: hidden; background: linear-gradient(0deg,#020407e6,transparent 60%),url('./images/mc-faceoff.png') center 35%/cover; gap: 0; }
+.mc-versus-arena { position: relative; border: 1px solid #ffffff1c; border-radius: 7px; overflow: hidden; background:#090d14; gap: 0; }
 .mc-fighter-card { z-index: 1; min-height: clamp(115px,19dvh,180px); padding: 8px 4px; justify-content: flex-end; border-radius: 0; border: 0; background: transparent; }
 .mc-fighter-card.mc-kenta.mc-active, .mc-fighter-card.mc-reina.mc-active { background: transparent; box-shadow: none; transform: none; }
 .mc-fighter-card.mc-dim { opacity: .6; transform: none; filter: none; }
@@ -207,5 +207,5 @@
 .news-tabs { overflow-x:auto; flex-wrap:nowrap; }
 .news-tabs button { flex:0 0 auto; white-space:nowrap; }
 
-.cutin-kenta .cutin-portrait { height:84%; bottom:6%; background-image:url('./images/mc-kenta.png'); background-size:contain; background-position:center bottom; }
-.cutin-reina .cutin-portrait { height:84%; bottom:6%; background-image:url('./images/mc-reina.png'); background-size:contain; background-position:center bottom; }
+.cutin-kenta .cutin-portrait { height:84%; bottom:6%; background-image:url('./images/mc-kenta-illustration.png'); background-size:contain; background-position:center bottom; }
+.cutin-reina .cutin-portrait { height:84%; bottom:6%; background-image:url('./images/mc-reina-illustration.png'); background-size:contain; background-position:center bottom; }

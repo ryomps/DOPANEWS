@@ -193,6 +193,7 @@
       }
     }
     function renderArticle(record) {
+      document.getElementById('news-screen').dataset.view = 'article';
       articleBattleBar?.remove(); articleBattleBar = null;
       body.replaceChildren();
       mount.hidden = false; curated.hidden = true;
@@ -216,6 +217,7 @@
         const start = button('MCバトル', async () => {
           const app = global.dopaNewsApp;
           if (!app || app.isGenerating || busy) return;
+          if (!await D.showCharacterSelect({title:record.article.title})) return;
           await app.handleArticleBattleGeneration({ articleText: record.articleText, title: record.article.title });
         });
         articleBattleBar = el('footer', undefined, 'news-battle-bar live-article-battle-bar');

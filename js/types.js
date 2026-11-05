@@ -94,6 +94,7 @@
 
     return {
       title: raw?.title || 'UNTITLED NEWS BATTLE',
+      ...(Array.isArray(raw?.character_ids) ? { character_ids: raw.character_ids.slice(0, 2) } : {}),
       topic_summary: raw?.topic_summary || '',
       kenta_stance: raw?.kenta_stance || '現場・庶民目線から現状の課題を徹底追及',
       reina_stance: raw?.reina_stance || 'データと国際基準・長期的合理性から冷静に反論',

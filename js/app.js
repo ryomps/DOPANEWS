@@ -840,6 +840,8 @@
     }
 
     _applyBattleData(battleData) {
+      if (!battleData.character_ids && DOPANEWS.selectedCharacters) battleData.character_ids = DOPANEWS.selectedCharacters.slice();
+      DOPANEWS.applyCharacterSelection?.(battleData.character_ids);
       if (!battleData.category) battleData.category = DOPANEWS.getNewsCategory?.(this.currentArticleText) || 'その他';
       if (!this.articleTransitionPending) {
         document.getElementById('battle-stage')?.classList.remove('article-generation-pending');
