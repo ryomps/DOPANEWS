@@ -7,6 +7,27 @@
     image: './css/images/artist-' + String(i + 1).padStart(2, '0') + '-' + (i % 2 ? 'female' : 'male') + '.png'
   }));
   let chosen = [1, 2], open = false;
+  // Retain decoded images so the roster and subsequent screens reuse them.
+  const characterImages = new Map();
+  function preloadCharacters() {
+    const queue = [...chosen, ...characters.map(character => character.id)]
+      .filter((id, index, ids) => ids.indexOf(id) === index);
+    async function loadNext() {
+      while (queue.length) {
+        const character = characters[queue.shift() - 1];
+        const image = new Image();
+        image.decoding = 'async';
+        image.fetchPriority = chosen.includes(character.id) ? 'high' : 'low';
+        characterImages.set(character.id, image);
+        const loaded = new Promise(resolve => { image.onload = resolve; image.onerror = resolve; });
+        image.src = character.image;
+        await loaded;
+        if (image.naturalWidth && image.decode) await image.decode().catch(() => {});
+      }
+    }
+    // Bound background downloads to leave bandwidth for news content.
+    for (let i = 0; i < 3; i++) void loadNext();
+  }
   D.getMcName = (speaker, battle) => {
     const ids = battle?.character_ids || chosen;
     return characters[ids[speaker === 'REINA' ? 1 : 0] - 1]?.name || speaker;
@@ -31,6 +52,7 @@
       if (Array.isArray(saved) && saved.length === 2 && saved.every(id => characters.some(c => c.id === id)) && saved[0] !== saved[1]) chosen = saved;
     } catch {}
     apply();
+    preloadCharacters();
   });
   D.showCharacterSelect = ({ title = '' } = {}) => {
     if (open) return Promise.resolve(false);
@@ -50,7 +72,10 @@
         side = target;
         const other = 1 - side;
         if (draft[other] === id) draft[other] = draft[side];
-        draft[side] = id; render();
+        draft[side] = id;
+        // After filling one side, the next tap fills the empty side.
+        if (!draft[other]) side = other;
+        render();
       }
       function clearDrag() {
         if (!drag) return;

@@ -306,7 +306,17 @@
 
       const activeEl = lineEls[activeLineIdx];
       if (activeEl && this.lyricBoxEl.scrollHeight > this.lyricBoxEl.clientHeight) {
-        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // Scroll only the lyrics, including when the phone preview is scaled.
+        const box = this.lyricBoxEl;
+        const boxRect = box.getBoundingClientRect();
+        const scale = boxRect.height / box.offsetHeight || 1;
+        const lineRect = activeEl.getBoundingClientRect();
+        const lineTop = (lineRect.top - boxRect.top) / scale + box.scrollTop - box.clientTop;
+        const target = lineTop - (box.clientHeight - activeEl.offsetHeight) / 2;
+        box.scrollTo({
+          top: Math.max(0, Math.min(box.scrollHeight - box.clientHeight, target)),
+          behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+        });
       }
     }
 

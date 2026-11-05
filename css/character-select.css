@@ -138,3 +138,73 @@
   :root { --phone-width:390px; --preview-height:844px; --preview-bottom:calc(100dvh - var(--preview-top) - 844px); }
   .stage-viewport::before, .news-mode::after { content:'6.1 INCH / 390 × 844'; }
 }
+/* Reflected beams originate at the ball rather than at the stage corners. */
+.stage-mirror-ball, .judge-mirror-ball { isolation:isolate; }
+.stage-mirror-ball img, .judge-mirror-ball img { position:relative; z-index:1; }
+.live-battle-player .stage-mirror-ball::before, .live-battle-player .judge-mirror-ball::before { content:''; position:absolute; inset:auto; top:58%; left:50%; width:330px; height:330px; z-index:-1; pointer-events:none; background:repeating-conic-gradient(from 12deg,transparent 0deg 24deg,#d7edff55 26deg,#fff3fc80 28deg,transparent 31deg 48deg); mask-image:radial-gradient(circle,transparent 0 16px,#0008 25px,#000 42px,transparent 150px); -webkit-mask-image:radial-gradient(circle,transparent 0 16px,#0008 25px,#000 42px,transparent 150px); transform:translate(-50%,-50%); filter:blur(1px); animation:mirror-light-rays 16s linear infinite; opacity:.7; }
+.live-battle-player .stage-mirror-ball::after, .live-battle-player .judge-mirror-ball::after { content:''; position:absolute; top:58%; left:50%; width:3px; height:3px; border-radius:50%; background:#f4f5ff; pointer-events:none; box-shadow:-112px 21px 3px #a8d7ffc0,104px 34px 3px #ffd2efc0,-76px 76px 2px #e9d7ffb0,82px 91px 3px #afd9ffa0,-130px -36px 2px #d6e9ff90,125px -22px 2px #ffd6eea0,-32px 112px 3px #e8ddff90,39px -61px 2px #fff9; animation:mirror-light-sparkles 3.2s ease-in-out infinite; }
+.live-battle-player .stage-mirror-ball::before, .live-battle-player .stage-mirror-ball::after { animation-play-state:paused; }
+.live-battle-player[data-playing="true"] .stage-mirror-ball::before, .live-battle-player[data-playing="true"] .stage-mirror-ball::after { animation-play-state:running; }
+@keyframes mirror-light-rays { from { transform:translate(-50%,-50%) rotate(0deg); } to { transform:translate(-50%,-50%) rotate(360deg); } }
+@keyframes mirror-light-sparkles { 0%,100% { opacity:.25; transform:rotate(-7deg) scale(.92); } 50% { opacity:.85; transform:rotate(7deg) scale(1.04); } }
+@media(prefers-reduced-motion:reduce) { .live-battle-player .stage-mirror-ball::before,.live-battle-player .stage-mirror-ball::after,.live-battle-player .judge-mirror-ball::before,.live-battle-player .judge-mirror-ball::after { animation:none; } }
+/* Subtle moving mirror reflections, without a spoke-like light pattern. */
+.live-battle-player .stage-mirror-ball::before, .live-battle-player .judge-mirror-ball::before { width:245px; height:200px; background:radial-gradient(ellipse at center,#dce7ff30,transparent 57%); mask-image:none; -webkit-mask-image:none; filter:blur(10px); opacity:.45; animation:mirror-reflection-haze 7s ease-in-out infinite alternate; }
+.live-battle-player .stage-mirror-ball::after, .live-battle-player .judge-mirror-ball::after { width:4px; height:2px; background:#e8eeff50; border-radius:40%; filter:blur(.7px); box-shadow:-107px 23px 2px 1px #c4d8ef59,98px 38px 3px 1px #e6d8e954,-69px 74px 2px 0 #d1d6ed70,77px 96px 3px 1px #bdd6e84d,-123px -29px 2px 0 #d5dfef40,119px -14px 3px 0 #e3d1e342,-29px 116px 3px 1px #d2d8ed4d,33px -54px 2px 0 #eef0f03d,-43px 39px 2px 0 #d7dfee59,52px 61px 2px 0 #e1dbe652,-89px 106px 3px 0 #c8d2e638,106px 121px 2px 1px #dcd6e342; animation:mirror-reflection-drift 12s ease-in-out infinite alternate; }
+@keyframes mirror-reflection-haze { from { transform:translate(-52%,-48%); opacity:.25; } to { transform:translate(-47%,-52%); opacity:.45; } }
+@keyframes mirror-reflection-drift { 0% { transform:translate(-7px,3px) rotate(-4deg); opacity:.35; } 45% { opacity:.65; } 100% { transform:translate(9px,-5px) rotate(5deg); opacity:.45; } }
+.live-battle-player .stage-mirror-ball::before,.live-battle-player .stage-mirror-ball::after { animation-play-state:paused; }
+.live-battle-player[data-playing="true"] .stage-mirror-ball::before,.live-battle-player[data-playing="true"] .stage-mirror-ball::after { animation-play-state:running; }
+@media(prefers-reduced-motion:reduce) { .live-battle-player .stage-mirror-ball::before,.live-battle-player .stage-mirror-ball::after,.live-battle-player .judge-mirror-ball::before,.live-battle-player .judge-mirror-ball::after { animation:none; } }
+/* Rotate around the hanging vertical axis; do not swing like a pendulum. */
+.stage-mirror-ball img, .judge-mirror-ball img { transform-origin:50% 50%; backface-visibility:visible; animation:mirror-ball-turn 12s linear infinite; }
+.live-battle-player .stage-mirror-ball img { animation-play-state:paused; }
+.live-battle-player[data-playing="true"] .stage-mirror-ball img { animation-play-state:running; }
+@keyframes mirror-ball-turn {
+  0% { transform:perspective(240px) rotateY(0deg); }
+  100% { transform:perspective(240px) rotateY(360deg); }
+}
+@media(prefers-reduced-motion:reduce) { .stage-mirror-ball img,.judge-mirror-ball img { animation:none; } }
+
+.mirror-sphere { position:relative; z-index:1; display:block; width:100%; height:100%; filter:drop-shadow(0 1px 5px #d5deff50); }
+/* The sphere renderer drives reflections from the same rotation angle. */
+.live-battle-player .stage-mirror-ball::before,.live-battle-player .judge-mirror-ball::before { animation:none; transform:translate(-50%,-50%); opacity:var(--reflection-light,.35); }
+.live-battle-player .stage-mirror-ball::after,.live-battle-player .judge-mirror-ball::after { animation:none; transform:translate(var(--reflection-x,0px),var(--reflection-y,0px)) rotate(var(--reflection-angle,0deg)); opacity:var(--reflection-light,.35); }
+.news-versus-cutin .cutin-vs { font-size:clamp(120px,21vw,170px); }
+@media(max-height:600px) { .news-versus-cutin .cutin-vs { font-size:120px; } }
+/* Brighter reflections remain tied to the sphere's rotation. */
+.live-battle-player .stage-mirror-ball::before,
+.live-battle-player .judge-mirror-ball::before {
+  width:360px; height:290px;
+  background:radial-gradient(ellipse,#eff5ff75 0%,#b7b4ff35 25%,transparent 65%);
+  filter:blur(8px);
+}
+.live-battle-player .stage-mirror-ball::after,
+.live-battle-player .judge-mirror-ball::after {
+  width:5px; height:3px; background:#fff; filter:blur(.45px);
+  box-shadow:-107px 23px 3px 1px #c4e6ffdd,98px 38px 3px 1px #ffe0f5dd,-69px 74px 2px 1px #e4ddffff,77px 96px 3px 1px #c6e8ffcc,-123px -29px 2px 1px #e3efffcc,119px -14px 3px 1px #ffdcf2cc,-29px 116px 3px 1px #e0e8ffcc,33px -54px 2px 1px #fff,-43px 39px 2px 1px #dceaffee,52px 61px 2px 1px #ffe4f5dd,-89px 106px 3px 1px #d7e9ffbb,106px 121px 2px 1px #ede2ffcc,-145px 64px 3px #fff9,143px 81px 3px #fff9,-22px 145px 3px #dfd4ffcc,62px 154px 3px #cceaffbb;
+}
+.battle-stage.live-battle-player {
+  background:radial-gradient(ellipse at 5% 8%,#357aff80,transparent 45%),radial-gradient(ellipse at 95% 10%,#ff356e75,transparent 45%),radial-gradient(ellipse at 50% 75%,#974fff40,transparent 60%),#080b13;
+}
+.live-battle-player .mc-versus-arena {
+  box-shadow:inset 0 0 32px #afa2ff35,0 0 20px #9977ff25;
+  background:radial-gradient(ellipse at 15% 0,#e2f3ffff,transparent 20%),radial-gradient(ellipse at 85% 0,#ffe2eeff,transparent 20%),conic-gradient(from 150deg at 15% 0,transparent,#78baff88 12deg,transparent 35deg),conic-gradient(from 175deg at 85% 0,transparent,#ff75a088 15deg,transparent 38deg),linear-gradient(#24223e,#10152b 78%,#67436c);
+}
+/* Multiple narrow laser fans sweep behind the performers. */
+.live-battle-player .mc-versus-arena::after {
+  content:''; position:absolute; inset:-15% -20%; z-index:0; pointer-events:none;
+  background:repeating-conic-gradient(from 148deg at 20% 10%,transparent 0deg 9deg,#8bd6ff88 9.2deg 9.6deg,transparent 10deg 18deg),repeating-conic-gradient(from 184deg at 80% 10%,transparent 0deg 12deg,#ff8ec888 12.2deg 12.6deg,transparent 13deg 23deg);
+  mask-image:linear-gradient(transparent,#000 20%,#0009 70%,transparent);
+  opacity:.65; transform-origin:50% 10%; animation:stage-laser-sweep 9s ease-in-out infinite alternate;
+}
+@keyframes stage-laser-sweep { from { transform:rotate(-6deg) scale(1.05); } to { transform:rotate(6deg) scale(1.12); } }
+@media(prefers-reduced-motion:reduce) { .live-battle-player .mc-versus-arena::after { animation:none; } }
+/* Let the performer continue behind the translucent name and stance panel. */
+.live-battle-player .mc-stage-portrait {
+  inset:0; height:100%; object-position:center top;
+}
+.live-battle-player .mc-identity {
+  background:linear-gradient(180deg,#060b13b8,#060b13de);
+  text-shadow:0 1px 3px #000,0 0 8px #0009;
+}

@@ -1,4 +1,18 @@
 /* Keep the 390 × 844 design, fitting the entire phone inside the desktop window. */
+@media(max-width:900px) {
+  #btn-toggle-drawer, .control-drawer, .control-drawer.drawer-open { display:none !important; }
+  .app-layout { display:block; height:var(--app-viewport-height,100dvh); min-height:0; overflow:hidden; }
+  .stage-viewport { width:100%; height:calc(var(--app-viewport-height,100dvh) - var(--app-footer-height)); padding:0; align-items:flex-start; justify-content:center; box-sizing:border-box; overflow:hidden; }
+  .battle-stage.live-battle-player { width:100%; max-width:430px; height:100%; max-height:100%; min-height:0; margin:0; aspect-ratio:auto; border:0; border-radius:0; box-sizing:border-box; }
+  .live-battle-player .stage-center { flex:1 1 0; min-height:0; }
+  .live-battle-player .mc-versus-arena { height:clamp(160px,28dvh,230px); }
+  .live-battle-player .punchline-card { min-height:60px; }
+  .live-battle-player .stage-lyric-box { min-height:40px; }
+  .live-battle-player .stage-bottom { flex-shrink:0; }
+  .live-battle-player .spectrum-canvas { display:none; }
+  .news-screen { height:calc(var(--app-viewport-height,100dvh) - var(--app-footer-height) - var(--consumer-header-height) - env(safe-area-inset-top) - 1px); max-height:calc(var(--app-viewport-height,100dvh) - var(--app-footer-height) - var(--consumer-header-height) - env(safe-area-inset-top) - 1px); }
+  #news-screen[data-view="list"] { height:calc(var(--app-viewport-height,100dvh) - var(--app-footer-height) - var(--consumer-header-height) - env(safe-area-inset-top) - 49px); max-height:calc(var(--app-viewport-height,100dvh) - var(--app-footer-height) - var(--consumer-header-height) - env(safe-area-inset-top) - 49px); }
+}
 @media(min-width:901px) {
   :root { --preview-bottom:calc(100dvh - var(--preview-top) - 844px * var(--phone-preview-scale,1)); }
   .battle-stage.live-battle-player { flex-shrink:0; transform:scale(var(--phone-preview-scale,1)); transform-origin:top center; }
