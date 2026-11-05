@@ -208,10 +208,11 @@
         return;
       }
 
-      // 音声URLがまだセットされていない場合は112BPMシンセビートでバトル再生を開始
+      // Missing/generated-failed audio must never masquerade as a completed song.
       if (!this.audio.getAttribute('src')) {
-        this.startSynthBattle(45);
-        return;
+        this.onPlayStateChange(false);
+        this.onPlaybackError(new Error('音源がまだ生成されていません。ラップ生成を完了してから再生してください。'));
+        return false;
       }
 
       if (this.audio.paused) {

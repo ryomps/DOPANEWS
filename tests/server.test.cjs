@@ -39,7 +39,7 @@ test('server keeps API keys private and injects them into the correct upstream r
     calls.push({ target, options }); return Response.json({ status: 'succeeded' });
   });
   const config = await (await fetch(`${url}/api/config`)).json();
-  assert.deepEqual(config, { geminiConfigured: true, murekaConfigured: true, openaiConfigured:false, reviewSupported: true });
+  assert.deepEqual(config, { geminiConfigured: true, murekaConfigured: true, openaiConfigured:false, reviewSupported: true, lyriaSupported: true, lyriaAlignmentSupported: true });
   for (const route of ['/config.local.json', '/.local/library/x.json', '/server.cjs', '/.git/config']) {
     assert.equal((await fetch(url + route)).status, 404);
   }
@@ -241,4 +241,58 @@ test('split-source demo serves MP3 ranges and keeps edit manifests private', asy
   assert.equal(response.headers.get('content-type'), 'audio/mpeg');
   assert.equal(await response.text(), '2345');
   assert.equal((await fetch(url + '/media/demos/food-boundary-edit.json')).status, 404);
+});
+
+
+test('Lyria HTTP routes save private originals, reuse generation and serve seekable audio', async t => {
+  let calls = 0;
+  const lines = Array.from({length:16}, (_,id) => ({id,start:2+id*2,end:3+id*2}));
+  const { url } = await fixture(t, async target => {
+    calls++;
+    return target.endsWith('/interactions')
+      ? Response.json({steps:[{type:'model_output',content:[{type:'audio',mime_type:'audio/mpeg',data:Buffer.from('ID3music').toString('base64')}]}]})
+      : Response.json({words:lines.map(l=>({word:'歌詞',start:l.start,end:l.end}))});
+  });
+  await post(url+'/api/config',{OpenAIApiKey:'test-openai'});
+  const verse = {lyric:Array(8).fill('歌詞').join('\n'),lyric_reading:Array(8).fill('かし').join('\n')};
+  const body = {gender:'male',verses:[verse,verse]};
+  const first = await post(url+'/api/lyria/generate',body);
+  assert.equal(first.status,200); const result = await first.json();
+  assert.equal(result.lines.length,16);
+  assert.equal((await post(url+'/api/lyria/generate',body)).status,200);
+  assert.equal(calls,2);
+  const audio = await fetch(url+result.audioUrl,{headers:{Range:'bytes=0-2'}});
+  assert.equal(audio.status,206); assert.equal(await audio.text(),'ID3');
+  assert.equal((await fetch(url+'/.local/lyria/'+result.id+'.request.json')).status,404);
+  assert.equal((await post(url+'/api/lyria/generate',{...body,gender:'duet'})).status,502);
+  assert.equal(calls,2);
+});
+
+test('stereo Lyria WAV larger than the old JSON limit saves and plays with ranges', async t => {
+  const { url, start } = await fixture(t, async () => { throw new Error('No upstream call expected'); });
+  const wav = Buffer.alloc(44+44100*4*35);
+  wav.write('RIFF'); wav.writeUInt32LE(wav.length-8,4); wav.write('WAVEfmt ',8);
+  wav.writeUInt32LE(16,16); wav.writeUInt16LE(1,20); wav.writeUInt16LE(2,22);
+  wav.writeUInt32LE(44100,24); wav.writeUInt32LE(44100*4,28); wav.writeUInt16LE(4,32); wav.writeUInt16LE(16,34);
+  wav.write('data',36); wav.writeUInt32LE(wav.length-44,40);
+  const response = await post(url+'/api/library',{battleData:script,audioWavBase64:wav.toString('base64')});
+  assert.equal(response.status,201); const saved = await response.json();
+  const next = await start();
+  const audio = await fetch(next.url+saved.audioUrl,{headers:{Range:'bytes=0-43'}});
+  assert.equal(audio.status,206);
+  const header = Buffer.from(await audio.arrayBuffer()); assert.equal(header.readUInt16LE(22),2);
+});
+
+
+test('published news audio supports ranges and keeps other files private', async t => {
+  const { root, url } = await fixture(t, async () => {throw new Error('No external request expected');});
+  await fs.mkdir(path.join(root,'media','news'),{recursive:true});
+  for(const name of ['adult-smartphone','bicycle-blue-ticket']) {
+    await fs.writeFile(path.join(root,'media','news',name+'.mp3'),'0123456789');
+    const response=await fetch(url+'/media/news/'+name+'.mp3',{headers:{Range:'bytes=2-5'}});
+    assert.equal(response.status,206); assert.equal(response.headers.get('content-type'),'audio/mpeg');
+    assert.equal(await response.text(),'2345');
+  }
+  await fs.writeFile(path.join(root,'media','news','private.json'),'{}');
+  assert.equal((await fetch(url+'/media/news/private.json')).status,404);
 });

@@ -464,7 +464,7 @@
           if (row.dataset.article) row.dataset.genre = items.find(article => article.id === row.dataset.article)?.category || 'その他';
         });
         const pinned = rows.filter(row => items.find(article => article.id === row.dataset.article)?.battleKey);
-        const picks = [...pinned, ...rows.filter(row => row.dataset.topPick === 'true' && !pinned.includes(row))].slice(0, 3);
+        const picks = [...pinned, ...rows.filter(row => row.dataset.topPick === 'true' && !pinned.includes(row))].slice(0, Math.max(3, pinned.length));
         for (const row of rows) { if (picks.length >= 3) break; if (!picks.includes(row)) picks.push(row); }
         grid.replaceChildren(...picks);
         const leadCard = picks[0]?.matches('.news-card') ? picks[0] : picks[0]?.querySelector('.news-card');

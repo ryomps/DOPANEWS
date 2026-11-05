@@ -6,3 +6,5 @@ config.local.*
 
 # Generated music and private local history
 .local/
+__pycache__/
+*.pyc

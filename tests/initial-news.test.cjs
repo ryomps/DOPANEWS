@@ -7,18 +7,20 @@ const root = path.join(__dirname, '..');
 function setup() {
   const window = { addEventListener() {} };
   const context = vm.createContext({ window });
-  for (const file of ['fixed-demo.js', 'initial-news.js', 'news-search.js', 'news.js']) {
+  for (const file of ['fixed-demo.js', 'completed-news.js', 'initial-news.js', 'news-search.js', 'news.js']) {
     vm.runInContext(fs.readFileSync(path.join(root, 'js', file), 'utf8'), context);
   }
   return window;
 }
-test('two prepared news articles lead the repository and are searchable by their topics', async () => {
+test('completed news lead the repository, with both smartphone topics first', async () => {
   const w = setup(), D = w.DOPANEWS;
   const items = await D.newsRepository.list();
-  assert.deepEqual(Array.from(items.slice(0, 2), a => a.id), ['sns-freedom', 'children-smartphone']);
-  assert.equal(D.matchesNewsSearch(items[0], 'SNS 自由'), true);
-  assert.equal(D.matchesNewsSearch(items[1], 'スマホ 子ども'), true);
-  for (const a of items.slice(0,2)) {
+  assert.deepEqual(Array.from(items.slice(0, 4), a => a.id), ['children-smartphone', 'adult-smartphone', 'bicycle-blue-ticket', 'sns-freedom']);
+  assert.equal(D.matchesNewsSearch(items[0], 'スマホ 子ども'), true);
+  assert.equal(D.matchesNewsSearch(items[1], '大人ドパガキ'), true);
+  assert.equal(D.matchesNewsSearch(items[2], '自転車 青切符'), true);
+  assert.equal(D.matchesNewsSearch(items[3], 'SNS 自由'), true);
+  for (const a of items.slice(0,4)) {
     assert.ok(a.paragraphs.length >= 4);
     assert.ok(a.sources.every(s => s.url.startsWith('https://')));
     assert.doesNotMatch(a.title + a.summary + a.paragraphs.join(''), /デモ|デフォルト/);
@@ -30,12 +32,23 @@ test('each news opens its own completed audio and preserves article context with
   const played = [];
   w.dopaNewsApp = { async handleFixedDemo(record) { played.push(record); } };
   for (const a of D.initialNewsArticles) assert.equal(await D.playNewsBattle(a), true);
-  assert.equal(played[0].audioUrl, '/media/demos/voice-no-yukue.mp3');
-  assert.equal(played[1].audioUrl, '/media/demos/food-boundary.mp3');
+  assert.deepEqual(played.map(p => p.audioUrl), ['/media/demos/food-boundary.mp3', '/media/news/adult-smartphone.mp3', '/media/news/bicycle-blue-ticket.mp3', '/media/demos/voice-no-yukue.mp3']);
   assert.ok(played[0].articleText.startsWith(D.initialNewsArticles[0].title));
   assert.ok(played[1].articleText.includes(D.initialNewsArticles[1].sources[0].url));
   played[0].battleData.verses[0].lyric = 'edited';
   assert.equal(JSON.stringify(D.FIXED_DEMO), beforeVoice);
   assert.equal(JSON.stringify(D.FOOD_DEMO), beforeFood);
   assert.equal(await D.playNewsBattle({battleKey:'unknown'}), false);
+});
+
+test('published battle metadata retains 32 timed lines without private cache paths or raw articles', () => {
+  const D = setup().DOPANEWS;
+  for (const record of Object.values(D.completedNewsBattles)) {
+    assert.equal(record.battleData.verses.length,4);
+    assert.equal(record.battleData.mureka_timeline.length,32);
+    assert.equal(record.battleData.part_segments.length,4);
+    assert.ok(record.battleData.part_segments.at(-1).end <= record.synthDuration + .001);
+    assert.ok(fs.existsSync(path.join(root, record.audioUrl)));
+    assert.doesNotMatch(JSON.stringify(record), /api\/lyria|ApiKey|\.local|【本文】/);
+  }
 });

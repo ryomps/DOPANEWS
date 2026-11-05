@@ -68,7 +68,7 @@ test('single-song generation sends four alternating verses in one request and do
   assert.equal(result.audioUrl, 'https://cdn.mureka.ai/song.mp3');
   assert.equal(calls.length, 1);
   assert.equal(calls[0].n, 1);
-  assert.match(calls[0].prompt, /96 BPM/);
+  assert.match(calls[0].prompt, /115 BPM/);
   assert.match(calls[0].lyrics, /\[Verse 1:/);
   assert.match(calls[0].lyrics, /\[Chorus 1:/);
   assert.match(calls[0].lyrics, /\[Verse 2:/);
