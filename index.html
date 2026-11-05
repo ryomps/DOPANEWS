@@ -306,13 +306,13 @@
 
         <!-- ステージ下部：オーディオスペクトラム風ビジュアライザー＆再生コントロール -->
         <footer class="stage-bottom">
+          <div class="battle-playback-time"><span id="stage-timer" class="stage-timer" aria-label="現在の再生時間と全体の長さ">00:00 / 01:07</span></div>
           <div class="battle-seek-row">
             <div id="stage-progress-track" class="stage-progress-track"><div id="stage-progress-fill" class="stage-progress-fill"></div></div>
             <input id="battle-seek" type="range" min="0" max="67" value="0" step="0.1" aria-label="再生位置" />
           </div>
           <div id="stage-verse-pills" class="verse-pills-row" aria-label="バースを選択"></div>
           <audio id="battle-audio"></audio>
-          <div class="battle-playback-time"><span id="stage-timer" class="stage-timer" aria-label="現在の再生時間と全体の長さ">00:00 / 01:07</span></div>
           <div class="stage-controls-row">
             <button id="btn-prev-verse" class="btn-verse-step" type="button" aria-label="前のバース" title="前のバース">❮</button>
             <button id="btn-play-pause" type="button" class="btn-stage-play" aria-label="再生" title="再生">▶</button>
