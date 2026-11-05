@@ -168,7 +168,13 @@
         const key = D.battleReflectionKey(item.battleData); matched.add(key);
         return { ...item, saved: true, vote: votes.find(v => v.key === key) };
       });
-      votes.filter(v => !matched.has(v.key)).forEach(v => entries.push({ battleData: v.battleData, vote: v, createdAt: v.votedAt, saved: false }));
+      const bundled = [D.FIXED_DEMO, D.FOOD_DEMO, ...Object.values(D.completedNewsBattles || {})].filter(Boolean);
+      votes.filter(v => !matched.has(v.key)).forEach(v => {
+        const recording = bundled.find(item => D.battleReflectionKey(item.battleData) === v.key);
+        entries.push({ ...recording, battleData: v.battleData, audioUrl: v.audioUrl || recording?.audioUrl,
+          articleText: v.articleText || recording?.articleText, synthDuration: v.synthDuration || recording?.synthDuration,
+          vote: v, createdAt: v.votedAt, saved: Boolean(v.audioUrl || recording?.audioUrl) });
+      });
       entries.forEach(entry => {
         const category = entry.category || entry.battleData.category;
         const inferred = D.getNewsCategory?.(entry.articleText || entry.battleData.title) || 'その他';

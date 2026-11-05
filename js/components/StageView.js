@@ -7,6 +7,17 @@
  */
 (function (global) {
   const DOPANEWS = (global.DOPANEWS = global.DOPANEWS || {});
+  const shortStances = new Map([
+    ['安心して発言できる場を守るため、サービス設計の改善を重視。', '安心して発言できる仕組みを'],
+    ['小さな声を消さないため、透明性と異議を伝える手段を重視。', '透明性と異議を伝える手段を'],
+    ['生活を守るため、大人も守る利用ルールを重視。', '大人も守るスマホルールを'],
+    ['子どもの事情を聞き、一緒にルールを見直すことを重視。', '親子の対話でルールを見直す'],
+    ['現代のストレス社会では手軽な癒やしが必要であり、タイパ重視は合理的な生存戦略である。', '手軽な癒やしと効率を重視'],
+    ['安易な快楽への依存は思考力を奪い、次世代への悪影響も大きいため、デジタルとの距離を再考すべき。', '親もスマホとの距離を見直す'],
+    ['取り締まりの急激な強化に疑問を呈し、庶民の利便性やインフラ整備の遅れを指摘する。', '罰則より先に道路整備を'],
+    ['「ながら運転」の多さを危険視し、ルール徹底による事故防止と社会全体の安全性を重視する。', 'ルールの徹底で事故を防ぐ'],
+  ]);
+  const conciseStance = text => shortStances.get(String(text || '').trim()) || text || '';
 
   class StageView {
     constructor({ onSelectVerse }) {
@@ -52,8 +63,8 @@
         this.progressFillEl.style.clipPath = 'inset(0 100% 0 0)';
       }
       if (this.topicEl) this.topicEl.textContent = battleData.topic_summary;
-      if (this.kentaStanceEl) this.kentaStanceEl.textContent = battleData.kenta_stance;
-      if (this.reinaStanceEl) this.reinaStanceEl.textContent = battleData.reina_stance;
+      if (this.kentaStanceEl) this.kentaStanceEl.textContent = battleData.kenta_stance_short || conciseStance(battleData.kenta_stance);
+      if (this.reinaStanceEl) this.reinaStanceEl.textContent = battleData.reina_stance_short || conciseStance(battleData.reina_stance);
 
       this._renderVersePills();
       this._renderVerseTrack();
@@ -305,7 +316,9 @@
       });
 
       const activeEl = lineEls[activeLineIdx];
-      if (activeEl && this.lyricBoxEl.scrollHeight > this.lyricBoxEl.clientHeight) {
+      if (this.lyricVerseChanged) {
+        this._scrollLyrics(0, false);
+      } else if (activeEl && this.lyricBoxEl.scrollHeight > this.lyricBoxEl.clientHeight) {
         // Scroll only the lyrics, including when the phone preview is scaled.
         const box = this.lyricBoxEl;
         const boxRect = box.getBoundingClientRect();
@@ -313,11 +326,26 @@
         const lineRect = activeEl.getBoundingClientRect();
         const lineTop = (lineRect.top - boxRect.top) / scale + box.scrollTop - box.clientTop;
         const target = lineTop - (box.clientHeight - activeEl.offsetHeight) / 2;
-        box.scrollTo({
-          top: Math.max(0, Math.min(box.scrollHeight - box.clientHeight, target)),
-          behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
-        });
+        this._scrollLyrics(target, !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
       }
+      this.lyricVerseChanged = false;
+    }
+
+    _scrollLyrics(target, smooth) {
+      if (this.lyricScrollFrame) cancelAnimationFrame(this.lyricScrollFrame);
+      this.lyricScrollFrame = null;
+      const box = this.lyricBoxEl;
+      if (!box) return;
+      const top = Math.max(0, Math.min(box.scrollHeight - box.clientHeight, target));
+      if (!smooth) { box.scrollTop = top; return; }
+      const start = box.scrollTop;
+      const startedAt = performance.now();
+      const step = now => {
+        const progress = Math.min(1, (now - startedAt) / 280);
+        box.scrollTop = start + (top - start) * (1 - Math.pow(1 - progress, 3));
+        this.lyricScrollFrame = progress < 1 ? requestAnimationFrame(step) : null;
+      };
+      this.lyricScrollFrame = requestAnimationFrame(step);
     }
 
     activateVerse(index, animate = true) {
@@ -325,6 +353,7 @@
       this.currentVerseIndex = index;
       this.currentLineIndex = -1;
       this.currentLineKey = null;
+      this.lyricVerseChanged = true;
       const verse = this.battleData.verses[index];
       const isReina = verse.speaker === 'REINA';
 
@@ -358,11 +387,10 @@
       }
 
       if (this.lyricBoxEl) {
-        if (animate) {
-          this.lyricBoxEl.classList.remove('lyric-slam-anim');
-          void this.lyricBoxEl.offsetWidth;
-          this.lyricBoxEl.classList.add('lyric-slam-anim');
-        }
+        // Cancel the previous verse's scroll before replacing its lines.
+        // Scaling this container during entry also distorts scroll coordinates.
+        this.lyricBoxEl.classList.remove('lyric-slam-anim');
+        this._scrollLyrics(0, false);
         const lines = verse.lyric.split('\n').filter(Boolean);
         this.lyricBoxEl.innerHTML = lines
           .map(
@@ -371,6 +399,14 @@
           )
           .join('');
         this.lyricBoxEl.scrollTop = 0;
+        // Reset again after the new verse has laid out; pending smooth scrolls
+        // and browser anchoring must not retain the previous MC's position.
+        if (this.lyricResetFrame) cancelAnimationFrame(this.lyricResetFrame);
+        const renderedVerse = verse;
+        this.lyricResetFrame = requestAnimationFrame(() => {
+          if (this.battleData?.verses?.[this.currentVerseIndex] !== renderedVerse) return;
+          this._scrollLyrics(0, false);
+        });
       }
 
       if (this.rhymeBadgeEl) {

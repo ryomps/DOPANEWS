@@ -25,7 +25,10 @@
   }
   function saveVote(data, choice) {
     const key = battleKey(data);
-    sessionVotes = [{ key, battleData: data, choice, votedAt: new Date().toISOString() }, ...readVotes().filter(v => v.key !== key)];
+    const app = global.dopaNewsApp;
+    const playback = app?.currentBattleData && battleKey(app.currentBattleData) === key
+      ? { audioUrl: app.currentAudioUrl, articleText: app.currentArticleText, synthDuration: app.currentSynthDuration } : {};
+    sessionVotes = [{ key, battleData: data, ...playback, choice, votedAt: new Date().toISOString() }, ...readVotes().filter(v => v.key !== key)];
     try { localStorage.setItem(VOTES_KEY, JSON.stringify(sessionVotes)); } catch { /* Keep the vote for this session. */ }
   }
   DOPANEWS.battleReflectionKey = battleKey;
