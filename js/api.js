@@ -218,11 +218,12 @@
   /**
    * Gemini APIを呼び出し、ニュース記事全文から「8小節（8行）×4本」の男女MCラップバトルJSONを生成する
    */
-  async function generateBattleScriptWithGemini(articleText, onProgress = () => {}, reviewFeedback = null) {
+  async function generateBattleScriptWithGemini(articleText, onProgress = () => {}, reviewFeedback = null, musicMode = 'legacy') {
     if (!articleText || articleText.trim().length < 20) {
       throw new Error('ニュース記事の本文を20文字以上入力してください。');
     }
 
+    const targetBpm = musicMode === 'lyria' ? 100 : 115;
     const systemPrompt = `あなたは日本のトップMCバトル番組（フリースタイルダンジョン・戦極MCBATTLE）の構成作家兼ニュース解説プロデューサーです。
 ユーザーが入力したニュース記事の対立軸（賛成派 vs 反対派 / メリット vs デメリット / 推進派 vs 慎重派）を抽出し、
 男性MC「KENTA」と女性MC「REINA」が交互にマイクリレーする【8小節×4本（計32小節）】の本格ラップバトル台本をJSON形式で出力してください。
@@ -237,8 +238,8 @@
   - 4本目のsection_tagは必ず "[Chorus 2: Clear Female Vocal, Upbeat Pop Rap]"
   - スタンス: クール・データや国際標準・経済合理性・現実的なトレードオフを分かりやすく突く側（または記事のもう一方の立場）
 
-【厳守ルール：115 BPM・4拍子・8小節×4本構成】
-歌声の交代は8小節を歌い切った直後に行う。1本目はKENTA男声のみ、2本目はREINA女声のみ、3本目はKENTA男声のみ、4本目はREINA女声のみ。全32小節を1曲として作る。115 BPMでは1小節＝約2.09秒、8小節＝約16.7秒。
+【厳守ルール：${targetBpm} BPM・4拍子・8小節×4本構成】
+歌声の交代は8小節を歌い切った直後に行う。1本目はKENTA男声のみ、2本目はREINA女声のみ、3本目はKENTA男声のみ、4本目はREINA女声のみ。全32小節を1曲として作る。${targetBpm} BPMでは1小節＝約${(240 / targetBpm).toFixed(2)}秒、8小節＝約${(1920 / targetBpm).toFixed(1)}秒。
 1. verses 配列は必ず要素4つ（KENTA [Verse 1] ➔ REINA [Chorus 1] ➔ KENTA [Verse 2] ➔ REINA [Chorus 2]）にすること。
 2. 各バースの lyric は【必ず改行区切りで8行（＝8小節、1行が1小節のリズム）】で書くこと！4行ではなく必ず8行（8小節）にすること。
 3. 1小節（1行）あたり18〜26文字程度の耳馴染みが良くキャッチーで分かりやすい教育的ポップラップ（Educational Pop Rap）にし、小節末で心地よい脚韻・頭韻を踏むこと。

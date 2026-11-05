@@ -55,7 +55,7 @@
         <h2 class="section-title">接続状態</h2>
         <p id="api-config-status" class="status-log" role="status">ローカル設定を確認中…</p>
         <form id="dev-api-form" class="dev-api-form" autocomplete="off">
-          <label for="dev-openai-key">OpenAI APIキー（ニュース検索）</label>
+          <label for="dev-openai-key">OpenAI APIキー（ニュース検索・音声同期）</label>
           <input id="dev-openai-key" class="cyber-input" type="password" autocomplete="new-password" placeholder="新しいキーを入力" />
           <label for="dev-gemini-key">Gemini APIキー</label>
           <input id="dev-gemini-key" class="cyber-input" type="password" autocomplete="new-password" placeholder="新しいキーを入力" />
@@ -74,7 +74,7 @@
           <button id="btn-preview-fixed-beat" class="btn-sub-action" type="button" hidden>🔊 固定ビートを試聴</button>
         </div>
         <audio id="fixed-beat-audio-preview" controls hidden style="width: 100%; margin-top: 8px;"></audio>
-        <p class="reflection-footnote">一度Murekaで生成するとこのPCに永久保存され、以降のニュースバトルでKENTA（男声）とREINA（女声）の8小節×4本がこの固定ビートに乗ります。</p>
+        <p class="reflection-footnote">一度Murekaで生成するとこのPCに永久保存され、伴奏用の操作として再利用できます。通常のニュースバトルはLyriaで男女別に生成します。</p>
       </section>
 
       <section class="panel-section">
@@ -107,6 +107,9 @@
           </button>
         </div>
 
+        <button id="btn-generate-from-url" type="button" class="btn-sub-action">🔗 URLからラップを生成</button>
+        <p class="reflection-footnote">URLの本文読込から作詞・Lyria音源生成・保存まで進みます。「URL読込」を先に押す必要はありません。</p>
+
         <textarea
           id="input-news-article"
           class="cyber-textarea"
@@ -115,7 +118,7 @@
 
         <!-- 🎛️ ビート＆ボーカル Style 指定欄 -->
         <div class="input-group" style="margin-top: 8px; display: flex; flex-direction: column; gap: 5px;">
-          <label for="input-battle-style">🎛️ ビート＆ボーカル Style（標準115 BPM・8小節約16.7秒）</label>
+          <label for="input-battle-style">🎛️ 旧方式のStyle（通常のLyria生成は100 BPMのラップバトル）</label>
           <select id="select-style-preset" class="cyber-input" style="width: 100%; padding: 6px 8px; font-size: 11.5px;">
             <option value="Japanese Pop Rap, Educational Rap, Male and Female Duet, Alternating Male Verse and Female Chorus, Catchy Melody, Upbeat, Clear Male Vocal, Clear Female Vocal, Groovy Funky Beat, 115 BPM">🎵 Pop & Educational Funky Rap (115 BPM・標準)</option>
             <option value="Japanese Hip Hop MC Battle, Male and Female Duet, Alternating Male Verse and Female Chorus, Clear Male Rapper vs Clear Female Rapper, Hard Boom Bap Beat, 95 BPM">🔥 王道Boom Bap (95 BPM)</option>
@@ -131,7 +134,7 @@
         </div>
 
         <button id="btn-start-battle" type="button" class="btn-fire-start">
-          🔥 8小節×4本 バトル生成スタート (固定ビート × KENTA＆REINA)
+          🔥 8小節×4本 バトル生成スタート (Lyria × KENTA＆REINA)
         </button>
 
         <div class="sub-action-row">
@@ -179,7 +182,7 @@
         </div>
         <div class="step-progress-bar">
           <div id="step-1-gemini" class="step-item">① Gemini作詞中</div>
-          <div id="step-2-suno" class="step-item">② 固定ビート×男女収録</div>
+          <div id="step-2-suno" class="step-item">② Lyriaで男女収録</div>
           <div id="step-3-battle" class="step-item">③ バトル開始！</div>
         </div>
         <div id="generation-status-log" class="status-log">
@@ -236,6 +239,7 @@
         <!-- 【拡張用レイヤー】Phase 2: カットイン演出（乱入・パンチライン特大エフェクト）オーバーレイ -->
         <div id="cutin-overlay-layer" class="cutin-overlay-layer" data-last-trigger="NONE"></div>
 
+        <p id="fixed-demo-playback-status" role="status" aria-live="polite" hidden style="margin:8px 16px;font-size:12px;line-height:1.6;overflow-wrap:anywhere"></p>
         <!-- ステージ上部：バトルタイトル＆再生タイマー -->
         <header class="stage-top">
           <div class="stage-top-meta">

@@ -102,6 +102,8 @@
       bpm,
       verses,
       ...(raw?.mureka_sync ? { mureka_sync: raw.mureka_sync } : {}),
+      ...(Array.isArray(raw?.lyria_sources) ? { lyria_sources: raw.lyria_sources } : {}),
+      ...(raw?.lyria_edit ? { lyria_edit: raw.lyria_edit } : {}),
       ...(Array.isArray(raw?.mureka_timeline) ? { mureka_timeline: raw.mureka_timeline } : {}),
       ...(Array.isArray(raw?.part_segments) ? { part_segments: raw.part_segments } : {})
     };

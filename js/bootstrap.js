@@ -1,7 +1,7 @@
 (function () {
   if (window.location.protocol !== 'file:') {
     // Parser-inserted scripts retain the application's DOMContentLoaded order.
-    const scripts = ['types.js', 'fixed-demo.js', 'initial-news.js', 'api.js', 'audioController.js',
+    const scripts = ['types.js', 'fixed-demo.js', 'completed-news.js', 'initial-news.js', 'api.js', 'lyria.js', 'audioController.js',
       'components/StageView.js', 'components/JudgeModal.js', 'app.js', 'news-search.js', 'character-select.js', 'news.js', 'news-live.js', 'dev-workspace.js', 'backing-workspace.js', 'library.js'];
     document.write(scripts.map(src => '<script src="./js/' + src + '"></script>').join(''));
     return;

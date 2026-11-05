@@ -9,6 +9,7 @@ const { reviewBattle, reviewFingerprint } = require('./review.cjs');
 const { createNewsService, publicNewsFailure } = require('./news-service.cjs');
 const { createBackingHandler } = require('./backing.cjs');
 const { createNewsImages } = require('./news-images.cjs');
+const { createLyria } = require('./lyria.cjs');
 
 function createServer({ root = __dirname, libraryDir = path.join(root, '.local', 'library'),
   fixedBeatDir = path.join(root, '.local', 'fixed-beat'),
@@ -31,13 +32,15 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
     let size = 0; const chunks = [];
     for await (const chunk of req) {
       size += chunk.length;
-      if (size > 5_000_000) throw new Error('Request is too large.');
+      if (size > (req.url === '/api/library' ? 56_000_000 : 5_000_000)) throw new Error('Request is too large.');
       chunks.push(chunk);
     }
     return JSON.parse(Buffer.concat(chunks).toString('utf8'));
   }
   const news = createNewsService({ directory: newsDirectory, fetchImpl, readConfig });
   const newsImage = createNewsImages({ directory: newsDirectory, fetchImpl });
+  const lyriaDirectory = path.join(root, '.local', 'lyria');
+  const lyria = createLyria({ directory: lyriaDirectory, fetchImpl });
   async function sendFile(req, res, file, mime) {
     const stat = await fsp.stat(file);
     let start = 0, end = stat.size - 1, status = 200;
@@ -79,6 +82,15 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
         const listing = await news.headlines();
         const topic = listing.items.find(item => item.id === imageRequest[1]);
         json(res, topic ? await newsImage(topic) : {imageUrl:null}); return;
+      }
+      if (route === '/api/lyria/generate' && req.method === 'POST') {
+        try { const config = await readConfig(); json(res, await lyria.generate(await readBody(req), config.gemini, config.openai)); }
+        catch (error) { json(res, { error: error.message }, [400, 401, 403, 404, 429, 500, 503].includes(error.status) ? error.status : 502); }
+        return;
+      }
+      const lyriaAudio = /^\/api\/lyria\/audio\/([a-f0-9]{64})$/.exec(route);
+      if (lyriaAudio && req.method === 'GET') {
+        await sendFile(req, res, path.join(lyriaDirectory, `${lyriaAudio[1]}.mp3`), 'audio/mpeg'); return;
       }
       if (route === '/api/news/search-usage' && req.method === 'GET') {
         const [usage, config] = await Promise.all([news.searchUsage(), readConfig()]);
@@ -216,7 +228,7 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
 
       if (route === '/api/config' && req.method === 'GET') {
         const config = await readConfig();
-        json(res, { geminiConfigured: Boolean(config.gemini), murekaConfigured: Boolean(config.mureka), openaiConfigured: Boolean(config.openai), reviewSupported: true }); return;
+        json(res, { geminiConfigured: Boolean(config.gemini), murekaConfigured: Boolean(config.mureka), openaiConfigured: Boolean(config.openai), reviewSupported: true, lyriaSupported: true, lyriaAlignmentSupported: true }); return;
       }
       if (route === '/api/review' && req.method === 'POST') {
         const input = await readBody(req);
@@ -337,7 +349,7 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
           if (input.audioWavBase64) {
             if (typeof input.audioWavBase64 !== 'string' || !/^[A-Za-z0-9+/]+={0,2}$/.test(input.audioWavBase64)) throw new Error('Invalid WAV encoding.');
             const wav = Buffer.from(input.audioWavBase64, 'base64');
-            if (wav.length < 44000 || wav.length > 15000000 || wav.toString('ascii', 0, 4) !== 'RIFF' || wav.toString('ascii', 8, 16) !== 'WAVEfmt ' || wav.readUInt32LE(16) !== 16 || wav.readUInt16LE(20) !== 1) throw new Error('Invalid mono PCM WAV.');
+            if (wav.length < 44000 || wav.length > 40000000 || wav.toString('ascii', 0, 4) !== 'RIFF' || wav.toString('ascii', 8, 16) !== 'WAVEfmt ' || wav.readUInt32LE(16) !== 16 || wav.readUInt16LE(20) !== 1 || ![1, 2].includes(wav.readUInt16LE(22))) throw new Error('Invalid PCM WAV.');
             await fsp.writeFile(tempAudio, wav);
             await fsp.rename(tempAudio, audioFile);
             audioUrl = '/api/library/' + id + '/audio';
@@ -380,6 +392,9 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
       }
       if (req.method === 'GET' && route === '/media/demos/food-boundary.mp3') {
         await sendFile(req, res, path.join(root, 'media', 'demos', 'food-boundary.mp3'), 'audio/mpeg'); return;
+      }
+      if (req.method === 'GET' && ['/media/news/adult-smartphone.mp3', '/media/news/bicycle-blue-ticket.mp3'].includes(route)) {
+        await sendFile(req, res, path.join(root, route.slice(1)), 'audio/mpeg'); return;
       }
       if (req.method === 'GET' && route === '/media/demos/voice-no-yukue.mp3') {
         await sendFile(req, res, path.join(root, 'media', 'demos', 'voice-no-yukue.mp3'), 'audio/mpeg'); return;
