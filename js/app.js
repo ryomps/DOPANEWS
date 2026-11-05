@@ -140,7 +140,9 @@
           this.stageView.setPlaybackState(isPlaying);
         },
         onPlaybackError: () => {
-          this._setLog('音声を再生できませんでした。保存一覧から読み直すか、音声ファイルを確認してください。', true);
+          this._setLog(this.currentAudioUrl?.startsWith('/media/demos/')
+            ? '音源を読み込めませんでした。start_server.batでサーバーを再起動し、Ctrl＋F5で更新してください。'
+            : '音声を再生できませんでした。保存一覧から読み直すか、音声ファイルを確認してください。', true);
         },
         onAutoplayBlocked: () => {
           this._setLog(
@@ -334,11 +336,20 @@
         this.stageView.syncTime(0, item.murekaTrack?.duration / 1000 || this.currentSynthDuration);
         this._setLog(`保存したラップ「${item.battleData.title}」を読み込みました。`);
         this._setStepState(3);
-        if (item.audioUrl) await this.audioController.loadAndPlayUrl(item.audioUrl);
-        else this.audioController.startSynthBattle(this.currentSynthDuration);
+        if (item.audioUrl) return await this.audioController.loadAndPlayUrl(item.audioUrl);
+        this.audioController.startSynthBattle(this.currentSynthDuration);
+        return true;
       } finally {
         this._setGenerating(false);
       }
+    }
+
+    async handleFixedDemo(demo = DOPANEWS.FIXED_DEMO) {
+      if (this.isGenerating || this.articleTransitionPending) return;
+      // Clone so playback edits cannot alter the bundled battle for later replays.
+      const playing = await this._playSavedBattle(JSON.parse(JSON.stringify(demo)));
+      if (!playing) return false;
+      this._setLog(`「${demo.battleData.title}」を再生しています。`);
     }
 
     _bindEvents() {
@@ -419,7 +430,7 @@
         this.currentArticleText = DOPANEWS.PRESET_NEWS_ARTICLE;
         this._applyBattleData(DOPANEWS.PRESET_BATTLE_DATA);
         this._setStepState(3);
-        this._setLog('🎧 プリセットニュース＆115BPMデモビートでバトルを開始しました！');
+        this._setLog('🎧 ニュースと115 BPMの内蔵ビートでバトルを開始しました！');
         this.currentSynthDuration = 67;
         this.audioController.startSynthBattle(67);
       });
@@ -668,7 +679,7 @@
         this._applyBattleData(battleData);
         this._setStepState(3);
         this._setLog(
-          '③ Gemini作詞完了！ステージに歌詞をセットし、115BPMデモビートで再生を開始します🔥'
+          '③ Gemini作詞完了！ステージに歌詞をセットし、115 BPMの内蔵ビートで再生を開始します🔥'
         );
         this.currentSynthDuration = 67;
         await this._autoSaveBattle();
@@ -769,6 +780,8 @@
       this.reviewState = { status: 'idle' };
       this.audioController.stopPlayback();
       this.currentAudioUrl = null;
+      const demoStatus = document.getElementById('fixed-demo-playback-status');
+      if (demoStatus) { demoStatus.hidden = true; demoStatus.textContent = ''; }
       this.currentSavedId = null;
       this.currentMurekaTrack = null;
       this.currentAudioWavBase64 = null;
@@ -876,6 +889,12 @@
     }
 
     _setLog(message, isError = false) {
+      const demoStatus = document.getElementById('fixed-demo-playback-status');
+      if (demoStatus && this.currentAudioUrl?.startsWith('/media/demos/')) {
+        demoStatus.textContent = message;
+        demoStatus.hidden = false;
+        demoStatus.classList.toggle('status-error', isError);
+      }
       if (this.articleGenerationStatusEl) {
         this.articleGenerationStatusEl.textContent = message;
         this.articleGenerationStatusEl.classList.toggle('status-error', isError);

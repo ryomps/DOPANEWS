@@ -411,6 +411,44 @@
   /**
    * 8行（8小節）のバース音声を、各行の文字数比率と無音谷（ポーズ）を手がかりに8個の小節クリップへ分割する
    */
+  function fitVocalWithoutPitchShift(samples, targetLength, sampleRate) {
+    if (!Number.isInteger(targetLength) || targetLength < 1 || !Number.isFinite(sampleRate) || sampleRate < 8000) throw new Error('音声の時間調整パラメーターが不正です。');
+    if (samples.length <= targetLength) return samples.slice();
+    const windowSize = Math.min(samples.length, targetLength, Math.round(sampleRate * 0.04));
+    const hop = Math.max(1, Math.floor(windowSize / 2));
+    const search = Math.round(sampleRate * 0.012);
+    const output = new Float32Array(targetLength), weights = new Float32Array(targetLength);
+    const ratio = samples.length / targetLength;
+    const window = Float32Array.from({ length: windowSize }, (_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * (i + 0.5) / windowSize));
+    // WSOLA: advance between frames, keep the original sampling rate inside
+    // each frame, and align overlapping waveforms instead of raising pitch.
+    for (let at = 0; at < targetLength; at += hop) {
+      const count = Math.min(windowSize, targetLength - at);
+      const maximum = samples.length - count;
+      const expected = Math.min(maximum, Math.round(at * ratio));
+      let best = expected;
+      if (at > 0) {
+        let bestScore = -Infinity;
+        for (let candidate = Math.max(0, expected - search); candidate <= Math.min(maximum, expected + search); candidate += 2) {
+          let dot = 0, a2 = 0, b2 = 0;
+          for (let j = 0; j < Math.min(hop, count); j += 4) {
+            if (weights[at + j] < 0.00001) continue;
+            const a = output[at + j] / weights[at + j], b = samples[candidate + j];
+            dot += a * b; a2 += a * a; b2 += b * b;
+          }
+          const score = a2 * b2 > 1e-12 ? dot / Math.sqrt(a2 * b2) - Math.abs(candidate - expected) * 1e-8 : -Infinity;
+          if (score > bestScore) { bestScore = score; best = candidate; }
+        }
+      }
+      for (let j = 0; j < count; j++) {
+        output[at + j] += samples[best + j] * window[j];
+        weights[at + j] += window[j];
+      }
+    }
+    for (let i = 0; i < targetLength; i++) output[i] = weights[i] ? output[i] / weights[i] : 0;
+    return output;
+  }
+
   function splitVerseIntoEightBars(verseSamples, readingLines, sampleRate) {
     const count = 8;
     const weights = [];
@@ -761,8 +799,8 @@
 
         let clip = barClips[bIdx] || new Float32Array(0);
         if (clip.length > maxBarSamples && maxBarSamples > 0) {
-          // 1小節（約2.09秒）に収まるよう軽微にテンポフィット
-          clip = resampleFloat32(clip, clip.length, maxBarSamples);
+          // Keep the exact bar duration without speeding up the waveform pitch.
+          clip = fitVocalWithoutPitchShift(clip, maxBarSamples, sampleRate);
         }
 
         // ピーク正規化で声を前に出す
@@ -829,6 +867,7 @@
       duration: Math.round(totalDurationSec * 1000),
       bpm,
       used_fixed_mureka_beat: usedMurekaBeat,
+      vocal_time_fit: 'wsola-pitch-preserving-v1',
       part_segments: partSegments
     };
 
@@ -945,6 +984,7 @@
   DOPANEWS.generateBattleScriptWithGemini = generateBattleScriptWithGemini;
   DOPANEWS.generateFixedBeatWithMureka = generateFixedBeatWithMureka;
   DOPANEWS.synthesizeBattleOnFixedBeat = synthesizeBattleOnFixedBeat;
+  DOPANEWS.fitVocalWithoutPitchShift = fitVocalWithoutPitchShift;
   DOPANEWS.generateBattleTrackWithMureka = generateBattleTrackWithMureka;
   DOPANEWS.generateBattleTrackWithSuno = generateBattleTrackWithMureka;
 })(window);

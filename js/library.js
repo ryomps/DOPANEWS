@@ -134,7 +134,7 @@
         }
         card.append(vote);
         const bottom = node('div', undefined, 'library-card-actions');
-        bottom.append(node('span', entry.saved ? (entry.audioUrl ? '音声保存済み' : '歌詞＋デモビート') : '音声は未保存'));
+        bottom.append(node('span', entry.saved ? (entry.audioUrl ? '音声保存済み' : '歌詞＋内蔵ビート') : '音声は未保存'));
         if (data.verses?.length) {
           const play = node('button', 'MCバトル'); play.type = 'button';
           play.addEventListener('click', async () => {

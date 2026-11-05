@@ -52,13 +52,14 @@ function setup(storage = new Map()) {
   };
   context.window = context;
   vm.createContext(context);
-  for (const file of ['js/types.js', 'js/audioController.js', 'js/components/StageView.js',
+  for (const file of ['js/types.js', 'js/fixed-demo.js', 'js/audioController.js', 'js/components/StageView.js',
     'js/components/JudgeModal.js', 'js/app.js']) {
     vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), context, { filename: file });
   }
   const savedRecords = [];
   context.DOPANEWS.getLocalConfig = async () => ({ geminiConfigured: true, murekaConfigured: true, reviewSupported: true });
   context.DOPANEWS.listSavedBattles = async () => ({ items: savedRecords });
+  context.DOPANEWS.getFixedBeat = async () => ({ exists: true, audioUrl: '/fixed-beat.mp3' });
   context.DOPANEWS.reviewBattle = async input => ({ stage: input.stage, verdict: 'pass', summary: '指摘なし', issues: [] });
   context.DOPANEWS.saveBattle = async record => {
     const saved = JSON.parse(JSON.stringify({ ...record, id: 'saved-test', createdAt: new Date().toISOString(),
@@ -79,7 +80,7 @@ for (const mode of ['full', 'gemini-only']) {
     app.judgeModal.open(app.currentBattleData);
     let release;
     data.generateBattleScriptWithGemini = () => new Promise(resolve => { release = resolve; });
-    data.generateBattleTrackWithMureka = async () => ({ audioUrl: 'new.mp3' });
+    data.synthesizeBattleOnFixedBeat = async () => ({ audioUrl: 'new.mp3' });
     const pending = mode === 'full' ? app.handleFullBattleGeneration() : app.handleGeminiOnlyGeneration();
     while (!release) await Promise.resolve();
     assert.equal(get('battle-audio').paused, true);
@@ -124,7 +125,7 @@ test('preset switch stops real audio and closes reflection; synth completion ope
   get('btn-load-preset').emit('click');
   assert.equal(get('battle-audio').src, '');
   assert.equal(get('judge-modal-overlay').classList.contains('hidden'), true);
-  tick(45);
+  tick(app.currentSynthDuration + 1);
   assert.equal(get('judge-modal-overlay').classList.contains('hidden'), false);
   get('btn-replay-battle').emit('click');
   assert.equal(app.audioController.synthPlaying, true);
@@ -423,7 +424,7 @@ test('lyrics fail at most three times, never generate music, and rejected lyrics
   let lyrics = 0, music = 0, reviews = 0;
   const original = app.currentBattleData;
   data.generateBattleScriptWithGemini = async () => { lyrics++; return {...data.PRESET_BATTLE_DATA, title: 'rejected lyrics'}; };
-  data.generateBattleTrackWithMureka = async () => { music++; };
+  data.synthesizeBattleOnFixedBeat = async () => { music++; };
   data.reviewBattle = async () => { reviews++; return flaggedReview('script'); };
   await app.handleFullBattleGeneration();
   assert.equal(lyrics, 3); assert.equal(reviews, 3); assert.equal(music, 0);
@@ -444,7 +445,7 @@ test('automatic correction uses the original article and latest feedback, then g
     if (lyrics === 2) app.articleInputEl.value = 'edited during generation';
     return JSON.parse(JSON.stringify(data.PRESET_BATTLE_DATA));
   };
-  data.generateBattleTrackWithMureka = async () => { music++; return { audioUrl: 'song.mp3' }; };
+  data.synthesizeBattleOnFixedBeat = async () => { music++; return { audioUrl: 'song.mp3' }; };
   data.reviewBattle = async input => {
     if (input.stage === 'audio') return { stage: 'audio', verdict: 'pass', summary: 'pass', issues: [] };
     reviews++; return reviews < 3 ? flaggedReview('script') : { stage: 'script', verdict: 'pass', summary: 'pass', issues: [] };
@@ -459,7 +460,7 @@ test('first-pass approval skips further lyrics and full generation stays locked 
   let lyrics = 0, release, entered;
   const started = new Promise(resolve => { entered = resolve; });
   data.generateBattleScriptWithGemini = async () => { lyrics++; return data.PRESET_BATTLE_DATA; };
-  data.generateBattleTrackWithMureka = () => new Promise(resolve => { release = resolve; entered(); });
+  data.synthesizeBattleOnFixedBeat = () => new Promise(resolve => { release = resolve; entered(); });
   const running = app.handleFullBattleGeneration();
   await started;
   assert.ok(release); assert.equal(lyrics, 1); assert.equal(app.isGenerating, true);
@@ -472,7 +473,7 @@ test('checker connection failure stops without regenerating or exposing internal
   const { app, data, get } = setup();
   let lyrics = 0, music = 0;
   data.generateBattleScriptWithGemini = async () => { lyrics++; return data.PRESET_BATTLE_DATA; };
-  data.generateBattleTrackWithMureka = async () => { music++; };
+  data.synthesizeBattleOnFixedBeat = async () => { music++; };
   data.reviewBattle = async () => { throw new Error('AI審判 internal provider failure'); };
   await app.handleFullBattleGeneration();
   assert.equal(app.reviewState.status, 'error'); assert.equal(music, 0); assert.equal(lyrics, 1);
@@ -484,7 +485,7 @@ test('audio review runs in background without regenerating and late results cann
   const { app, data, get } = setup();
   let music = 0, finish;
   data.generateBattleScriptWithGemini = async () => data.PRESET_BATTLE_DATA;
-  data.generateBattleTrackWithMureka = async () => { music++; return { audioUrl: 'song.mp3' }; };
+  data.synthesizeBattleOnFixedBeat = async () => { music++; return { audioUrl: 'song.mp3' }; };
   data.reviewBattle = async input => input.stage === 'script'
     ? { stage: 'script', verdict: 'pass', summary: '確認完了', issues: [] }
     : new Promise(resolve => { finish = resolve; });
@@ -500,7 +501,7 @@ test('audio review remains internal and never regenerates or replaces the record
   const { app, data, get } = setup();
   let music = 0;
   data.generateBattleScriptWithGemini = async () => data.PRESET_BATTLE_DATA;
-  data.generateBattleTrackWithMureka = async () => { music++; return { audioUrl: 'song.mp3' }; };
+  data.synthesizeBattleOnFixedBeat = async () => { music++; return { audioUrl: 'song.mp3' }; };
   data.reviewBattle = async input => input.stage === 'audio' ? flaggedReview('audio') : { stage: 'script', verdict: 'pass', summary: 'pass', issues: [] };
   await app.handleFullBattleGeneration(); await app.audioReviewPromise;
   assert.equal(app.reviewState.status, 'needs_revision'); assert.equal(music, 1);
@@ -513,7 +514,7 @@ test('outdated local server is detected before spending Gemini or Mureka credits
   let calls = 0;
   data.getLocalConfig = async () => ({ geminiConfigured: true, murekaConfigured: true });
   data.generateBattleScriptWithGemini = async () => { calls++; };
-  data.generateBattleTrackWithMureka = async () => { calls++; };
+  data.synthesizeBattleOnFixedBeat = async () => { calls++; };
   await app.handleFullBattleGeneration(); await app.handleGeminiOnlyGeneration();
   assert.equal(calls, 0);
   assert.match(get('generation-status-log').textContent, /サーバー/);
@@ -535,7 +536,7 @@ test('missing review route explains restart while missing audio keeps its own er
 test('lyrics-only generation also retries uncertain scripts within the shared three-attempt budget', async () => {
   const { app, data } = setup(); let lyrics = 0, reviews = 0, music = 0;
   data.generateBattleScriptWithGemini = async () => { lyrics++; return data.PRESET_BATTLE_DATA; };
-  data.generateBattleTrackWithMureka = async () => { music++; };
+  data.synthesizeBattleOnFixedBeat = async () => { music++; };
   data.reviewBattle = async () => { reviews++; return reviews === 1 ? {...flaggedReview('script'), verdict: 'uncertain'} : {stage:'script', verdict:'pass', summary:'pass', issues:[]}; };
   await app.handleGeminiOnlyGeneration();
   assert.equal(lyrics, 2); assert.equal(reviews, 2); assert.equal(music, 0);
@@ -698,7 +699,7 @@ test('composed parts switch MC at exactly 20/40/60 seconds including lyric gaps 
     assert.equal(get('battle-stage').attrs['data-active-mc'], battle.verses[index].speaker);
   }
   app.stageView.syncTime(80, 80);
-  assert.equal(get('battle-stage').attrs['data-active-mc'], 'NONE');
+  assert.equal(get('battle-stage').attrs['data-active-mc'], battle.verses[3].speaker, 'retain the final MC at the end of a composed track');
 });
 
 test('Library votes survive a reload and updating a vote does not duplicate a battle', () => {
@@ -734,7 +735,7 @@ test('generated article handoff shows the selected title and consumer progress i
   let release;
   let received;
   data.generateBattleScriptWithGemini = article => { received = article; return new Promise(resolve => { release = resolve; }); };
-  data.generateBattleTrackWithMureka = async () => ({ audioUrl: 'new.mp3' });
+  data.synthesizeBattleOnFixedBeat = async () => ({ audioUrl: 'new.mp3' });
   const articleText = 'マッシュルの記事本文と確認済みの根拠';
   const pending = app.handleArticleBattleGeneration({ articleText, title: 'マッシュル実写映画化' });
   while (!release) await Promise.resolve();
@@ -763,4 +764,111 @@ test('consumer generation errors and retry stay visible when configuration stops
   assert.equal(get('battle-stage').classList.contains('article-generation-pending'), true);
   app._applyBattleData(data.PRESET_BATTLE_DATA);
   assert.equal(get('article-generation-panel').hidden, true);
+});
+
+
+test('fixed demo replaces Library playback, switches MC and restores bundled data without paid calls', async () => {
+  const { app, data, body, get } = setup();
+  for (const name of ['generateBattleScriptWithGemini', 'synthesizeBattleOnFixedBeat', 'reviewBattle', 'saveBattle']) {
+    data[name] = async () => { assert.fail('fixed demo must not call ' + name); };
+  }
+  body.classList.add('library-mode');
+  get('library-screen').hidden = false;
+  await app.audioController.loadAndPlayUrl('old.mp3');
+  await app.handleFixedDemo();
+  assert.equal(body.classList.contains('library-mode'), false);
+  assert.equal(body.classList.contains('news-mode'), false);
+  assert.equal(get('library-screen').hidden, true);
+  assert.equal(app.currentAudioUrl, '/media/demos/voice-no-yukue.mp3');
+  assert.equal(app.audioEl.src, app.currentAudioUrl);
+  assert.equal(app.currentSavedId, null);
+  assert.equal(app.currentBattleData.verses.length, 4);
+  for (const [time, index] of [[0,0],[20.6,1],[38.6,2],[61.188,3]]) {
+    app.stageView.syncTime(time, 83.588);
+    assert.equal(app.stageView.currentVerseIndex, index);
+    const verse = app.currentBattleData.verses[index];
+    assert.equal(verse.lyric.split('\n').length, 8);
+    assert.equal(verse.timed_lines.length, 8);
+    assert.equal(app.stageView.getVerseWindows(83.588)[index].start, time);
+  }
+  app.currentBattleData.verses[0].lyric = 'edited';
+  await app.handleFixedDemo();
+  assert.notEqual(app.currentBattleData.verses[0].lyric, 'edited');
+  assert.match(get('generation-status-log').textContent, /声の行方/);
+  assert.doesNotMatch(get('generation-status-log').textContent, /デモ|API/);
+});
+
+
+test('split-source food demo uses the male-female-male-female order and caption-derived timing', async () => {
+  const { app, data } = setup();
+  for (const name of ['generateBattleScriptWithGemini', 'synthesizeBattleOnFixedBeat', 'reviewBattle', 'saveBattle']) {
+    data[name] = async () => { assert.fail('demo must not call ' + name); };
+  }
+  await app.handleFixedDemo(data.FOOD_DEMO);
+  assert.equal(app.currentAudioUrl, '/media/demos/food-boundary.mp3');
+  assert.equal(app.currentSynthDuration, 82.2);
+  assert.deepEqual(Array.from(app.currentBattleData.verses, v => v.speaker), ['KENTA','REINA','KENTA','REINA']);
+  for (const [time, index] of [[0,0],[19.199,0],[19.2,1],[38.4,2],[59.999,2],[60,3],[82,3]]) {
+    app.stageView.syncTime(time, 82.2);
+    assert.equal(app.stageView.currentVerseIndex, index);
+  }
+  for (const [index, verse] of app.currentBattleData.verses.entries()) {
+    assert.equal(verse.lyric.split('\n').length, 8);
+    assert.equal(verse.timed_lines.length, 8);
+    assert.equal(verse.timed_lines[0].start_sec, verse.start_time_sec + (index === 2 ? .5 : 0));
+    assert.ok(verse.timed_lines[7].end_sec <= verse.end_time_sec);
+  }
+  assert.match(app.currentBattleData.verses[3].lyric, /だれを見てるんだ/);
+  await app.handleFixedDemo();
+  assert.equal(app.currentAudioUrl, '/media/demos/voice-no-yukue.mp3');
+});
+
+
+test('fixed demo playback failure stays visible and is never overwritten by a success message', async () => {
+  const { app, get } = setup();
+  app.audioEl.play = async () => { throw new Error('source 404'); };
+  assert.equal(await app.handleFixedDemo(), false);
+  assert.match(get('generation-status-log').textContent, /サーバーを再起動/);
+  assert.doesNotMatch(get('generation-status-log').textContent, /再生しています/);
+  assert.equal(get('fixed-demo-playback-status').hidden, false);
+  assert.equal(app.isGenerating, false);
+});
+
+test('blocked fixed demo autoplay retains the instruction to press play', async () => {
+  const { app, get } = setup();
+  app.audioEl.play = async () => { throw Object.assign(new Error('blocked'), { name: 'NotAllowedError' }); };
+  assert.equal(await app.handleFixedDemo(), false);
+  assert.match(get('fixed-demo-playback-status').textContent, /自動再生制限/);
+  assert.doesNotMatch(get('generation-status-log').textContent, /再生しています/);
+});
+
+
+test('playback time is above the play controls and updates when seeking', () => {
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  assert.equal([...html.matchAll(/id="stage-timer"/g)].length, 1);
+  assert.ok(html.indexOf('id="stage-timer"') > html.indexOf('id="stage-verse-pills"'));
+  assert.ok(html.indexOf('id="stage-timer"') < html.indexOf('id="btn-play-pause"'));
+  const css = fs.readFileSync(path.join(root, 'css/live-battle.css'), 'utf8');
+  assert.doesNotMatch(css, /#stage-timer\s*\{\s*display:\s*none/);
+  const { app, get } = setup();
+  app.stageView.syncTime(43.5, 82.2);
+  assert.equal(get('stage-timer').textContent, '00:43 / 01:22');
+});
+
+
+test('voice demo preserves reported word onsets and includes the male second-turn ending', () => {
+  const { data } = setup();
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'media/demos/voice-no-yukue-edit.json'), 'utf8'));
+  assert.equal(data.FIXED_DEMO.synthDuration, 83.588);
+  const sourceOnsets = [10.9, 8.6, 39.6, 36.212];
+  manifest.edits.forEach((edit, index) => {
+    const verse = data.FIXED_DEMO.battleData.verses[index];
+    assert.ok(Math.abs(edit.source_start + verse.timed_lines[0].start_sec - edit.output_start - sourceOnsets[index]) < .001);
+    assert.ok(verse.timed_lines[7].end_sec <= verse.end_time_sec + .001);
+    assert.equal(verse.timed_lines.length, 8);
+  });
+  assert.equal(manifest.edits[2].source_end, 61.988);
+  assert.ok(manifest.edits[2].source_end > 45.6, 'restore ending missing from the old cut');
+  assert.equal(manifest.edits[3].source_start, 36.012);
+  assert.equal(manifest.edits[3].source_end, 58.412);
 });

@@ -28,7 +28,7 @@
     <main id="news-content" class="news-content"></main>
   </section>
 
-    <footer id="news-battle-bar" class="news-battle-bar" hidden><div><span>このニュースを、ふたつの視点で。</span><button id="news-start-battle" type="button">MCバトル</button><small>資料に基づく創作台本＋デモビートで再生</small></div></footer>
+    <footer id="news-battle-bar" class="news-battle-bar" hidden><div><span>このニュースを、ふたつの視点で。</span><button id="news-start-battle" type="button">MCバトル</button><small>資料に基づく歌詞と内蔵ビートで再生</small></div></footer>
 
   <button id="btn-toggle-drawer" class="mobile-drawer-btn" type="button">⚙️ 設定・記事入力</button>
 
@@ -137,7 +137,7 @@
             ⚡ Gemini作詞のみ実行
           </button>
           <button id="btn-load-preset" type="button" class="btn-sub-action" title="APIクレジット消費ゼロでプリセットバトルを即座に再生します">
-            🎧 プリセット即再生デモ
+            🎧 内蔵ビートで再生
           </button>
         </div>
       </section>
@@ -234,6 +234,7 @@
         <!-- 【拡張用レイヤー】Phase 2: カットイン演出（乱入・パンチライン特大エフェクト）オーバーレイ -->
         <div id="cutin-overlay-layer" class="cutin-overlay-layer" data-last-trigger="NONE"></div>
 
+        <p id="fixed-demo-playback-status" role="status" aria-live="polite" hidden style="margin:8px 16px;font-size:12px;line-height:1.6;overflow-wrap:anywhere"></p>
         <!-- ステージ上部：バトルタイトル＆再生タイマー -->
         <header class="stage-top">
           <div class="stage-top-meta">
@@ -248,7 +249,6 @@
               >
                 🎤 歌い出し同期
               </button>
-              <span id="stage-timer" class="stage-timer">00:00 / 01:07</span>
             </div>
           </div>
           <h2 id="stage-battle-title" class="stage-battle-title">バトルタイトル読込中...</h2>
@@ -311,6 +311,7 @@
           </div>
           <div id="stage-verse-pills" class="verse-pills-row" aria-label="バースを選択"></div>
           <audio id="battle-audio"></audio>
+          <div class="battle-playback-time"><span id="stage-timer" class="stage-timer" aria-label="現在の再生時間と全体の長さ">00:00 / 01:07</span></div>
           <div class="stage-controls-row">
             <button id="btn-prev-verse" class="btn-verse-step" type="button" aria-label="前のバース" title="前のバース">❮</button>
             <button id="btn-play-pause" type="button" class="btn-stage-play" aria-label="再生" title="再生">▶</button>
