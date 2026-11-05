@@ -287,3 +287,5 @@
 .live-battle-player .lyric-line { border-left: 3px solid transparent; font-weight: 700; transform: none; transition: color .2s ease, background-color .2s ease, border-color .2s ease; }
 .live-battle-player .lyric-line.line-active { transform: none; }
 
+/* Drive lyric movement explicitly, avoiding iOS native smooth-scroll carryover. */
+.live-battle-player .stage-lyric-box { scroll-behavior:auto !important; scroll-snap-type:none; }

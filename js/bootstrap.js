@@ -10,10 +10,10 @@
   const destination = 'http://localhost:8080/' + window.location.hash;
   document.body.className = '';
   document.body.innerHTML = '<main style="max-width:540px;margin:12vh auto;padding:28px;color:#f5f5f5;background:#111827;border:1px solid #374151;border-radius:16px;font-family:sans-serif;line-height:1.9">'
-    + '<h1 style="margin-top:0">DOPANEWS</h1>'
+    + '<h1 style="margin-top:0">ドパNEWS</h1>'
     + '<p id="launch-status" role="status">ローカルサーバーへの接続を確認しています…</p>'
-    + '<p>サーバーが起動していない場合は、このフォルダーの <strong>start_server.bat</strong> をダブルクリックしてください。起動後、自動でDOPANEWSを開きます。</p>'
-    + '<p><a id="launch-link" style="color:#93c5fd">DOPANEWSを開く →</a></p>'
+    + '<p>サーバーが起動していない場合は、このフォルダーの <strong>start_server.bat</strong> をダブルクリックしてください。起動後、自動でドパNEWSを開きます。</p>'
+    + '<p><a id="launch-link" style="color:#93c5fd">ドパNEWSを開く →</a></p>'
     + '<small>音声生成・APIキー保存にはローカルサーバーが必要です。ブラウザーのHTMLからプログラムを直接起動することはできません。</small></main>';
   document.body.style.background = '#090a0f';
   document.getElementById('launch-link').href = destination;

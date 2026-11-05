@@ -479,7 +479,7 @@
         grid.replaceChildren(...picks);
         const leadCard = picks[0]?.matches('.news-card') ? picks[0] : picks[0]?.querySelector('.news-card');
         leadCard?.classList.add('news-pick-featured');
-        content.querySelector('.news-section-label span').textContent = 'ピックアップ';
+        content.querySelector('.news-section-label span').remove();
         ['テクノロジー','政治','経済','スポーツ','自然','エンタメ','恋愛','その他'].forEach(genre => {
           const genreRows = rows.filter(row => row.dataset.genre === genre && !picks.includes(row));
           if (!genreRows.length) return;
@@ -549,16 +549,16 @@
     function sourceMarkup(a) {
       const links = a.sources.map(src => '<a href="'+escape(src.url)+'" target="_blank" rel="noopener noreferrer">'+escape(src.name)+'</a>').join(' ／ ');
       const details = a.sources.map(src => '<p>'+escape(src.name)+' · '+escape(src.date)+'<br>'+escape(src.scope)+(src.terms ? '<br><a href="'+escape(src.terms)+'" target="_blank" rel="noopener noreferrer">利用規約</a>' : '')+'</p>').join('');
-      return '<section class="news-source-notes"><div class="news-source-links"><span>出典：</span>'+links+'</div><details><summary>詳細</summary>'+details+'<p>上記の情報をもとにDOPANEWSが論点を整理。MCの意見・歌詞は創作です。</p></details></section>';
+      return '<section class="news-source-notes"><div class="news-source-links"><span>出典：</span>'+links+'</div><details><summary>詳細</summary>'+details+'<p>上記の情報をもとにドパNEWSが論点を整理。MCの意見・歌詞は創作です。</p></details></section>';
     }
     function detail(a) {
       screen.dataset.view = 'article';
       newsHeader.querySelector('.news-tabs')?.remove();
       const articleKind = a.kind === 'report' ? '報道をもとにした解説' : '公的資料に基づく解説';
-      const disclaimer = a.kind === 'report' ? '報道をもとにDOPANEWSが論点を整理しています。MCの意見・歌詞は創作であり、取材相手の発言ではありません。' : '公的資料の説明・数値をもとにDOPANEWSが編集・加工した解説です。MCの意見・歌詞は創作であり、出典機関の発言や推奨を表しません。';
+      const disclaimer = a.kind === 'report' ? '報道をもとにドパNEWSが論点を整理しています。MCの意見・歌詞は創作であり、取材相手の発言ではありません。' : '公的資料の説明・数値をもとにドパNEWSが編集・加工した解説です。MCの意見・歌詞は創作であり、出典機関の発言や推奨を表しません。';
       bar.querySelector('small').textContent = a.battleKey ? 'ふたつの視点から、このニュースを考える' : '資料に基づく歌詞と内蔵ビートで再生';
       selected = a; back.hidden = false; bar.hidden = false; searchButton.hidden = false;
-      content.innerHTML = '<article class="news-article" style="'+genreStyle(a.category)+'"><div class="news-meta"><span class="news-category">'+a.category+'</span><span>'+articleKind+'</span><span>約2分で読めます</span></div><h1 tabindex="-1">'+a.title+'</h1><div class="news-byline"><span>DOPANEWS 編集部</span><time datetime="'+a.date.replaceAll('/','-')+'">'+escape(a.dateLabel||'資料公表')+'：'+a.date+'</time></div><figure><img src="'+artwork(a)+'" alt="'+a.caption+'"/></figure><p class="news-disclaimer">'+disclaimer+'</p><div class="news-article-body">'+a.paragraphs.map(p=>'<p>'+escape(p)+'</p>').join('')+'</div>'+sourceMarkup(a)+'<aside class="news-perspectives"><span class="news-eyebrow">ふたつの視点</span><h2>資料を踏まえて、あなたはどう考える？</h2><p><b>MIC A</b>'+a.stances[0]+'</p><p><b>MIC B</b>'+a.stances[1]+'</p></aside><p class="news-end">ここまで読んだら、次はふたつの視点を聴いてみよう。</p></article>';
+      content.innerHTML = '<article class="news-article" style="'+genreStyle(a.category)+'"><div class="news-meta"><span class="news-category">'+a.category+'</span><span>'+articleKind+'</span><span>約2分で読めます</span></div><h1 tabindex="-1">'+a.title+'</h1><div class="news-byline"><span>ドパNEWS 編集部</span><time datetime="'+a.date.replaceAll('/','-')+'">'+escape(a.dateLabel||'資料公表')+'：'+a.date+'</time></div><figure><img src="'+artwork(a)+'" alt="'+a.caption+'"/></figure><p class="news-disclaimer">'+disclaimer+'</p><div class="news-article-body">'+a.paragraphs.map(p=>'<p>'+escape(p)+'</p>').join('')+'</div>'+sourceMarkup(a)+'<aside class="news-perspectives"><span class="news-eyebrow">ふたつの視点</span><h2>資料を踏まえて、あなたはどう考える？</h2><p><b>MIC A</b>'+a.stances[0]+'</p><p><b>MIC B</b>'+a.stances[1]+'</p></aside><p class="news-end">ここまで読んだら、次はふたつの視点を聴いてみよう。</p></article>';
       screen.scrollTop = 0; content.querySelector('h1').focus({preventScroll:true});
     }
     content.addEventListener('submit', event => {
@@ -646,7 +646,7 @@
       }
       app._stopCurrentBattle();
       app.newsUrlInputEl.value = ''; app.lastFetchedUrl = '';
-      app.articleInputEl.value = a.title+'\n\n'+a.paragraphs.join('\n\n')+'\n\n出典：'+a.sources.map(src=>src.name+' '+src.url+'（'+src.date+'）').join('\n')+'\n上記資料をもとにDOPANEWSが編集・加工。MCの意見・歌詞は創作です。';
+      app.articleInputEl.value = a.title+'\n\n'+a.paragraphs.join('\n\n')+'\n\n出典：'+a.sources.map(src=>src.name+' '+src.url+'（'+src.date+'）').join('\n')+'\n上記資料をもとにドパNEWSが編集・加工。MCの意見・歌詞は創作です。';
       app.currentArticleText = app.articleInputEl.value;
       app.currentSynthDuration = 67;
       const lines = a.stances.map((stance,i) => [stance, i ? '選べる未来を ここから描こう' : 'その理想の前に 現場を見よう', a.summary, i ? '期待だけじゃない 課題も確かめる' : 'その負担は誰が 引き受ける', a.paragraphs[i+2].split('。')[0], i ? '小さく試して 改善重ねよう' : '取り残される声にも 応えよう', '違う視点を 重ねてみよう', 'このニュースから 明日を考えよう']);

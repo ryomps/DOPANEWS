@@ -40,6 +40,7 @@
   },
   {
     "id": "adult-smartphone",
+    "imageUrl": "./css/images/news-adult-smartphone.png",
     "battleKey": "adult",
     "kind": "report",
     "category": "その他",
@@ -76,6 +77,7 @@
   },
   {
     "id": "bicycle-blue-ticket",
+    "imageUrl": "./css/images/news-bicycle-blue-ticket.png",
     "battleKey": "bicycle",
     "kind": "report",
     "category": "その他",

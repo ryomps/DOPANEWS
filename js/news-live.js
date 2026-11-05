@@ -115,7 +115,7 @@
       if (!data) return 0;
       const topics = data.headlines.items.map(topic => ({ ...topic, saved: data.articles.find(a => a.id === topic.id) }));
       const ids = new Set(topics.map(t => t.id));
-      data.articles.filter(a => !ids.has(a.id)).forEach(saved => topics.push({ ...saved, saved, provider: 'DOPANEWS', publishedAt: saved.createdAt }));
+      data.articles.filter(a => !ids.has(a.id)).forEach(saved => topics.push({ ...saved, saved, provider: 'ドパNEWS', publishedAt: saved.createdAt }));
       // Editorial top picks stay first, independently of their content genre.
       topics.sort((a, b) => Number(b.feed === 'top-picks') - Number(a.feed === 'top-picks'));
       const filtered = topics.filter(topic => (category === 'トップ' || topicGenre(topic) === category)
@@ -144,7 +144,7 @@
         if (topic.feed === 'top-picks') meta.append(el('span', '注目', 'news-pick-label'));
         meta.append(el('span', date(topic.publishedAt)));
         const bottom = el('div', undefined, 'news-card-bottom');
-        bottom.append(el('span', topic.provider || 'DOPANEWS'), el('span', topic.saved?.status === 'ready' ? '保存済み記事' : '記事を作成', 'live-card-action'));
+        bottom.append(el('span', topic.provider || 'ドパNEWS'), el('span', topic.saved?.status === 'ready' ? '保存済み記事' : '記事を作成', 'live-card-action'));
         copy.append(meta, el('h3', topic.title), bottom);
         action.append(image, copy); row.append(action, feedback);
         list.insertBefore(row, anchor);
@@ -235,7 +235,7 @@
       const meta = el('div', undefined, 'news-meta');
       meta.append(el('span', genre === 'トップ' ? '話題' : genre, 'news-category'), el('span', '資料に基づく解説'));
       const byline = el('div', undefined, 'news-byline');
-      byline.append(el('span', 'DOPANEWS 編集部'), el('time', date(record.createdAt)));
+      byline.append(el('span', 'ドパNEWS 編集部'), el('time', date(record.createdAt)));
       const figure = el('figure');
       const image = el('img'); image.src = D.newsArtwork({ category: genre, art: genre === '経済' ? 'energy' : genre === 'テクノロジー' ? 'ai' : 'people' });
       image.alt = '本アプリ制作のジャンル別イメージイラスト';
