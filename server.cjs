@@ -368,6 +368,15 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
         const wav = record.audioFormat === 'wav';
         await sendFile(req, res, path.join(libraryDir, audio[1] + (wav ? '.wav' : '.mp3')), wav ? 'audio/wav' : 'audio/mpeg'); return;
       }
+      if (req.method === 'GET' && route === '/media/demos/food-boundary.mp3') {
+        await sendFile(req, res, path.join(root, 'media', 'demos', 'food-boundary.mp3'), 'audio/mpeg'); return;
+      }
+      if (req.method === 'GET' && route === '/media/demos/voice-no-yukue.mp3') {
+        await sendFile(req, res, path.join(root, 'media', 'demos', 'voice-no-yukue.mp3'), 'audio/mpeg'); return;
+      }
+      if (req.method === 'GET' && route === '/media/demos/voice-no-yukue.mp4') {
+        await sendFile(req, res, path.join(root, 'media', 'demos', 'voice-no-yukue.mp4'), 'video/mp4'); return;
+      }
       const publicPath = route === '/' ? '/index.html' : route;
       if (req.method === 'GET' && /^\/css\/images\/[a-zA-Z0-9_-]+\.png$/.test(publicPath)) {
         await sendFile(req, res, path.join(root, publicPath.slice(1)), 'image/png'); return;

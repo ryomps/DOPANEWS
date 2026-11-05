@@ -155,7 +155,9 @@
 /* Keep the manual sync hook available without showing a consumer control. */
 #btn-sync-vocal-start[hidden] { display:none; }
 
-.live-battle-player #stage-timer { display:none; }
+/* Keep playback time visible directly above transport controls, including phones. */
+.battle-playback-time { display:flex; justify-content:center; align-items:center; width:100%; margin:5px 0 2px; color:#b9c6d8; font-size:11px; line-height:1.4; text-align:center; }
+.live-battle-player #stage-timer { display:inline-block; color:#e2e6f3; background:transparent; border:0; padding:0; font-family:monospace; letter-spacing:0; font-variant-numeric:tabular-nums; }
 
 .live-battle-player #btn-show-ai-review { display:none; }
 

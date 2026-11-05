@@ -304,6 +304,7 @@
     "caption": "本アプリ制作のテーマ別イメージイラスト（実在の人物・サービスではありません）"
   }
 ];
+  articles.unshift(...(D.initialNewsArticles || []));
   D.newsRepository = { async list() { return articles; } };
   D.getNewsCategory = text => articles.find(article => String(text || '').includes(article.title))?.category || 'その他';
   const genreColors = {"トップ":"#ef4444","テクノロジー":"#3b82f6","政治":"#a78bfa","経済":"#eab308","スポーツ":"#f97316","自然":"#22c55e","エンタメ":"#06b6d4","恋愛":"#f472b6","その他":"#94a3b8"};
@@ -345,7 +346,7 @@
         overlay.setAttribute('aria-label', 'MCバトル 対立するふたつの立場');
         const portrait = reina => '<div class="cutin-portrait '+(reina?'portrait-reina':'portrait-kenta')+'" aria-hidden="true"></div>';
         const stanceHtml = index => escape(article.stances[index]);
-        overlay.innerHTML = '<div class="cutin-topic"><span>NEWS MC BATTLE</span><h2>'+escape(article.title)+'</h2></div><div class="cutin-matchup"><div class="cutin-side cutin-kenta"><div class="cutin-stance"><span>立場 A / MC KENTA</span><h3>'+stanceHtml(0)+'</h3></div>'+portrait(false)+'</div><div class="cutin-side cutin-reina"><div class="cutin-stance"><span>立場 B / MC REINA</span><h3>'+stanceHtml(1)+'</h3></div>'+portrait(true)+'</div><button type="button" class="cutin-vs" aria-label="VSを押してMCバトル開始"><span class="cutin-vs-letters">VS</span><span class="cutin-vs-hint">タップしてスタジオへ進む</span></button></div>';
+        overlay.innerHTML = '<div class="cutin-topic"><span>NEWS MC BATTLE</span><h2>'+escape(article.title)+'</h2></div><div class="cutin-matchup"><div class="cutin-side cutin-kenta"><div class="cutin-stance"><span>立場 A / MC KENTA</span><h3>'+stanceHtml(0)+'</h3></div>'+portrait(false)+'</div><div class="cutin-side cutin-reina"><div class="cutin-stance"><span>立場 B / MC REINA</span><h3>'+stanceHtml(1)+'</h3></div>'+portrait(true)+'</div><button type="button" class="cutin-vs" aria-label="VSを押してMCバトル開始"><span class="cutin-vs-letters">VS</span><span class="cutin-vs-hint">'+(article.battleKey ? 'タップしてバトル開始' : 'タップしてスタジオへ進む')+'</span></button></div>';
         document.body.appendChild(overlay);
         screen.inert = true;
         const startButton = overlay.querySelector('button');
@@ -450,8 +451,9 @@
         rows.forEach(row => {
           if (row.dataset.article) row.dataset.genre = items.find(article => article.id === row.dataset.article)?.category || 'その他';
         });
-        const picks = rows.filter(row => row.dataset.topPick === 'true').slice(0, 3);
-        if (!picks.length) picks.push(...rows.slice(0, 3));
+        const pinned = rows.filter(row => items.find(article => article.id === row.dataset.article)?.battleKey);
+        const picks = [...pinned, ...rows.filter(row => row.dataset.topPick === 'true' && !pinned.includes(row))].slice(0, 3);
+        for (const row of rows) { if (picks.length >= 3) break; if (!picks.includes(row)) picks.push(row); }
         grid.replaceChildren(...picks);
         const leadCard = picks[0]?.matches('.news-card') ? picks[0] : picks[0]?.querySelector('.news-card');
         leadCard?.classList.add('news-pick-featured');
@@ -518,11 +520,14 @@
       genreScrollFrame = requestAnimationFrame(() => { genreScrollFrame = 0; syncTopGenre(); });
     }, {passive:true});
     function sourceMarkup(a) {
-      return '<section class="news-source-notes"><h2>出典・利用条件</h2>'+a.sources.map(src=>'<p><a href="'+escape(src.url)+'" target="_blank" rel="noopener noreferrer">'+escape(src.name)+'</a><br>資料・制度の日付：'+escape(src.date)+'<br>'+escape(src.scope)+'</p><p><a href="'+escape(src.terms)+'" target="_blank" rel="noopener noreferrer">出典サイトの利用規約</a></p>').join('')+'<p>上記資料をもとにDOPANEWSが編集・加工。本文は本アプリの解説、イラストは自作、MCの意見と歌詞は創作です。資料・規約確認日：2026年10月29日。</p></section>';
+      return '<section class="news-source-notes"><h2>出典</h2>'+a.sources.map(src=>'<p><a href="'+escape(src.url)+'" target="_blank" rel="noopener noreferrer">'+escape(src.name)+'</a><br>'+escape(src.date)+'<br>'+escape(src.scope)+'</p>'+(src.terms ? '<p><a href="'+escape(src.terms)+'" target="_blank" rel="noopener noreferrer">出典サイトの利用規約</a></p>' : '')).join('')+'<p>上記の情報をもとにDOPANEWSが論点を整理しています。MCの意見と歌詞は創作です。</p></section>';
     }
     function detail(a) {
+      const articleKind = a.kind === 'report' ? '報道をもとにした解説' : '公的資料に基づく解説';
+      const disclaimer = a.kind === 'report' ? '報道をもとにDOPANEWSが論点を整理しています。MCの意見・歌詞は創作であり、取材相手の発言ではありません。' : '公的資料の説明・数値をもとにDOPANEWSが編集・加工した解説です。MCの意見・歌詞は創作であり、出典機関の発言や推奨を表しません。';
+      bar.querySelector('small').textContent = a.battleKey ? 'ふたつの視点から、このニュースを考える' : '資料に基づく歌詞と内蔵ビートで再生';
       selected = a; back.hidden = false; bar.hidden = false; searchButton.hidden = false;
-      content.innerHTML = '<article class="news-article" style="'+genreStyle(a.category)+'"><div class="news-meta"><span class="news-category">'+a.category+'</span><span>公的資料に基づく解説</span><span>約2分で読めます</span></div><h1 tabindex="-1">'+a.title+'</h1><div class="news-byline"><span>DOPANEWS 編集部</span><time datetime="'+a.date.replaceAll('/','-')+'">'+escape(a.dateLabel||'資料公表')+'：'+a.date+'</time></div><figure><img src="'+artwork(a)+'" alt="'+a.caption+'"/><figcaption>'+a.caption+'</figcaption></figure><p class="news-disclaimer">公的資料の説明・数値をもとにDOPANEWSが編集・加工した解説です。MCの意見・歌詞は創作であり、出典機関の発言や推奨を表しません。</p><div class="news-article-body">'+a.paragraphs.map(p=>'<p>'+escape(p)+'</p>').join('')+'</div>'+sourceMarkup(a)+'<aside class="news-perspectives"><span class="news-eyebrow">TWO SIDES, ONE TOPIC</span><h2>資料を踏まえて、あなたはどう考える？</h2><p><b>KENTA</b>'+a.stances[0]+'</p><p><b>REINA</b>'+a.stances[1]+'</p></aside><p class="news-end">ここまで読んだら、次はふたつの視点を聴いてみよう。</p></article>';
+      content.innerHTML = '<article class="news-article" style="'+genreStyle(a.category)+'"><div class="news-meta"><span class="news-category">'+a.category+'</span><span>'+articleKind+'</span><span>約2分で読めます</span></div><h1 tabindex="-1">'+a.title+'</h1><div class="news-byline"><span>DOPANEWS 編集部</span><time datetime="'+a.date.replaceAll('/','-')+'">'+escape(a.dateLabel||'資料公表')+'：'+a.date+'</time></div><figure><img src="'+artwork(a)+'" alt="'+a.caption+'"/><figcaption>'+a.caption+'</figcaption></figure><p class="news-disclaimer">'+disclaimer+'</p><div class="news-article-body">'+a.paragraphs.map(p=>'<p>'+escape(p)+'</p>').join('')+'</div>'+sourceMarkup(a)+'<aside class="news-perspectives"><span class="news-eyebrow">TWO SIDES, ONE TOPIC</span><h2>資料を踏まえて、あなたはどう考える？</h2><p><b>KENTA</b>'+a.stances[0]+'</p><p><b>REINA</b>'+a.stances[1]+'</p></aside><p class="news-end">ここまで読んだら、次はふたつの視点を聴いてみよう。</p></article>';
       screen.scrollTop = 0; content.querySelector('h1').focus({preventScroll:true});
     }
     content.addEventListener('submit', event => {
@@ -602,6 +607,11 @@
       const proceed = await showBattleCutin(a);
       enteringBattle = false;
       if (!proceed) return;
+      if (a.battleKey) {
+        await D.playNewsBattle(a);
+        returnBtn.focus({preventScroll:true});
+        return;
+      }
       app._stopCurrentBattle();
       app.newsUrlInputEl.value = ''; app.lastFetchedUrl = '';
       app.articleInputEl.value = a.title+'\n\n'+a.paragraphs.join('\n\n')+'\n\n出典：'+a.sources.map(src=>src.name+' '+src.url+'（'+src.date+'）').join('\n')+'\n上記資料をもとにDOPANEWSが編集・加工。MCの意見・歌詞は創作です。';
@@ -612,8 +622,8 @@
       document.body.classList.remove('news-mode'); returnBtn.hidden = false;
       returnBtn.focus({preventScroll:true});
       app._setStepState(0);
-      app._setLog('📰 記事をセットしました！左パネルの「🔥 8小節×4本 バトル生成スタート」を押すとラップ楽曲を生成します（右下の「▶ 再生」でデモ再生も可能）。');
-      // ※ここで勝手にサンプル歌詞・デモビートが流れ出さないよう自動再生を停止し、00:00 待機状態に保つ
+      app._setLog('📰 記事をセットしました！左パネルの「🔥 8小節×4本 バトル生成スタート」を押すとラップ楽曲を生成します（右下の「▶ 再生」で内蔵ビートの再生も可能）。');
+      // ※ここで勝手に歌詞・内蔵ビートが流れ出さないよう自動再生を停止し、00:00 待機状態に保つ
     });
     document.querySelector('.battle-brand')?.addEventListener('click', event => {
       event.preventDefault();

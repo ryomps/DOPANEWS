@@ -213,3 +213,32 @@ test('composed 80-second WAV survives save/restart, range playback and audio rev
   assert.equal((await post(url + '/api/library', { battleData: script, audioWavBase64: 'YmFk' })).status, 400);
   assert.equal((await fetch(url + '/api/audio-source?url=' + encodeURIComponent('https://example.com/audio'))).status, 400);
 });
+
+test('bundled fixed demo serves MP4 with range support and exposes no other media paths', async t => {
+  const { root, url } = await fixture(t, async () => { assert.fail('demo must not call an upstream API'); });
+  await fs.mkdir(path.join(root, 'media', 'demos'), { recursive: true });
+  await fs.writeFile(path.join(root, 'media', 'demos', 'voice-no-yukue.mp4'), Buffer.from('0123456789'));
+  const response = await fetch(url + '/media/demos/voice-no-yukue.mp4', { headers: { Range: 'bytes=2-5' } });
+  assert.equal(response.status, 206);
+  assert.equal(response.headers.get('content-type'), 'video/mp4');
+  assert.equal(response.headers.get('content-range'), 'bytes 2-5/10');
+  assert.equal(await response.text(), '2345');
+  await fs.writeFile(path.join(root, 'media', 'demos', 'voice-no-yukue.mp3'), Buffer.from('0123456789'));
+  const splitAudio = await fetch(url + '/media/demos/voice-no-yukue.mp3', { headers: { Range: 'bytes=2-5' } });
+  assert.equal(splitAudio.status, 206);
+  assert.equal(splitAudio.headers.get('content-type'), 'audio/mpeg');
+  assert.equal(await splitAudio.text(), '2345');
+  assert.equal((await fetch(url + '/media/demos/other.mp4')).status, 404);
+});
+
+
+test('split-source demo serves MP3 ranges and keeps edit manifests private', async t => {
+  const { root, url } = await fixture(t, async () => { assert.fail('no upstream request'); });
+  await fs.mkdir(path.join(root, 'media', 'demos'), { recursive: true });
+  await fs.writeFile(path.join(root, 'media', 'demos', 'food-boundary.mp3'), Buffer.from('0123456789'));
+  const response = await fetch(url + '/media/demos/food-boundary.mp3', { headers: { Range: 'bytes=2-5' } });
+  assert.equal(response.status, 206);
+  assert.equal(response.headers.get('content-type'), 'audio/mpeg');
+  assert.equal(await response.text(), '2345');
+  assert.equal((await fetch(url + '/media/demos/food-boundary-edit.json')).status, 404);
+});

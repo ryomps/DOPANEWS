@@ -115,12 +115,17 @@
 
       try {
         await this.audio.play();
-        if (version === this.playbackVersion) this.onPlayStateChange(true);
+        if (version === this.playbackVersion) {
+          this.onPlayStateChange(true);
+          return true;
+        }
+        return false;
       } catch (err) {
         if (version !== this.playbackVersion) return;
         this.onPlayStateChange(false);
         if (err.name === 'NotAllowedError') this.onAutoplayBlocked(url);
         else this.onPlaybackError(err);
+        return false;
       }
     }
 
