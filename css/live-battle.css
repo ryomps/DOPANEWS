@@ -141,7 +141,16 @@
 .live-battle-player .mc-identity { left:0; right:0; bottom:0; height:52px; padding:6px 8px; background:#060b13; }
 .live-battle-player .mc-name { font-size:13px; }
 .live-battle-player .mc-stance,.live-battle-player .mc-dim .mc-stance { font-size:8px; line-height:1.35; margin-top:3px; }
-.live-battle-player .mc-crowd { display:none; }
+.live-battle-player .mc-crowd { display:flex; bottom:52px; height:49px; padding-top:12px; box-sizing:border-box; overflow:hidden; z-index:3; opacity:0; transition:opacity .25s; }
+.live-battle-player .mc-active .mc-crowd { opacity:1; }
+.live-battle-player .mc-crowd::before { inset:-10px 0 0; background:linear-gradient(0deg,#5f9cff70,transparent); filter:blur(3px); }
+.live-battle-player .mc-reina .mc-crowd::before { background:linear-gradient(0deg,#ff617770,transparent); }
+.live-battle-player .mc-crowd i { height:35px; flex-basis:10%; margin:0 -1.4%; mask-size:100% 165%; mask-position:center top; background:#03050a; filter:drop-shadow(0 -1px 0 #a9c8ff8a); }
+.live-battle-player .mc-crowd i:nth-child(5n) { animation-delay:-.37s; animation-duration:.68s; }
+.live-battle-player .mc-crowd i:nth-child(7n) { animation-delay:-.51s; animation-duration:.77s; }
+.live-battle-player .mc-reina .mc-crowd i { filter:drop-shadow(0 -1px 0 #ffb3be8a); }
+.live-battle-player .mc-crowd i:nth-child(2n) { height:29px; mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 100'%3E%3Ccircle cx='31' cy='23' r='10'/%3E%3Cpath d='M22 36L10 16 12 3 5 1 1 19 16 49 20 64 12 96 22 99 32 72 43 99 53 95 43 63 47 46 62 29 56 19 49 23 53 29 39 37z'/%3E%3C/svg%3E"); }
+.live-battle-player .mc-crowd i:nth-child(3n) { height:37px; mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 100'%3E%3Ccircle cx='32' cy='25' r='10'/%3E%3Cpath d='M22 38L9 25 8 10 1 9 1 30 18 51 22 66 10 95 20 99 32 75 44 99 54 95 42 66 45 49 60 26 62 4 55 2 52 23 40 38z'/%3E%3C/svg%3E"); }
 .live-battle-player .vs-emblem,.live-battle-player[data-active-mc="KENTA"] .vs-emblem,.live-battle-player[data-active-mc="REINA"] .vs-emblem { top:calc((100% - 52px)/2); }
 @media(max-height:740px) { .live-battle-player .mc-versus-arena { height:185px; } }
 

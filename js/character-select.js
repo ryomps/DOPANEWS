@@ -113,7 +113,7 @@
           const image = button.querySelector('img'); image.hidden = !character;
           if (character) image.src = character.image; else image.removeAttribute('src');
           button.querySelector('strong').textContent = character?.name || '';
-          button.querySelector('small').textContent = character?.description || '';
+          button.querySelector('small').textContent = '';
         });
         overlay.querySelector('.character-confirm').disabled = !draft.every(Boolean);
       }
