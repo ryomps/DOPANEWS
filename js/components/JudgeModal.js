@@ -5,7 +5,7 @@
   let sessionVotes = [];
   function battleKey(data) {
     return JSON.stringify({
-      title: data?.title, topic_summary: data?.topic_summary,
+      ...(!data?.verses?.length ? {title:data?.title, topic_summary:data?.topic_summary} : {}),
       kenta_stance: data?.kenta_stance, reina_stance: data?.reina_stance,
       verses: (data?.verses || []).map(v => ({ speaker: v.speaker, lyric: v.lyric, point_summary: v.point_summary }))
     });
@@ -15,6 +15,12 @@
       const stored = JSON.parse(localStorage.getItem(VOTES_KEY) || 'null');
       if (Array.isArray(stored)) sessionVotes = stored.filter(v => typeof v.key === 'string' && v.battleData?.title && ['KENTA','REINA','UNDECIDED'].includes(v.choice));
     } catch { /* Session votes still work when storage is unavailable. */ }
+    const latest = new Map();
+    sessionVotes.slice().sort((a,b) => String(b.votedAt || '').localeCompare(String(a.votedAt || ''))).forEach(vote => {
+      const key = battleKey(vote.battleData);
+      if (!latest.has(key)) latest.set(key, {...vote, key});
+    });
+    sessionVotes = [...latest.values()];
     return sessionVotes;
   }
   function saveVote(data, choice) {

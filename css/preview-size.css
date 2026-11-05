@@ -1,0 +1,11 @@
+/* Keep the 390 × 844 design, fitting the entire phone inside the desktop window. */
+@media(min-width:901px) {
+  :root { --preview-bottom:calc(100dvh - var(--preview-top) - 844px * var(--phone-preview-scale,1)); }
+  .battle-stage.live-battle-player { flex-shrink:0; transform:scale(var(--phone-preview-scale,1)); transform-origin:top center; }
+  .consumer-fixed-header { transform:translateX(-50%) scale(var(--phone-preview-scale,1)); transform-origin:top center; }
+  .news-screen { transform:translateX(-50%) scale(var(--phone-preview-scale,1)); transform-origin:top center; top:calc(var(--preview-top) + 45px * var(--phone-preview-scale,1)); }
+  #news-screen[data-view="list"] { top:calc(var(--preview-top) + 93px * var(--phone-preview-scale,1)); }
+  .app-bottom-nav { top:calc(var(--preview-top) + (844px - var(--app-footer-height)) * var(--phone-preview-scale,1)); bottom:auto; transform:translateX(-50%) scale(var(--phone-preview-scale,1)); transform-origin:top center; }
+  .news-versus-cutin { transform:translateX(-50%) scale(var(--phone-preview-scale,1)); transform-origin:top center; }
+  .news-battle-bar { bottom:calc(var(--preview-bottom) + (var(--app-footer-height) + 16px) * var(--phone-preview-scale,1)); transform:translateX(-50%) scale(var(--phone-preview-scale,1)); transform-origin:bottom center; }
+}

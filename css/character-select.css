@@ -99,17 +99,25 @@
 .live-battle-player .judge-dialog-layout > .judge-close-button { position:static; align-self:flex-start; flex-shrink:0; margin:0; padding:3px 2px; min-height:28px; font-size:11px; }
 .live-battle-player .judge-dialog-layout .judge-modal-card { min-height:0; max-height:none; }
 .live-battle-player .judge-topic-title { padding-right:0; }
+.live-battle-player .judge-headline { position:relative; z-index:2; align-self:center; padding:5px 14px; border:1px solid #ffffff30; border-radius:99px; background:#080b14ed; color:#fff; font-family:'Noto Sans JP',sans-serif; font-weight:700; line-height:1.4; text-shadow:none; }
 /* One-screen voting: portraits use only the space left after the controls. */
 .live-battle-player .judge-dialog-layout { height:100%; max-height:100%; overflow:hidden; }
 .live-battle-player .judge-dialog-layout .judge-modal-card { flex:1 1 0; min-height:0; max-height:100%; overflow:hidden; }
 .live-battle-player .judge-topic-title, .live-battle-player .judge-headline, .live-battle-player .judge-footer-btns { flex-shrink:0; }
-.live-battle-player .judge-cards-grid { flex:1 1 0; min-height:0; grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:minmax(0,1fr) auto; gap:7px; }
+.live-battle-player .judge-cards-grid { flex:1 1 0; min-height:0; grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:minmax(0,1fr) auto auto; gap:7px; }
 .live-battle-player .judge-choice-card:not(.reflection-neutral) { min-height:0; height:100%; }
 .live-battle-player .judge-choice-card > div { display:flex; flex-direction:column; flex:1; min-height:0; height:100%; }
 .live-battle-player .judge-face-icon { flex:1 1 0; height:auto; min-height:0; }
 .live-battle-player .judge-vote-caption { flex:0 0 auto; margin-top:-16px; }
-.live-battle-player .reflection-neutral { grid-column:1 / -1; min-height:34px; }
-.live-battle-player .judge-mirror-ball { position:absolute; top:82px; left:50%; transform:translateX(-50%); width:40px; height:42px; margin:0; z-index:1; }
+.live-battle-player .judge-choice-card:not(.reflection-neutral) { display:grid; grid-row:1 / span 2; grid-template-rows:subgrid; gap:0; }
+.live-battle-player .judge-choice-kenta { grid-column:1; }
+.live-battle-player .judge-choice-reina { grid-column:2; }
+.live-battle-player .judge-choice-card:not(.reflection-neutral) > div { display:contents; }
+.live-battle-player .judge-face-icon { height:100%; }
+.live-battle-player .judge-vote-caption { align-self:stretch; display:flex; flex-direction:column; }
+.live-battle-player .judge-vote-caption .judge-tap-cta { margin-top:auto; }
+.live-battle-player .reflection-neutral { grid-column:1 / -1; grid-row:3; min-height:34px; }
+.live-battle-player .judge-mirror-ball { position:absolute; top:76px; left:50%; transform:translateX(-50%); width:64px; height:68px; margin:0; z-index:1; }
 @container battle-vote (max-height:500px) {
   .live-battle-player .judge-dialog-layout .judge-modal-card { padding:7px 8px; gap:4px; }
   .live-battle-player .judge-topic-title { font-size:14px; }
@@ -125,3 +133,8 @@
 .news-versus-cutin .cutin-topic > span { color:#e0e0e0; font-family:'Noto Sans JP',sans-serif; font-size:12px; font-weight:700; font-style:normal; letter-spacing:.08em; text-shadow:none; }
 .news-versus-cutin .cutin-topic h2 { color:#fff; }
 @media(max-height:700px) { .character-select { gap:6px; padding:10px; } .character-roster button { height:52px; } .character-preview { min-height:145px; flex-basis:145px; } }
+/* Fixed 6.1-inch logical viewport for the desktop phone preview. */
+@media(min-width:901px) {
+  :root { --phone-width:390px; --preview-height:844px; --preview-bottom:calc(100dvh - var(--preview-top) - 844px); }
+  .stage-viewport::before, .news-mode::after { content:'6.1 INCH / 390 × 844'; }
+}

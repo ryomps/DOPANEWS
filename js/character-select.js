@@ -20,7 +20,7 @@
       const character = characters[chosen[index] - 1];
       document.documentElement.style.setProperty('--mc-' + side + '-image', 'url("' + character.image + '")');
       document.querySelectorAll('.mc-' + side + ' .mc-stage-portrait, .judge-character-' + side).forEach(image => { image.src = character.image; });
-      document.querySelectorAll('.mc-' + side + ' .mc-name').forEach(label => { label.textContent = 'MC ' + character.name; });
+      document.querySelectorAll('.mc-' + side + ' .mc-name').forEach(label => { label.textContent = character.name; });
       document.querySelector('#btn-vote-' + side + ' .judge-tap-cta')?.replaceChildren(character.name);
     });
     D.selectedCharacters = chosen.slice();

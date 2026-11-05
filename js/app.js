@@ -305,7 +305,12 @@
       try {
         this.articleInputEl.value = item.articleText || '';
         this.currentArticleText = this.articleInputEl.value;
-        this._applyBattleData(DOPANEWS.normalizeBattleData(item.battleData));
+        const restoredBattle = DOPANEWS.normalizeBattleData(item.battleData);
+        const originalArticle = DOPANEWS.initialNewsArticles?.find(article =>
+          this.currentArticleText.includes(article.title) ||
+          (item.audioUrl && item.audioUrl === (article.battleKey === 'voice' ? DOPANEWS.FIXED_DEMO : DOPANEWS.FOOD_DEMO)?.audioUrl));
+        if (originalArticle) restoredBattle.title = originalArticle.title;
+        this._applyBattleData(restoredBattle);
         if (DOPANEWS.libraryNavigation?.openBattle) {
           DOPANEWS.libraryNavigation.openBattle();
         } else {
@@ -349,7 +354,7 @@
       // Clone so playback edits cannot alter the bundled battle for later replays.
       const playing = await this._playSavedBattle(JSON.parse(JSON.stringify(demo)));
       if (!playing) return false;
-      this._setLog(`「${demo.battleData.title}」を再生しています。`);
+
     }
 
     _bindEvents() {
@@ -889,12 +894,7 @@
     }
 
     _setLog(message, isError = false) {
-      const demoStatus = document.getElementById('fixed-demo-playback-status');
-      if (demoStatus && this.currentAudioUrl?.startsWith('/media/demos/')) {
-        demoStatus.textContent = message;
-        demoStatus.hidden = false;
-        demoStatus.classList.toggle('status-error', isError);
-      }
+
       if (this.articleGenerationStatusEl) {
         this.articleGenerationStatusEl.textContent = message;
         this.articleGenerationStatusEl.classList.toggle('status-error', isError);

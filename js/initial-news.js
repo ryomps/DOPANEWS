@@ -85,6 +85,7 @@
     const source = article.battleKey === 'voice' ? D.FIXED_DEMO : article.battleKey === 'food' ? D.FOOD_DEMO : null;
     if (!source) return false;
     const record = JSON.parse(JSON.stringify(source));
+    record.battleData.title = article.title;
     record.articleText = article.title + '\n\n' + article.paragraphs.join('\n\n')
       + '\n\n出典：' + article.sources.map(source => source.name + ' ' + source.url).join('\n');
     await global.dopaNewsApp.handleFixedDemo(record);

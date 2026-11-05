@@ -16,6 +16,8 @@
   <link rel="stylesheet" href="./css/app-footer.css" />
   <link rel="stylesheet" href="./css/library.css" />
   <link rel="stylesheet" href="./css/character-select.css" />
+  <link rel="stylesheet" href="./css/preview-size.css" />
+  <script src="./js/preview-size.js"></script>
 </head>
 <body class="news-mode">
   <section id="news-screen" class="news-screen" aria-label="ニュース">
@@ -234,7 +236,6 @@
         <!-- 【拡張用レイヤー】Phase 2: カットイン演出（乱入・パンチライン特大エフェクト）オーバーレイ -->
         <div id="cutin-overlay-layer" class="cutin-overlay-layer" data-last-trigger="NONE"></div>
 
-        <p id="fixed-demo-playback-status" role="status" aria-live="polite" hidden style="margin:8px 16px;font-size:12px;line-height:1.6;overflow-wrap:anywhere"></p>
         <!-- ステージ上部：バトルタイトル＆再生タイマー -->
         <header class="stage-top">
           <div class="stage-top-meta">
@@ -264,7 +265,7 @@
               <img class="mc-stage-portrait" src="./css/images/mc-kenta-illustration.png" alt="MC KENTAのポートレート" />
               <span class="mc-speaking-label">ON MIC</span>
               <div class="mc-crowd" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-              <div class="mc-identity"><div class="mc-name">MC KENTA</div><p id="stage-kenta-stance" class="mc-stance"></p></div>
+              <div class="mc-identity"><div class="mc-name">KENTA</div><p id="stage-kenta-stance" class="mc-stance"></p></div>
             </div>
 
             <div class="vs-emblem">VS</div>
@@ -273,7 +274,7 @@
               <img class="mc-stage-portrait" src="./css/images/mc-reina-illustration.png" alt="MC REINAのポートレート" />
               <span class="mc-speaking-label">ON MIC</span>
               <div class="mc-crowd" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-              <div class="mc-identity"><div class="mc-name">MC REINA</div><p id="stage-reina-stance" class="mc-stance"></p></div>
+              <div class="mc-identity"><div class="mc-name">REINA</div><p id="stage-reina-stance" class="mc-stance"></p></div>
             </div>
           </div>
           <p id="stage-speaking-status" class="stage-speaking-status" role="status" aria-live="polite"></p>

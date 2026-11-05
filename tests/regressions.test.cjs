@@ -730,6 +730,17 @@ test('Library keeps distinct scripts separate while music timing changes retain 
   assert.equal(data.readBattleVotes()[0].choice, 'UNDECIDED');
 });
 
+test('Library replaces the vote when the same battle title or selected characters change', () => {
+  const {app, data, get} = setup();
+  app.judgeModal.open(app.currentBattleData); get('btn-vote-kenta').emit('click');
+  const battle = JSON.parse(JSON.stringify(app.currentBattleData));
+  battle.title = 'ニュースの議題に変更'; battle.character_ids = [9,10];
+  app.judgeModal.open(battle); get('btn-vote-reina').emit('click');
+  assert.equal(data.readBattleVotes().length, 1);
+  assert.equal(data.readBattleVotes()[0].choice, 'REINA');
+  assert.equal(data.readBattleVotes()[0].battleData.title, battle.title);
+});
+
 test('generated article handoff shows the selected title and consumer progress instead of the old preset', async () => {
   const { app, data, get } = setup();
   let release;

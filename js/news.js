@@ -547,7 +547,9 @@
       genreScrollFrame = requestAnimationFrame(() => { genreScrollFrame = 0; syncTopGenre(); });
     }, {passive:true});
     function sourceMarkup(a) {
-      return '<section class="news-source-notes"><h2>出典</h2>'+a.sources.map(src=>'<p><a href="'+escape(src.url)+'" target="_blank" rel="noopener noreferrer">'+escape(src.name)+'</a><br>'+escape(src.date)+'<br>'+escape(src.scope)+'</p>'+(src.terms ? '<p><a href="'+escape(src.terms)+'" target="_blank" rel="noopener noreferrer">出典サイトの利用規約</a></p>' : '')).join('')+'<p>上記の情報をもとにDOPANEWSが論点を整理しています。MCの意見と歌詞は創作です。</p></section>';
+      const links = a.sources.map(src => '<a href="'+escape(src.url)+'" target="_blank" rel="noopener noreferrer">'+escape(src.name)+'</a>').join(' ／ ');
+      const details = a.sources.map(src => '<p>'+escape(src.name)+' · '+escape(src.date)+'<br>'+escape(src.scope)+(src.terms ? '<br><a href="'+escape(src.terms)+'" target="_blank" rel="noopener noreferrer">利用規約</a>' : '')+'</p>').join('');
+      return '<section class="news-source-notes"><div class="news-source-links"><span>出典：</span>'+links+'</div><details><summary>詳細</summary>'+details+'<p>上記の情報をもとにDOPANEWSが論点を整理。MCの意見・歌詞は創作です。</p></details></section>';
     }
     function detail(a) {
       screen.dataset.view = 'article';

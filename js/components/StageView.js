@@ -357,7 +357,7 @@
         this.lyricBoxEl.innerHTML = lines
           .map(
             (line, i) =>
-              `<p class="lyric-line ${i === 0 ? 'line-active' : ''}"><span class="bar-num">${i + 1}</span>${this._escapeHtml(line)}</p>`
+              `<p class="lyric-line ${i === 0 ? 'line-active' : ''}">${this._escapeHtml(line)}</p>`
           )
           .join('');
         this.lyricBoxEl.scrollTop = 0;

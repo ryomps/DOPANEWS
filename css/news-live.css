@@ -94,3 +94,10 @@
 .news-search-tags button:focus-visible { outline:2px solid #edf3ff; outline-offset:2px; }
 
 .news-perspectives .news-eyebrow { font-family:'Noto Sans JP',sans-serif; font-size:12px; font-weight:700; font-style:normal; letter-spacing:.05em; color:#b8c4d5; }
+.news-article .news-source-notes { margin:12px 0; padding:7px 0; border:0; border-top:1px solid #ffffff18; border-radius:0; background:transparent; font-size:10px; line-height:1.5; color:#8492a6; }
+.news-source-notes .news-source-links { display:block; }
+.news-article .news-source-notes p { margin:5px 0; font-size:10px; line-height:1.5; }
+.news-article .news-source-notes a { font-size:10px; }
+.news-source-notes details { margin-top:4px; }
+.news-source-notes summary { cursor:pointer; color:#8492a6; font-size:9px; }
+.news-article .news-disclaimer { font-size:10px; line-height:1.5; margin:8px 0 12px; color:#8e99aa; }
