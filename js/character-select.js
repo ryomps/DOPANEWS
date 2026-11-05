@@ -50,7 +50,10 @@
         side = target;
         const other = 1 - side;
         if (draft[other] === id) draft[other] = draft[side];
-        draft[side] = id; render();
+        draft[side] = id;
+        // After filling one side, the next tap fills the empty side.
+        if (!draft[other]) side = other;
+        render();
       }
       function clearDrag() {
         if (!drag) return;

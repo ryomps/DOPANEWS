@@ -101,3 +101,7 @@
 .news-source-notes details { margin-top:4px; }
 .news-source-notes summary { cursor:pointer; color:#8492a6; font-size:9px; }
 .news-article .news-disclaimer { font-size:10px; line-height:1.5; margin:8px 0 12px; color:#8e99aa; }
+/* 16px prevents iOS focus zoom without disabling pinch zoom. */
+@media (max-width:900px), (pointer:coarse) {
+  .news-search input { font-size:16px; line-height:1.4; }
+}
