@@ -4,6 +4,7 @@
   D.initialNewsArticles = [
   {
     "id": "sns-freedom",
+    "imageUrl": "./css/images/news-sns-safety-freedom.png",
     "battleKey": "voice",
     "kind": "report",
     "category": "テクノロジー",
@@ -45,6 +46,7 @@
   },
   {
     "id": "children-smartphone",
+    "imageUrl": "./css/images/news-child-smartphone-dialogue.png",
     "battleKey": "food",
     "kind": "report",
     "category": "その他",

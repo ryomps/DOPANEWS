@@ -8,6 +8,7 @@ const { pipeline } = require('node:stream/promises');
 const { reviewBattle, reviewFingerprint } = require('./review.cjs');
 const { createNewsService, publicNewsFailure } = require('./news-service.cjs');
 const { createBackingHandler } = require('./backing.cjs');
+const { createNewsImages } = require('./news-images.cjs');
 
 function createServer({ root = __dirname, libraryDir = path.join(root, '.local', 'library'),
   fixedBeatDir = path.join(root, '.local', 'fixed-beat'),
@@ -36,6 +37,7 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
     return JSON.parse(Buffer.concat(chunks).toString('utf8'));
   }
   const news = createNewsService({ directory: newsDirectory, fetchImpl, readConfig });
+  const newsImage = createNewsImages({ directory: newsDirectory, fetchImpl });
   async function sendFile(req, res, file, mime) {
     const stat = await fsp.stat(file);
     let start = 0, end = stat.size - 1, status = 200;
@@ -72,6 +74,12 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
         json(res, { error: 'Origin denied' }, 403); return;
       }
       const url = new URL(req.url, `http://${host}`), route = url.pathname;
+      const imageRequest = /^\/api\/news\/images\/([a-f0-9]{32})$/.exec(route);
+      if (imageRequest && req.method === 'GET') {
+        const listing = await news.headlines();
+        const topic = listing.items.find(item => item.id === imageRequest[1]);
+        json(res, topic ? await newsImage(topic) : {imageUrl:null}); return;
+      }
       if (route === '/api/news/search-usage' && req.method === 'GET') {
         const [usage, config] = await Promise.all([news.searchUsage(), readConfig()]);
         json(res, { ...usage, configured: Boolean(config.openai) }); return;
