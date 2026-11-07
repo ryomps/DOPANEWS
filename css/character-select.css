@@ -227,3 +227,11 @@
 .news-battle-bar button:hover { filter:brightness(1.12); }
 .news-battle-bar button,
 .news-battle-bar button:hover { border-color:#fff; }
+
+.vote-library-flight {
+  position: fixed;
+  z-index: 2000;
+  pointer-events: none;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px #b9ccff99);
+}

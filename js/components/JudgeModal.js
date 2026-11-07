@@ -55,6 +55,7 @@
           this.reflections.get(this.battleKey).choice = choice;
           saveVote(this.battleData, choice);
           this._renderSelection();
+          this._animateVoteToLibrary(button);
           this.close();
           this.onChoose(choice);
         });
@@ -79,6 +80,100 @@
           first.focus();
         }
       });
+    }
+
+    _animateVoteToLibrary(button) {
+      const library = document.querySelector?.('.app-nav-library');
+      if (!library?.animate) return;
+
+      this.voteFlight?.cancel();
+      this.libraryPulse?.cancel();
+      const playSound = this._prepareVoteSound();
+      const reducedMotion = global.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      let reacted = false;
+      const react = () => {
+        if (reacted) return;
+        reacted = true;
+        this.libraryPulse = library.animate(reducedMotion
+          ? [{ opacity: 1 }, { opacity: 0.65 }, { opacity: 1 }]
+          : [{ transform: 'scale(1)' }, { transform: 'scale(1.1)', offset: 0.3 }, { transform: 'scale(1)' }],
+        { duration: 280, easing: 'ease-out' });
+        playSound?.();
+      };
+      const portrait = button.querySelector('img');
+      if (!portrait || reducedMotion) { react(); return; }
+
+      const from = portrait.getBoundingClientRect();
+      const to = (library.querySelector('svg') || library).getBoundingClientRect();
+      if (!from.width || !from.height || !to.width || !to.height) { react(); return; }
+
+      const flyer = document.createElement('img');
+      flyer.src = portrait.currentSrc || portrait.src;
+      flyer.alt = '';
+      flyer.className = 'vote-library-flight';
+      Object.assign(flyer.style, {
+        left: `${from.left}px`, top: `${from.top}px`,
+        width: `${from.width}px`, height: `${from.height}px`
+      });
+      document.body.append(flyer);
+      const dx = to.left + to.width / 2 - from.left - from.width / 2;
+      const dy = to.top + to.height / 2 - from.top - from.height / 2;
+      // Use one continuous curve for travel, shrink and absorption.
+      const frames = Array.from({ length: 61 }, (_, index) => {
+        const t = index / 60;
+        const sideways = 1 - Math.pow(1 - t, 2);
+        const nearIcon = Math.max(0, (t - 0.84) / 0.16);
+        const absorb = nearIcon * nearIcon * (3 - 2 * nearIcon);
+        const scale = 1 - 0.66 * t - 0.29 * absorb;
+        return {
+          transform: `translate(${dx * sideways}px, ${dy * t}px) scale(${scale})`,
+          opacity: 1 - absorb
+        };
+      });
+      const flight = this.voteFlight = flyer.animate(frames, {
+        delay: 180, duration: 750, easing: 'cubic-bezier(.32, 0, .42, 1)', fill: 'both'
+      });
+      let reactionFrame;
+      const checkLanding = () => {
+        if (this.voteFlight !== flight || flight.playState === 'idle') return;
+        if (flight.effect.getComputedTiming().progress >= 0.94) react();
+        else reactionFrame = global.requestAnimationFrame(checkLanding);
+      };
+      reactionFrame = global.requestAnimationFrame(checkLanding);
+      flight.finished.then(react, () => {}).finally(() => {
+        global.cancelAnimationFrame(reactionFrame);
+        flyer.remove();
+        if (this.voteFlight === flight) this.voteFlight = null;
+      });
+    }
+
+    _prepareVoteSound() {
+      const AudioContext = global.AudioContext || global.webkitAudioContext;
+      if (!AudioContext) return;
+      try {
+        const audio = this.voteAudio ||= new AudioContext();
+        // Resume from the tap so playback can start at landing on iPhone.
+        const resumed = audio.resume();
+        this.voteSound ||= global.fetch('./media/effects/vote-confirm.mp3')
+          .then(response => {
+            if (!response.ok) throw new Error('Vote sound unavailable');
+            return response.arrayBuffer();
+          })
+          .then(bytes => audio.decodeAudioData(bytes))
+          .catch(() => { this.voteSound = null; });
+        const ready = Promise.all([resumed, this.voteSound]).catch(() => []);
+        return () => {
+          void ready.then(([, buffer]) => {
+            if (!buffer || audio.state !== 'running') return;
+            const source = audio.createBufferSource();
+            source.buffer = buffer;
+            const volume = audio.createGain();
+            volume.gain.value = 0.4;
+            source.connect(volume).connect(audio.destination);
+            source.start();
+          }).catch(() => {});
+        };
+      } catch { /* Voting still works if sound is unavailable. */ }
     }
 
     open(battleData) {

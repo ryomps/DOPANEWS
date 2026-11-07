@@ -99,7 +99,13 @@
       });
 
       this.judgeModal = new DOPANEWS.JudgeModal({
-        onChoose: () => document.getElementById('return-to-news')?.click?.(),
+        onChoose: () => {
+          document.getElementById('return-to-news')?.click?.();
+          if (document.body.classList.contains('news-mode') && !document.body.classList.contains('library-mode')) {
+            const screen = document.getElementById('news-screen');
+            if (screen?.dataset.view === 'article') screen.scrollTop = 0;
+          }
+        },
         onReplay: () => {
           if (this.isGenerating) return;
           this.audioController.seekTo(0);

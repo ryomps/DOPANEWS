@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ドパNEWS｜発表</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#05070b;color:#f5f7ff;font:16px system-ui,"Yu Gothic",sans-serif;display:grid;place-items:center;align-content:center;gap:12px;padding-block:12px;min-height:100dvh}
+  main{position:relative;width:min(900px,calc(100vw - 32px),calc(177.78dvh - 145px));aspect-ratio:16/9;container-type:inline-size;overflow:hidden;background:#0a0f19;border:1px solid #26334a;border-radius:12px}
+  @media(max-height:320px){main{width:min(900px,calc(100vw - 24px),150dvh)}}
+  section{position:absolute;inset:0;padding:6% 7%;display:flex;flex-direction:column;justify-content:center;gap:2.2cqw;background:radial-gradient(ellipse at 95% 15%,#192d53,transparent 55%),#0a0f19}
+  [hidden]{display:none!important}
+  h1,h2,p{margin:0}
+  h1,h2{font-size:5.3cqw;line-height:1.2;letter-spacing:-.045em;text-wrap:balance}
+  p,li{font-size:2.65cqw;line-height:1.55}
+  small,.kicker{font-size:1.45cqw;letter-spacing:.12em;color:#9fc2ff;font-weight:800}
+  small{letter-spacing:0}
+  .split{display:grid;grid-template-columns:1.3fr 1fr;gap:5cqw;align-items:center}
+  .split>div{display:grid;gap:2cqw}
+  img{max-width:100%;display:block;max-height:34cqw;object-fit:contain}
+  .phone{justify-self:center;border:1px solid #38445c;border-radius:1.5cqw}
+  .logo{width:37cqw}
+  .cards{display:flex;gap:1.6cqw}
+  .card{flex:1;background:#152440;border:1px solid #3f5a86;border-radius:1.2cqw;padding:2cqw;font-size:2.2cqw}
+  .card:nth-child(even){background:#351927;border-color:#794353}
+  .card strong{display:block;font-size:3.15cqw;margin-bottom:.6cqw}
+  .demo{padding:0;background:#03050a}
+  video{width:100%;height:100%;object-fit:contain}
+  .closing{text-align:center;background:#05070b}
+  .opening{text-align:center}
+  .closing img{width:23cqw;margin:0 auto 1cqw}
+  #launch{position:absolute;inset:0;background:#070a12e8;display:grid;place-content:center;justify-items:center;gap:16px;text-align:center;padding:24px;z-index:2}
+  #launch img{width:min(280px,70vw)}
+  button{font:inherit;font-weight:700;padding:10px 24px;border-radius:100px;border:1px solid #cdddfd;background:#e7efff;color:#0b1322;cursor:pointer}
+  #replay{position:absolute;bottom:4%;right:5%;z-index:1}
+  #notice{font-size:14px;color:#d6e2fb;max-width:38em}
+  #slide-controls{display:flex;align-items:center;gap:12px;background:#111a2a;border:1px solid #40516c;border-radius:10px;padding:6px 10px;font-size:13px}
+  #slide-controls output{min-width:7em;text-align:center;font-variant-numeric:tabular-nums}
+  #slide-controls button{padding:5px 11px}
+  #slide-controls button:disabled{opacity:.45;cursor:default}
+</style>
+<main id="player" aria-label="ドパNEWSの発表">
+  <section class="opening" data-seconds="6" hidden>
+    <h1>NEWSを見ていますか？</h1>
+  </section>
+  <section class="comparison" data-seconds="12" hidden>
+    <span class="kicker">02 / 世の中の流れ</span>
+    <h2>若い世代で、毎日の<br>ニュース利用が減少</h2>
+    <div class="cards"><div class="card"><strong>−15ポイント</strong>18〜24歳</div><div class="card"><strong>−5ポイント</strong>55歳以上</div></div>
+    <small>毎日ニュースを利用する割合の変化（2017→2025年）｜既存スライド掲載のReuters Institute調査</small>
+  </section>
+  <section data-seconds="9" hidden>
+    <span class="kicker">03 / 問題提起</span>
+    <h2>ニュースを楽しみながら、<br>自分の意見を考えるには？</h2>
+    <div class="cards"><div class="card"><strong>楽しく触れる</strong>音楽とキャラクターが入口に</div><div class="card"><strong>自分で考える</strong>ふたつの主張を聴き、自分の意見へ</div></div>
+  </section>
+  <section data-seconds="7" hidden>
+    <div class="split"><div><img class="logo" src="css/images/dopanews-header-logo-v3.png" alt="ドパNEWS"><h1>ニュースが、<br>MCバトルになる。</h1></div><img class="phone" src=".local/slide-refresh/battle.png" alt="MCバトルの再生画面"></div>
+  </section>
+  <section class="process" data-seconds="6" hidden>
+    <span class="kicker">05 / アプリの流れ</span>
+    <h2>ひとつの記事、ふたつの主張。</h2>
+    <div class="cards"><div class="card"><strong>読む</strong>記事と出典を確認</div><div class="card"><strong>聴く</strong>MCがラップで議論</div><div class="card"><strong>投票する</strong>自分に近い意見を選ぶ</div></div>
+  </section>
+  <section class="process" data-seconds="12" hidden>
+    <span class="kicker">06 / システム構成</span>
+    <h2>記事からラップバトルへ</h2>
+    <div class="cards"><div class="card"><strong>OpenAI</strong>記事の情報を整理</div><div class="card"><strong>Gemini</strong>歌詞と読みを生成</div><div class="card"><strong>Lyria 3.5</strong>ラップ入り音楽を生成</div></div>
+  </section>
+  <section data-seconds="10" hidden>
+    <span class="kicker">07 / 再生と同期</span>
+    <h2>音楽と歌詞を<br>同じ時刻に合わせる</h2>
+    <div class="cards"><div class="card"><strong>Whisper</strong>歌詞の時刻を取得</div><div class="card"><strong>再生位置</strong>今の歌詞とMCを強調</div></div>
+  </section>
+  <section data-seconds="10" hidden>
+    <span class="kicker">08 / UI・UX</span>
+    <div class="split"><div><h2>誰の主張か、<br>ひと目で分かる。</h2><p>ON MIC、照明、歌詞の強調が、歌っているMCに合わせて切り替わる。</p></div><img class="phone" src=".local/slide-refresh/battle-reina.png" alt="MCが交代した再生画面"></div>
+  </section>
+  <section data-seconds="8" hidden>
+    <span class="kicker">09 / 今後の展望</span>
+    <h2>歌詞を出典と<br>照らし合わせる</h2>
+    <div class="cards"><div class="card">数値</div><div class="card">固有名詞</div><div class="card">出典・断言</div></div>
+  </section>
+  <section data-seconds="8" hidden>
+    <span class="kicker">10 / 今後の展望</span>
+    <h2>同じニュースを、<br>みんなで聴いて話す。</h2>
+    <div class="cards"><div class="card">同時に聴く</div><div class="card">意見を交わす</div><div class="card">投票を共有する</div></div>
+  </section>
+  <section class="demo" hidden><video src="demo.mp4" preload="metadata" playsinline aria-label="ドパNEWSのデモ"></video></section>
+  <section class="closing" data-seconds="5.22" hidden><img src="css/images/dopanews-header-logo-v3.png" alt="ドパNEWS"><h2>ご清聴ありがとうございました</h2></section>
+  <div id="launch">
+    <img src="css/images/dopanews-header-logo-v3.png" alt="ドパNEWS">
+    <button id="start">発表を再生</button>
+    <label><input type="checkbox" id="narrate" checked> ナレーションを読み上げる</label>
+    <p id="notice" role="status">約2分40秒</p>
+  </div>
+  <button id="replay" hidden>最初から再生</button>
+</main>
+<nav id="slide-controls" aria-label="スライド操作">
+    <button id="previous" aria-label="前のスライド">←</button>
+    <output id="position" aria-live="polite"></output>
+    <button id="next" aria-label="次のスライド">→</button>
+</nav>
+<script>
+  const narration = [
+    'ニュースを見ていますか？',
+    '国際調査では、若い世代で毎日ニュースに触れる人の割合が下がっています。',
+    'そこで私たちは、ニュースに楽しく触れて、自分ならどう考えるかまで進める入口を作りました。',
+    'ドパニュースです。一つの記事を、二人のエムシーがラップバトルで議論します。',
+    '二人の主張を聴き、自分の意見に近い方に投票できます。',
+    '裏側では、記事から異なる二つの立場を整理します。それぞれの立場で歌詞を作り、ラップ入りの音楽を生成します。',
+    '音源から歌詞の時刻を取得し、再生に合わせて、いま歌っている行を強調します。',
+    '歌うエムシーが変わると、照明も切り替わります。誰の主張か、画面でも追いかけられます。',
+    '今後は、歌詞を出典と照らし合わせ、事実と意見の違いをより分かりやすくします。',
+    '将来は、同じニュースをみんなで聴いて話せる場へ。実際の画面をご覧ください。',
+    '',
+    'ご清聴ありがとうございました。'
+  ];
+  const scenes = [...document.querySelectorAll('section')];
+  const video = document.querySelector('video');
+  const launch = document.querySelector('#launch');
+  const replay = document.querySelector('#replay');
+  const synth = window.speechSynthesis;
+  const previous = document.querySelector('#previous');
+  const next = document.querySelector('#next');
+  const position = document.querySelector('#position');
+  let current = -1;
+  let autoAdvance = false;
+  let timer;
+  function updatePosition() {
+    position.textContent = `${current < 0 ? '開始前' : current + 1} / ${scenes.length}枚`;
+    previous.disabled = current <= 0;
+    next.disabled = current >= scenes.length - 1;
+  }
+  function speak(index) {
+    synth?.cancel();
+    if (!synth || !document.querySelector('#narrate').checked || !narration[index]) return;
+    const line = new SpeechSynthesisUtterance(narration[index]);
+    line.lang = 'ja-JP';
+    line.rate = 1.1;
+    const japanese = synth.getVoices().find(voice => /^ja[-_]/i.test(voice.lang));
+    if (japanese) line.voice = japanese;
+    synth.speak(line);
+  }
+  function show(index, automatic = true) {
+    clearTimeout(timer);
+    video.pause();
+    replay.hidden = true;
+    scenes.forEach((scene, position) => {
+      scene.hidden = position !== index;
+    });
+    current = index;
+    autoAdvance = automatic;
+    updatePosition();
+    if (!automatic) {
+      synth?.cancel();
+      if (scenes[index].contains(video)) video.controls = true;
+      return;
+    }
+    speak(index);
+    if (scenes[index].contains(video)) {
+      video.currentTime = 0;
+      video.play().catch(() => { video.controls = true; });
+      return;
+    }
+    timer = setTimeout(() => {
+      if (index + 1 < scenes.length) show(index + 1);
+      else replay.hidden = false;
+    }, Number(scenes[index].dataset.seconds) * 1000);
+  }
+  function start() {
+    launch.hidden = true;
+    replay.hidden = true;
+    video.pause();
+    video.controls = false;
+    show(0);
+  }
+  video.addEventListener('ended', () => {
+    if (autoAdvance && scenes[current]?.contains(video)) show(current + 1);
+  });
+  function move(delta) {
+    const index = current + delta;
+    if (index < 0 || index >= scenes.length) return;
+    launch.hidden = true;
+    show(index, false);
+  }
+  previous.addEventListener('click', () => move(-1));
+  next.addEventListener('click', () => move(1));
+  document.addEventListener('keydown', event => {
+    if (event.target.closest('input, video') || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    move(event.key === 'ArrowLeft' ? -1 : 1);
+  });
+  updatePosition();
+  document.querySelector('#start').addEventListener('click', start);
+  replay.addEventListener('click', start);
+</script>
+</html>

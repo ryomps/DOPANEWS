@@ -393,7 +393,7 @@ function createServer({ root = __dirname, libraryDir = path.join(root, '.local',
       if (req.method === 'GET' && route === '/media/demos/food-boundary.mp3') {
         await sendFile(req, res, path.join(root, 'media', 'demos', 'food-boundary.mp3'), 'audio/mpeg'); return;
       }
-      if (req.method === 'GET' && ['/media/news/adult-smartphone.mp3', '/media/news/bicycle-blue-ticket.mp3'].includes(route)) {
+      if (req.method === 'GET' && ['/media/news/adult-smartphone.mp3', '/media/news/bicycle-blue-ticket.mp3', '/media/effects/vote-confirm.mp3'].includes(route)) {
         await sendFile(req, res, path.join(root, route.slice(1)), 'audio/mpeg'); return;
       }
       if (req.method === 'GET' && route === '/media/demos/voice-no-yukue.mp3') {
